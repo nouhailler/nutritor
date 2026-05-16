@@ -9,7 +9,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, Line, Pattern, Rect } from 'react-native-svg';
 import { Icon } from '../components/Icon';
-import { FILTERS, SAVED_PLATES, SavedPlate, FilterId, applyFilter } from '../data/saved';
+import { FILTERS, SavedPlate, FilterId, applyFilter } from '../data/saved';
 import { Colors, Fonts } from '../theme/tokens';
 
 function StripedThumb({ children }: { children: React.ReactNode }) {
@@ -35,14 +35,16 @@ function StripedThumb({ children }: { children: React.ReactNode }) {
   );
 }
 
-function SavedCard({ plate, onPress }: { plate: SavedPlate; onPress: () => void }) {
+function SavedCard({ plate, onPress, onEdit }: { plate: SavedPlate; onPress: () => void; onEdit: () => void }) {
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.75} onPress={onPress}>
       <StripedThumb>
         <Text style={styles.kcalBadge}>
           {plate.kcal}<Text style={styles.kcalUnit}> kcal</Text>
         </Text>
-        <Text style={styles.timeBadge}>{plate.time}</Text>
+        <TouchableOpacity style={styles.editBadge} onPress={onEdit} activeOpacity={0.7}>
+          <Icon name="edit" size={11} color={Colors.muted} />
+        </TouchableOpacity>
       </StripedThumb>
       <Text style={styles.cardName}>{plate.name}</Text>
       <View style={styles.tags}>
@@ -58,14 +60,17 @@ function SavedCard({ plate, onPress }: { plate: SavedPlate; onPress: () => void 
 }
 
 interface SavedScreenProps {
+  plates: SavedPlate[];
   onOpenPlate: (plate: SavedPlate) => void;
+  onCreatePlate: () => void;
+  onEditPlate: (plate: SavedPlate) => void;
 }
 
-export function SavedScreen({ onOpenPlate }: SavedScreenProps) {
+export function SavedScreen({ plates, onOpenPlate, onCreatePlate, onEditPlate }: SavedScreenProps) {
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<FilterId>('all');
 
-  const filtered = applyFilter(SAVED_PLATES, filter);
+  const filtered = applyFilter(plates, filter);
 
   const pairs: SavedPlate[][] = [];
   for (let i = 0; i < filtered.length; i += 2) {
@@ -79,7 +84,7 @@ export function SavedScreen({ onOpenPlate }: SavedScreenProps) {
           <Text style={styles.eyebrow}>Bibliothèque</Text>
           <Text style={styles.title}>Plats sauvegardés</Text>
         </View>
-        <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={onCreatePlate}>
           <Icon name="plus" size={20} color={Colors.ink} />
         </TouchableOpacity>
       </View>
@@ -92,7 +97,7 @@ export function SavedScreen({ onOpenPlate }: SavedScreenProps) {
         >
           {FILTERS.map((f) => {
             const active = f.id === filter;
-            const label = f.id === 'all' ? `${f.label} · ${SAVED_PLATES.length}` : f.label;
+            const label = f.id === 'all' ? `${f.label} · ${plates.length}` : f.label;
             return (
               <TouchableOpacity
                 key={f.id}
@@ -109,7 +114,14 @@ export function SavedScreen({ onOpenPlate }: SavedScreenProps) {
         <View style={styles.grid}>
           {pairs.map((pair, rowIdx) => (
             <View key={rowIdx} style={styles.row}>
-              {pair.map((p) => <SavedCard key={p.id} plate={p} onPress={() => onOpenPlate(p)} />)}
+              {pair.map((p) => (
+                <SavedCard
+                  key={p.id}
+                  plate={p}
+                  onPress={() => onOpenPlate(p)}
+                  onEdit={() => onEditPlate(p)}
+                />
+              ))}
               {pair.length === 1 && <View style={styles.cardSpacer} />}
             </View>
           ))}
@@ -237,18 +249,15 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: Colors.muted,
   },
-  timeBadge: {
-    fontFamily: Fonts.mono,
-    fontSize: 9,
-    letterSpacing: 1.8,
-    textTransform: 'uppercase',
-    color: Colors.muted,
+  editBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: Colors.paper,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 100,
     borderWidth: 1,
     borderColor: Colors.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
     overflow: 'hidden',
   },
 

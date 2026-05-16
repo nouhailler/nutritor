@@ -1,6 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
+  Easing,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -18,13 +20,26 @@ import { EditProfileScreen } from '../screens/EditProfileScreen';
 import { StatsScreen } from '../screens/StatsScreen';
 import { SavedScreen } from '../screens/SavedScreen';
 import { SavedDetailScreen } from '../screens/SavedDetailScreen';
+import { EditSavedPlateScreen } from '../screens/EditSavedPlateScreen';
 import { SearchScreen } from '../screens/SearchScreen';
 import { Colors, Fonts } from '../theme/tokens';
 import { Food, Meal } from '../types';
-import { SavedPlate } from '../data/saved';
+import { SAVED_PLATES, SavedPlate } from '../data/saved';
+import { usePersistedState } from '../storage/usePersistedState';
+import { KEYS, load, save } from '../storage/store';
+import { SettingsScreen } from '../screens/SettingsScreen';
+import { AddFoodScreen } from '../screens/AddFoodScreen';
+import { OpenFoodFactsScreen } from '../screens/OpenFoodFactsScreen';
+import { CIQUALScreen } from '../screens/CIQUALScreen';
+import { BarcodeScannerScreen } from '../screens/BarcodeScannerScreen';
+import { AppSettings, DEFAULT_SETTINGS } from '../types/settings';
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 type Tab = 'home' | 'saved' | 'stats' | 'profile';
-type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | null;
+type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | null;
 
 const TABS: { id: Tab; label: string; icon: 'home' | 'book' | 'chart' | 'user' }[] = [
   { id: 'home',    label: 'Journal', icon: 'home' },
@@ -55,6 +70,22 @@ function Toast({ message }: { message: string | null }) {
       <Text style={styles.toastText}>{message}</Text>
     </Animated.View>
   );
+}
+
+// ── Fade transition wrapper ───────────────────────────────────
+
+function FadeScreen({ children, screenKey }: { children: React.ReactNode; screenKey: string }) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    opacity.setValue(0);
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 350,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [screenKey]);
+  return <Animated.View style={{ flex: 1, opacity }}>{children}</Animated.View>;
 }
 
 // ── Tabbar ────────────────────────────────────────────────────
@@ -103,21 +134,74 @@ function PlaceholderScreen({ title }: { title: string }) {
 // ── App Shell ─────────────────────────────────────────────────
 
 export function AppShell() {
+  console.log('[AppShell] render start');
+
+  // ── All hooks must be declared before any conditional return ──
   const [tab, setTab] = useState<Tab>('home');
   const [stack, setStack] = useState<StackScreen>(null);
   const [selectedFood, setSelectedFood] = useState<Food>(DETAIL_FOOD);
-  const [meals, setMeals] = useState<Meal[]>(INITIAL_MEALS);
-  const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const [toast, setToast] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [detailOrigin, setDetailOrigin] = useState<'search' | null>(null);
+  const [selectedPlate, setSelectedPlate] = useState<SavedPlate | null>(null);
+  const [plateForEdit, setPlateForEdit] = useState<SavedPlate | null>(null);
+
+  const [profile, setProfile, profileLoading] = usePersistedState<UserProfile>(
+    KEYS.profile,
+    DEFAULT_PROFILE,
+  );
+  const [foodList, setFoodList, foodsLoading] = usePersistedState<Food[]>(
+    KEYS.foods,
+    [DETAIL_FOOD],
+  );
+  const [settings, setSettings] = usePersistedState<AppSettings>(
+    KEYS.settings,
+    DEFAULT_SETTINGS,
+  );
+  const [meals, setMeals, mealsLoading] = usePersistedState<Meal[]>(
+    KEYS.meals,
+    INITIAL_MEALS,
+  );
+  const [savedPlates, setSavedPlates] = usePersistedState<SavedPlate[]>(
+    KEYS.savedPlates,
+    SAVED_PLATES,
+  );
+
+  console.log(`[AppShell] loading — profile:${profileLoading} foods:${foodsLoading} meals:${mealsLoading}`);
+
+  // Reset meals daily
+  useEffect(() => {
+    if (mealsLoading) return;
+    console.log('[AppShell] checking daily reset…');
+    load<string>(KEYS.mealsDate).then((storedDate) => {
+      const today = todayStr();
+      console.log(`[AppShell] mealsDate stored="${storedDate}" today="${today}"`);
+      if (storedDate !== today) {
+        console.log('[AppShell] resetting meals for new day');
+        setMeals(INITIAL_MEALS);
+        save(KEYS.mealsDate, today);
+      }
+    });
+  }, [mealsLoading]);
+
+  const appLoading = profileLoading || foodsLoading || mealsLoading;
+
+  if (appLoading) {
+    console.log('[AppShell] still loading — showing spinner');
+    return (
+      <View style={styles.loadingScreen}>
+        <ActivityIndicator color={Colors.ink} />
+      </View>
+    );
+  }
+
+  console.log(`[AppShell] ready — tab:${tab} stack:${stack} foods:${foodList.length} plates:${savedPlates.length}`);
 
   const showTab = (t: Tab) => {
+    console.log(`[AppShell] showTab → ${t}`);
     setStack(null);
     setTab(t);
   };
-
-  const [detailOrigin, setDetailOrigin] = useState<'search' | null>(null);
-  const [selectedPlate, setSelectedPlate] = useState<SavedPlate | null>(null);
 
   const openSearch = () => setStack('search');
 
@@ -212,6 +296,17 @@ export function AppShell() {
     }));
   };
 
+  const handleSavePlate = (plate: SavedPlate) => {
+    setSavedPlates((prev) => {
+      const exists = prev.some((p) => p.id === plate.id);
+      return exists ? prev.map((p) => (p.id === plate.id ? plate : p)) : [...prev, plate];
+    });
+    setStack(null);
+    setTab('saved');
+    setToast(plateForEdit ? `« ${plate.name} » mis à jour` : `« ${plate.name} » sauvegardé`);
+    setTimeout(() => setToast(null), 2600);
+  };
+
   const showTabs = stack === null;
 
   // ── Active screen ────────────────────────────────────────
@@ -221,8 +316,13 @@ export function AppShell() {
   if (stack === 'search') {
     screen = (
       <SearchScreen
+        foodList={foodList}
         onBack={() => setStack(null)}
-        onPickItem={() => openDetail(DETAIL_FOOD, 'search')}
+        onPickItem={(food) => openDetail(food, 'search')}
+        onAddWithAI={() => setStack('addFood')}
+        onOpenFoodFacts={() => setStack('openFoodFacts')}
+        onOpenCIQUAL={() => setStack('ciqual')}
+        onOpenScanner={() => setStack('scanner')}
       />
     );
   } else if (stack === 'detail') {
@@ -251,6 +351,81 @@ export function AppShell() {
         onBack={() => setStack(null)}
       />
     );
+  } else if (stack === 'scanner') {
+    screen = (
+      <BarcodeScannerScreen
+        existingIds={new Set(foodList.map((f) => f.id))}
+        onImport={(food) => {
+          setFoodList((prev) => [...prev, food]);
+          setToast(`« ${food.name} » ajouté à ta liste`);
+          setTimeout(() => setToast(null), 2600);
+        }}
+        onBack={() => setStack('search')}
+      />
+    );
+  } else if (stack === 'ciqual') {
+    screen = (
+      <CIQUALScreen
+        existingIds={new Set(foodList.map((f) => f.id))}
+        onImport={(food) => {
+          setFoodList((prev) => [...prev, food]);
+          setToast(`« ${food.name} » ajouté à ta liste`);
+          setTimeout(() => setToast(null), 2600);
+        }}
+        onBack={() => setStack('search')}
+      />
+    );
+  } else if (stack === 'openFoodFacts') {
+    screen = (
+      <OpenFoodFactsScreen
+        existingIds={new Set(foodList.map((f) => f.id))}
+        onImport={(food) => {
+          setFoodList((prev) => [...prev, food]);
+          setToast(`« ${food.name} » ajouté à ta liste`);
+          setTimeout(() => setToast(null), 2600);
+        }}
+        onBack={() => setStack('search')}
+      />
+    );
+  } else if (stack === 'addFood') {
+    screen = (
+      <AddFoodScreen
+        settings={settings}
+        onAdd={(food) => {
+          setFoodList((prev) => [...prev, food]);
+          setStack('search');
+          setToast(`« ${food.name} » ajouté à ta liste`);
+          setTimeout(() => setToast(null), 2600);
+        }}
+        onBack={() => setStack('search')}
+      />
+    );
+  } else if (stack === 'editSavedPlate') {
+    screen = (
+      <EditSavedPlateScreen
+        plate={plateForEdit}
+        onSave={handleSavePlate}
+        onBack={() => setStack(null)}
+      />
+    );
+  } else if (stack === 'settings') {
+    screen = (
+      <SettingsScreen
+        settings={settings}
+        foodList={foodList}
+        onSave={setSettings}
+        onImportFoods={(foods) => {
+          const existing = new Set(foodList.map((f) => f.id));
+          const newFoods = foods.filter((f) => !existing.has(f.id));
+          setFoodList([...foodList, ...newFoods]);
+        }}
+        onBack={() => setStack(null)}
+        showToast={(msg) => {
+          setToast(msg);
+          setTimeout(() => setToast(null), 2600);
+        }}
+      />
+    );
   } else {
     switch (tab) {
       case 'home':
@@ -265,7 +440,20 @@ export function AppShell() {
         );
         break;
       case 'saved':
-        screen = <SavedScreen onOpenPlate={openSavedDetail} />;
+        screen = (
+          <SavedScreen
+            plates={savedPlates}
+            onOpenPlate={openSavedDetail}
+            onCreatePlate={() => {
+              setPlateForEdit(null);
+              setStack('editSavedPlate');
+            }}
+            onEditPlate={(plate) => {
+              setPlateForEdit(plate);
+              setStack('editSavedPlate');
+            }}
+          />
+        );
         break;
       case 'stats':
         screen = <StatsScreen />;
@@ -291,9 +479,13 @@ export function AppShell() {
     goal: profile.goal,
   };
 
+  const screenKey = stack ?? tab;
+
   return (
     <View style={styles.container}>
-      <View style={styles.screenWrap}>{screen}</View>
+      <FadeScreen screenKey={screenKey}>
+        <View style={styles.screenWrap}>{screen}</View>
+      </FadeScreen>
       {showTabs && <Tabbar activeTab={tab} onSelect={showTab} />}
       <Toast message={toast} />
       <DrawerMenu
@@ -301,6 +493,7 @@ export function AppShell() {
         activeTab={tab}
         profile={drawerProfile}
         onNavigate={(t) => showTab(t)}
+        onOpenSettings={() => setStack('settings')}
         onClose={() => setDrawerOpen(false)}
       />
     </View>
@@ -365,6 +558,12 @@ const styles = StyleSheet.create({
     color: Colors.paper2,
   },
 
+  loadingScreen: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.paper,
+  },
   placeholder: {
     flex: 1,
     alignItems: 'center',

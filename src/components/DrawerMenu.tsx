@@ -36,6 +36,7 @@ interface DrawerMenuProps {
   activeTab: Tab;
   profile: { initial: string; name: string; diet: string; goal: string };
   onNavigate: (tab: Tab) => void;
+  onOpenSettings: () => void;
   onClose: () => void;
 }
 
@@ -44,6 +45,7 @@ export function DrawerMenu({
   activeTab,
   profile,
   onNavigate,
+  onOpenSettings,
   onClose,
 }: DrawerMenuProps) {
   const insets = useSafeAreaInsets();
@@ -157,6 +159,14 @@ export function DrawerMenu({
         {/* Footer */}
         <View style={styles.drawerFooter}>
           <View style={styles.separator} />
+          <TouchableOpacity
+            style={styles.settingsBtn}
+            onPress={() => { onOpenSettings(); onClose(); }}
+            activeOpacity={0.7}
+          >
+            <Icon name="settings" size={16} color={Colors.muted} />
+            <Text style={styles.settingsBtnText}>Paramètres</Text>
+          </TouchableOpacity>
           <Text style={styles.footerBrand}>Nutritor</Text>
           <Text style={styles.footerTagline}>Allergies & micronutriments</Text>
         </View>
@@ -303,6 +313,18 @@ const styles = StyleSheet.create({
   drawerFooter: {
     marginTop: 'auto',
     paddingTop: 16,
+  },
+  settingsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  settingsBtnText: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.muted,
   },
   footerBrand: {
     fontFamily: Fonts.serif,

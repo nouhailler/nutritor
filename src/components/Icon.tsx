@@ -20,7 +20,16 @@ type IconName =
   | 'bookmark'
   | 'arrow-right'
   | 'sparkle'
-  | 'leaf';
+  | 'leaf'
+  | 'settings'
+  | 'refresh'
+  | 'upload'
+  | 'download'
+  | 'key'
+  | 'cpu'
+  | 'database'
+  | 'trash'
+  | 'edit';
 
 const FEATHER_MAP: Record<IconName, keyof typeof Feather.glyphMap> = {
   menu: 'menu',
@@ -41,6 +50,15 @@ const FEATHER_MAP: Record<IconName, keyof typeof Feather.glyphMap> = {
   'arrow-right': 'arrow-right',
   sparkle: 'star',
   leaf: 'feather',
+  settings: 'settings',
+  refresh: 'refresh-cw',
+  upload: 'upload',
+  download: 'download',
+  key: 'key',
+  cpu: 'cpu',
+  database: 'database',
+  trash: 'trash-2',
+  edit: 'edit-2',
 };
 
 interface IconProps {

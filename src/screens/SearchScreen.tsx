@@ -12,13 +12,31 @@ import { Icon } from '../components/Icon';
 import {
   RECENT,
   SEARCH_FILTERS,
-  SEARCH_RESULTS,
-  RecentItem,
   SearchFilter,
   SearchResult,
   TagKind,
 } from '../data/search';
+import { useDebounce } from '../hooks/useDebounce';
 import { Colors, Fonts } from '../theme/tokens';
+import { Food } from '../types';
+
+function foodToSearchResult(food: Food): SearchResult {
+  const kcal = Math.round((food.per100.kcal * food.defaultPortion) / 100);
+  return {
+    id: food.id,
+    name: food.name,
+    brand: food.brand,
+    portion: `${food.defaultPortion} ${food.unit}`,
+    kcal,
+    glyph: food.name.charAt(0).toUpperCase(),
+    tags: food.compat.map((c) => ({ label: c.label, kind: c.kind as TagKind })),
+    macros: {
+      protein: food.per100.protein,
+      carbs: food.per100.carbs,
+      fat: food.per100.fat,
+    },
+  };
+}
 
 // ── Tag pill ─────────────────────────────────────────────────
 
@@ -87,21 +105,28 @@ function SectionLabel({ left, right }: { left: string; right?: string }) {
 // ── Search screen ─────────────────────────────────────────────
 
 interface Props {
+  foodList: Food[];
   onBack: () => void;
-  onPickItem: () => void;
+  onPickItem: (food: Food) => void;
+  onAddWithAI: () => void;
+  onOpenFoodFacts: () => void;
+  onOpenCIQUAL: () => void;
+  onOpenScanner: () => void;
 }
 
-export function SearchScreen({ onBack, onPickItem }: Props) {
+export function SearchScreen({ foodList, onBack, onPickItem, onAddWithAI, onOpenFoodFacts, onOpenCIQUAL, onOpenScanner }: Props) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
+  const debouncedQuery = useDebounce(query, 300);
   const [filters, setFilters] = useState<SearchFilter[]>(SEARCH_FILTERS);
 
   const toggle = (id: string) =>
     setFilters((fs) => fs.map((f) => (f.id === id ? { ...f, active: !f.active } : f)));
 
-  const filtered = SEARCH_RESULTS.filter(
-    (item) => !query || item.name.toLowerCase().includes(query.toLowerCase())
+  const allResults = foodList.map(foodToSearchResult);
+  const filtered = allResults.filter(
+    (item) => !debouncedQuery || item.name.toLowerCase().includes(debouncedQuery.toLowerCase())
   );
   const compatible   = filtered.filter((i) => !i.incompatible);
   const incompatible = filtered.filter((i) => i.incompatible);
@@ -119,7 +144,7 @@ export function SearchScreen({ onBack, onPickItem }: Props) {
             <Text style={styles.title}>Ajouter un aliment</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={onOpenScanner}>
           <Icon name="scan" size={20} color={Colors.ink} />
         </TouchableOpacity>
       </View>
@@ -190,7 +215,10 @@ export function SearchScreen({ onBack, onPickItem }: Props) {
             kcal={item.kcal}
             glyph={item.glyph}
             tags={item.tags}
-            onPress={onPickItem}
+            onPress={() => {
+              const food = foodList.find((f) => f.id === item.id);
+              if (food) onPickItem(food);
+            }}
           />
         ))}
 
@@ -208,7 +236,10 @@ export function SearchScreen({ onBack, onPickItem }: Props) {
                   kcal={item.kcal}
                   glyph={item.glyph}
                   tags={item.tags}
-                  onPress={onPickItem}
+                  onPress={() => {
+                    const food = foodList.find((f) => f.id === item.id);
+                    if (food) onPickItem(food);
+                  }}
                 />
               ))}
             </View>
@@ -217,7 +248,7 @@ export function SearchScreen({ onBack, onPickItem }: Props) {
 
         {/* Recents */}
         <SectionLabel left="Récents" />
-        {RECENT.map((item: RecentItem) => (
+        {RECENT.map((item) => (
           <ResultRow
             key={item.id}
             name={item.name}
@@ -226,9 +257,36 @@ export function SearchScreen({ onBack, onPickItem }: Props) {
             kcal={item.kcal}
             glyph={item.glyph}
             tags={[{ label: 'récent', kind: '' }]}
-            onPress={onPickItem}
+            onPress={() => {
+              const food = foodList.find((f) => f.id === item.id);
+              if (food) onPickItem(food);
+            }}
           />
         ))}
+
+        {/* Add with AI / OFF */}
+        <View style={styles.aiSection}>
+          <View style={styles.aiDivider}>
+            <View style={styles.aiDividerLine} />
+            <Text style={styles.aiDividerText}>ajouter un aliment</Text>
+            <View style={styles.aiDividerLine} />
+          </View>
+          <View style={styles.addBtns}>
+            <TouchableOpacity style={styles.ciqualBtn} onPress={onOpenCIQUAL} activeOpacity={0.8}>
+              <Icon name="database" size={14} color={Colors.signal} />
+              <Text style={styles.ciqualBtnText}>CIQUAL</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.offBtn} onPress={onOpenFoodFacts} activeOpacity={0.8}>
+              <Icon name="search" size={14} color={Colors.ok} />
+              <Text style={styles.offBtnText}>Open Food Facts</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.aiBtn} onPress={onAddWithAI} activeOpacity={0.8}>
+              <Icon name="sparkle" size={14} color={Colors.paper2} />
+              <Text style={styles.aiBtnText}>IA</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.aiHint}>CIQUAL · 3 167 FR  ·  OFF · 3M mondial  ·  IA · données complètes</Text>
+        </View>
       </ScrollView>
     </View>
   );
@@ -446,5 +504,74 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.sans,
     fontSize: 10,
     color: Colors.muted,
+  },
+
+  aiSection: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 12 },
+  aiDivider: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  aiDividerLine: { flex: 1, height: 1, backgroundColor: Colors.hairline2 },
+  aiDividerText: {
+    fontFamily: Fonts.mono,
+    fontSize: 8,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    color: Colors.muted2,
+  },
+  addBtns: { flexDirection: 'row', gap: 6 },
+  ciqualBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    borderRadius: 100,
+    paddingVertical: 13,
+    borderWidth: 1,
+    borderColor: 'rgba(107,90,46,0.35)',
+    backgroundColor: 'rgba(107,90,46,0.07)',
+  },
+  ciqualBtnText: {
+    fontFamily: Fonts.sansSemiBold,
+    fontSize: 12,
+    color: Colors.signal,
+  },
+  offBtn: {
+    flex: 1.4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    borderRadius: 100,
+    paddingVertical: 13,
+    borderWidth: 1,
+    borderColor: 'rgba(63,90,58,0.35)',
+    backgroundColor: 'rgba(63,90,58,0.07)',
+  },
+  offBtnText: {
+    fontFamily: Fonts.sansSemiBold,
+    fontSize: 12,
+    color: Colors.ok,
+  },
+  aiBtn: {
+    flex: 0.7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: Colors.ink,
+    borderRadius: 100,
+    paddingVertical: 13,
+  },
+  aiBtnText: {
+    fontFamily: Fonts.sansSemiBold,
+    fontSize: 12,
+    color: Colors.paper2,
+  },
+  aiHint: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: Colors.muted2,
+    textAlign: 'center',
   },
 });

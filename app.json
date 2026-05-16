@@ -16,15 +16,22 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.nutritor.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": ["android.permission.CAMERA"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "46d09cc8-95ed-4674-83e5-af1aafe48d57"
+      }
     }
   }
 }
