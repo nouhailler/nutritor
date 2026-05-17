@@ -15,17 +15,18 @@ import { Colors, Fonts } from '../theme/tokens';
 const DRAWER_WIDTH = 290;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-type Tab = 'home' | 'saved' | 'stats' | 'profile';
+type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile';
 
 interface NavItem {
   id: Tab;
   label: string;
-  icon: 'home' | 'book' | 'chart' | 'user';
+  icon: 'home' | 'leaf' | 'book' | 'chart' | 'user';
   description: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'home',    label: 'Journal',    icon: 'home',  description: 'Bilan du jour' },
+  { id: 'foods',   label: 'Aliments',   icon: 'leaf',  description: 'Ma bibliothèque d\'aliments' },
   { id: 'saved',   label: 'Plats',      icon: 'book',  description: 'Mes repas sauvegardés' },
   { id: 'stats',   label: 'Statistiques', icon: 'chart', description: 'Tendances hebdomadaires' },
   { id: 'profile', label: 'Profil',     icon: 'user',  description: 'Allergies & objectifs' },

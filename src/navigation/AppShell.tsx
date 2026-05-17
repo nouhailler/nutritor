@@ -24,9 +24,10 @@ import { SavedScreen } from '../screens/SavedScreen';
 import { SavedDetailScreen } from '../screens/SavedDetailScreen';
 import { EditSavedPlateScreen } from '../screens/EditSavedPlateScreen';
 import { SearchScreen } from '../screens/SearchScreen';
+import { FoodListScreen } from '../screens/FoodListScreen';
 import { Colors, Fonts } from '../theme/tokens';
 import { Food, Meal } from '../types';
-import { SAVED_PLATES, SavedPlate } from '../data/saved';
+import { SAVED_PLATES, SavedPlate, SavedPlateItem } from '../data/saved';
 import { usePersistedState } from '../storage/usePersistedState';
 import { KEYS, load, save } from '../storage/store';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -42,14 +43,15 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
-type Tab = 'home' | 'saved' | 'stats' | 'profile';
+type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile';
 type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | null;
 
-const TABS: { id: Tab; label: string; icon: 'home' | 'book' | 'chart' | 'user' }[] = [
-  { id: 'home',    label: 'Journal', icon: 'home' },
-  { id: 'saved',   label: 'Plats',   icon: 'book' },
-  { id: 'stats',   label: 'Stats',   icon: 'chart' },
-  { id: 'profile', label: 'Profil',  icon: 'user' },
+const TABS: { id: Tab; label: string; icon: 'home' | 'leaf' | 'book' | 'chart' | 'user' }[] = [
+  { id: 'home',    label: 'Journal',  icon: 'home' },
+  { id: 'foods',   label: 'Aliments', icon: 'leaf' },
+  { id: 'saved',   label: 'Plats',    icon: 'book' },
+  { id: 'stats',   label: 'Stats',    icon: 'chart' },
+  { id: 'profile', label: 'Profil',   icon: 'user' },
 ];
 
 // ── Toast ─────────────────────────────────────────────────────
@@ -364,6 +366,37 @@ export function AppShell() {
     setFoodList((prev) => prev.map((f) => (f.id === food.id ? food : f)));
   };
 
+  const handleAddFoodToPlate = (food: Food, plateId: string) => {
+    const plate = savedPlates.find((p) => p.id === plateId);
+    if (!plate) return;
+    const portion = food.defaultPortion;
+    const item: SavedPlateItem = {
+      name: food.name,
+      qty: `${portion} ${food.unit}`,
+      kcal: Math.round((food.per100.kcal * portion) / 100),
+      macros: {
+        protein: Math.round((food.per100.protein * portion) / 100 * 10) / 10,
+        carbs:   Math.round((food.per100.carbs   * portion) / 100 * 10) / 10,
+        fat:     Math.round((food.per100.fat     * portion) / 100 * 10) / 10,
+      },
+    };
+    setSavedPlates((prev) =>
+      prev.map((p) => p.id !== plateId ? p : {
+        ...p,
+        recipe: [...p.recipe, item],
+        items: p.items + 1,
+        kcal: p.kcal + item.kcal,
+        macros: {
+          protein: Math.round((p.macros.protein + item.macros.protein) * 10) / 10,
+          carbs:   Math.round((p.macros.carbs   + item.macros.carbs)   * 10) / 10,
+          fat:     Math.round((p.macros.fat     + item.macros.fat)     * 10) / 10,
+        },
+      })
+    );
+    setToast(`« ${food.name} » ajouté à « ${plate.name} »`);
+    setTimeout(() => setToast(null), 2600);
+  };
+
   const handleRemoveItem = (mealId: string, itemIdx: number) => {
     updateViewedMeals((ms) =>
       ms.map((m) =>
@@ -548,6 +581,22 @@ export function AppShell() {
             onRemoveItem={handleRemoveItem}
             onOpenMenu={() => setDrawerOpen(true)}
             onOpenSearch={openSearch}
+          />
+        );
+        break;
+      case 'foods':
+        screen = (
+          <FoodListScreen
+            foodList={foodList}
+            savedPlates={savedPlates}
+            profile={profile}
+            onPickFood={(food) => openDetail(food, null)}
+            onAddToPlate={handleAddFoodToPlate}
+            onOpenMenu={() => setDrawerOpen(true)}
+            onAddWithAI={(q) => { setPendingQuery(q); setStack('addFood'); }}
+            onOpenFoodFacts={(q) => { setPendingQuery(q); setStack('openFoodFacts'); }}
+            onOpenCIQUAL={(q) => { setPendingQuery(q); setStack('ciqual'); }}
+            onOpenScanner={() => setStack('scanner')}
           />
         );
         break;
