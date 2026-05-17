@@ -4,6 +4,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -188,6 +189,7 @@ export function EditSavedPlateScreen({ plate, allPlates, onSave, onBack }: Props
   const [timeMin, setTimeMin] = useState(plate ? String(plate.timeMin) : '');
   const [tags, setTags] = useState<string[]>(plate?.tags ?? []);
   const [photo, setPhoto] = useState<string | undefined>(plate?.photo);
+  const [pendingPhoto, setPendingPhoto] = useState<string | undefined>();
   const [pairedWith, setPairedWith] = useState<string[]>(plate?.pairedWith ?? []);
   const [pairingQuery, setPairingQuery] = useState('');
   const [pairingSugOpen, setPairingSugOpen] = useState(false);
@@ -230,14 +232,12 @@ export function EditSavedPlateScreen({ plate, allPlates, onSave, onBack }: Props
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [16, 10],
-      quality: 0.7,
+      quality: 0.8,
       base64: true,
     });
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
-      setPhoto(asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri);
+      setPendingPhoto(asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri);
     }
   };
 
@@ -318,6 +318,51 @@ export function EditSavedPlateScreen({ plate, allPlates, onSave, onBack }: Props
   };
 
   return (
+    <>
+    {/* ── Photo confirmation modal ── */}
+    <Modal
+      visible={!!pendingPhoto}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={() => setPendingPhoto(undefined)}
+    >
+      <View style={styles.confirmOverlay}>
+        <View style={[styles.confirmHeader, { paddingTop: insets.top + 16 }]}>
+          <TouchableOpacity onPress={() => setPendingPhoto(undefined)} activeOpacity={0.7} style={styles.confirmClose}>
+            <Icon name="close" size={20} color={Colors.paper2} />
+          </TouchableOpacity>
+          <Text style={styles.confirmTitle}>Valider la photo ?</Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <Image
+          source={{ uri: pendingPhoto ?? '' }}
+          style={styles.confirmImage}
+          resizeMode="contain"
+        />
+
+        <View style={[styles.confirmActions, { paddingBottom: insets.bottom + 24 }]}>
+          <TouchableOpacity
+            style={styles.retakeBtn}
+            onPress={() => { setPendingPhoto(undefined); takePhoto(); }}
+            activeOpacity={0.8}
+          >
+            <Icon name="refresh" size={16} color={Colors.paper2} />
+            <Text style={styles.retakeBtnText}>Reprendre</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.validateBtn}
+            onPress={() => { setPhoto(pendingPhoto!); setPendingPhoto(undefined); }}
+            activeOpacity={0.8}
+          >
+            <Icon name="check" size={18} color={Colors.paper2} />
+            <Text style={styles.validateBtnText}>Utiliser cette photo</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -527,6 +572,7 @@ export function EditSavedPlateScreen({ plate, allPlates, onSave, onBack }: Props
         </ScrollView>
       </View>
     </KeyboardAvoidingView>
+    </>
   );
 }
 
@@ -954,5 +1000,72 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.sans,
     fontSize: 12,
     color: Colors.muted2,
+  },
+
+  // ── Photo confirmation modal ───────────────────────────────
+  confirmOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15,12,8,0.96)',
+    justifyContent: 'space-between',
+  },
+  confirmHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  confirmClose: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmTitle: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 16,
+    color: Colors.paper2,
+    letterSpacing: 0.1,
+  },
+  confirmImage: {
+    flex: 1,
+    width: '100%',
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  retakeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: 'rgba(247,242,231,0.25)',
+  },
+  retakeBtnText: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 14,
+    color: Colors.paper2,
+  },
+  validateBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 100,
+    backgroundColor: Colors.ok,
+  },
+  validateBtnText: {
+    fontFamily: Fonts.sansSemiBold,
+    fontSize: 15,
+    color: Colors.paper2,
+    letterSpacing: 0.1,
   },
 });
