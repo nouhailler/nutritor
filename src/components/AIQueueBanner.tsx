@@ -1,8 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AIJobSnapshot } from '../services/aiQueue';
 import { Colors, Fonts } from '../theme/tokens';
+
+const SNOOZE_MS = 10_000;
 
 interface Props {
   jobs: AIJobSnapshot[];
@@ -26,17 +28,48 @@ function PulseDot() {
 export function AIQueueBanner({ jobs, hasTabBar, onDismiss }: Props) {
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(80)).current;
-  const visible = jobs.length > 0;
+  const [snoozed, setSnoozed] = useState(false);
+  const snoozeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const hasJobs = jobs.length > 0;
+  const effectiveVisible = hasJobs && !snoozed;
 
   useEffect(() => {
     Animated.timing(slideAnim, {
-      toValue: visible ? 0 : 80,
+      toValue: effectiveVisible ? 0 : 80,
       duration: 260,
       useNativeDriver: true,
     }).start();
-  }, [visible]);
+  }, [effectiveVisible]);
 
-  if (jobs.length === 0) return null;
+  // Clear snooze when jobs are gone
+  useEffect(() => {
+    if (!hasJobs) {
+      if (snoozeTimer.current) {
+        clearTimeout(snoozeTimer.current);
+        snoozeTimer.current = null;
+      }
+      setSnoozed(false);
+    }
+  }, [hasJobs]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (snoozeTimer.current) clearTimeout(snoozeTimer.current);
+    };
+  }, []);
+
+  if (!hasJobs) return null;
+
+  const handleSnooze = () => {
+    if (snoozeTimer.current) clearTimeout(snoozeTimer.current);
+    setSnoozed(true);
+    snoozeTimer.current = setTimeout(() => {
+      setSnoozed(false);
+      snoozeTimer.current = null;
+    }, SNOOZE_MS);
+  };
 
   const running = jobs.find((j) => j.status === 'running');
   const pending = jobs.filter((j) => j.status === 'pending');
@@ -44,7 +77,6 @@ export function AIQueueBanner({ jobs, hasTabBar, onDismiss }: Props) {
   const done    = jobs.filter((j) => j.status === 'done');
   const allFinished = jobs.every((j) => j.status === 'done' || j.status === 'error');
 
-  // Bottom offset: above tab bar when visible, otherwise just above safe area
   const TAB_H = 62;
   const bottomOffset = hasTabBar ? insets.bottom + TAB_H : insets.bottom + 12;
 
@@ -79,7 +111,8 @@ export function AIQueueBanner({ jobs, hasTabBar, onDismiss }: Props) {
         allFinished && !isError && styles.bannerDone,
       ]}
     >
-      <View style={styles.left}>
+      {/* Main content — tap to snooze 10 s */}
+      <TouchableOpacity style={styles.left} onPress={handleSnooze} activeOpacity={0.75}>
         {running ? <PulseDot /> : (
           <Text style={[styles.iconText, isError && styles.iconError, allFinished && !isError && styles.iconDone]}>
             {icon}
@@ -87,10 +120,13 @@ export function AIQueueBanner({ jobs, hasTabBar, onDismiss }: Props) {
         )}
         <View style={styles.texts}>
           <Text style={styles.mainText} numberOfLines={1}>{mainText}</Text>
-          {subText ? <Text style={styles.subText} numberOfLines={1}>{subText}</Text> : null}
+          {subText ? (
+            <Text style={styles.subText} numberOfLines={1}>{subText}</Text>
+          ) : null}
         </View>
-      </View>
+      </TouchableOpacity>
 
+      {/* Permanent dismiss when all done */}
       {allFinished && (
         <TouchableOpacity onPress={onDismiss} style={styles.dismissBtn} activeOpacity={0.7}>
           <Text style={styles.dismissText}>Fermer</Text>
@@ -120,12 +156,8 @@ const styles = StyleSheet.create({
     elevation: 10,
     zIndex: 60,
   },
-  bannerError: {
-    backgroundColor: '#8B3A2E',
-  },
-  bannerDone: {
-    backgroundColor: '#3F5A3A',
-  },
+  bannerError: { backgroundColor: '#8B3A2E' },
+  bannerDone:  { backgroundColor: '#3F5A3A' },
 
   left: {
     flex: 1,
@@ -150,7 +182,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   iconError: { color: '#FDDDD9' },
-  iconDone: { color: '#D6EDD3' },
+  iconDone:  { color: '#D6EDD3' },
 
   texts: { flex: 1, minWidth: 0 },
   mainText: {
