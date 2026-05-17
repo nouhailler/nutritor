@@ -548,7 +548,6 @@ export function AppShell() {
             onRemoveItem={handleRemoveItem}
             onOpenMenu={() => setDrawerOpen(true)}
             onOpenSearch={openSearch}
-            onOpenProfile={() => showTab('profile')}
           />
         );
         break;

@@ -12,7 +12,7 @@ import { Icon } from '../components/Icon';
 import { CalendarModal } from '../components/CalendarModal';
 import { HelpButton, HelpModal } from '../components/HelpModal';
 import { HELP } from '../data/helpContent';
-import { UserProfile, Vitamin, computeDietLabel } from '../data/user';
+import { UserProfile, Vitamin } from '../data/user';
 import { Colors, Fonts } from '../theme/tokens';
 import { Meal } from '../types';
 
@@ -264,7 +264,6 @@ interface HomeScreenProps {
   onRemoveItem: (mealId: string, itemIdx: number) => void;
   onOpenMenu: () => void;
   onOpenSearch: () => void;
-  onOpenProfile: () => void;
 }
 
 export function HomeScreen({
@@ -276,7 +275,6 @@ export function HomeScreen({
   onRemoveItem,
   onOpenMenu,
   onOpenSearch,
-  onOpenProfile,
 }: HomeScreenProps) {
   const insets = useSafeAreaInsets();
   const [helpVisible, setHelpVisible] = useState(false);
@@ -322,16 +320,6 @@ export function HomeScreen({
         <View style={styles.topbar}>
           <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
             <Icon name="menu" size={22} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.profilePill}
-            onPress={onOpenProfile}
-            activeOpacity={0.8}
-          >
-            <View style={styles.profileAv}>
-              <Text style={styles.profileAvText}>{profile.initial}</Text>
-            </View>
-            <Text style={styles.profileDiet} numberOfLines={1}>{computeDietLabel(profile.diets)}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn} onPress={() => setCalendarVisible(true)} activeOpacity={0.7}>
             <Icon name="calendar" size={18} color={!isToday ? Colors.signal : Colors.ink} />
@@ -475,37 +463,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-
-  profilePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: Colors.hairline,
-    backgroundColor: Colors.card,
-    borderRadius: 100,
-    paddingVertical: 4,
-    paddingLeft: 4,
-    paddingRight: 11,
-  },
-  profileAv: {
-    width: 26, height: 26,
-    borderRadius: 13,
-    backgroundColor: Colors.ink,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileAvText: {
-    fontFamily: Fonts.serif,
-    fontSize: 12,
-    color: Colors.paper2,
-  },
-  profileDiet: {
-    fontFamily: Fonts.sans,
-    fontSize: 12,
-    color: Colors.ink2,
-    flexShrink: 1,
   },
 
   // Date nav bar
