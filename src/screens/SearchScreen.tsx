@@ -276,6 +276,7 @@ export function SearchScreen({ foodList, profile, onBack, onPickItem, onDeleteFo
 
       {/* Results */}
       <ScrollView
+        style={styles.resultsList}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: 40 }}
@@ -416,11 +417,13 @@ const styles = StyleSheet.create({
     color: Colors.muted,
   },
 
+  resultsList: { flex: 1 },
+
   filterStrip: {
     flexDirection: 'row',
     gap: 8,
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: 14,
   },
   chip: {
     flexDirection: 'row',
@@ -431,7 +434,7 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     borderWidth: 1,
     borderColor: Colors.hairline,
-    backgroundColor: 'transparent',
+    backgroundColor: Colors.paper2,
   },
   chipActive: {
     backgroundColor: Colors.ink,
