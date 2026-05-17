@@ -11,6 +11,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { DrawerMenu } from '../components/DrawerMenu';
+import { AIQueueBanner } from '../components/AIQueueBanner';
+import { aiQueue, AIJobSnapshot } from '../services/aiQueue';
 import { DETAIL_FOOD, INITIAL_MEALS } from '../data/food';
 import { DEFAULT_PROFILE, UserProfile, computeDietLabel } from '../data/user';
 import { HomeScreen } from '../screens/HomeScreen';
@@ -144,6 +146,7 @@ export function AppShell() {
   const [selectedFood, setSelectedFood] = useState<Food>(DETAIL_FOOD);
   const [toast, setToast] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [queueJobs, setQueueJobs] = useState<AIJobSnapshot[]>([]);
   const [detailOrigin, setDetailOrigin] = useState<'search' | null>(null);
   const [selectedPlate, setSelectedPlate] = useState<SavedPlate | null>(null);
   const [plateForEdit, setPlateForEdit] = useState<SavedPlate | null>(null);
@@ -199,6 +202,12 @@ export function AppShell() {
       }
     });
   }, [mealsLoading, journalLoading]);
+
+  // Subscribe to AI queue for banner updates
+  useEffect(() => {
+    const unsub = aiQueue.subscribe(setQueueJobs);
+    return unsub;
+  }, []);
 
   // One-time migration: recompute CIQUAL allergens for stored foods
   useEffect(() => {
@@ -351,6 +360,10 @@ export function AppShell() {
     setTimeout(() => setToast(null), 2600);
   };
 
+  const handleUpdateFood = (food: Food) => {
+    setFoodList((prev) => prev.map((f) => (f.id === food.id ? food : f)));
+  };
+
   const handleRemoveItem = (mealId: string, itemIdx: number) => {
     updateViewedMeals((ms) =>
       ms.map((m) =>
@@ -466,9 +479,8 @@ export function AppShell() {
         settings={settings}
         onImport={(food) => {
           setFoodList((prev) => [...prev, food]);
-          setToast(`« ${food.name} » ajouté à ta liste`);
-          setTimeout(() => setToast(null), 2600);
         }}
+        onUpdateFood={handleUpdateFood}
         onBack={() => setStack('search')}
       />
     );
@@ -480,9 +492,8 @@ export function AppShell() {
         settings={settings}
         onImport={(food) => {
           setFoodList((prev) => [...prev, food]);
-          setToast(`« ${food.name} » ajouté à ta liste`);
-          setTimeout(() => setToast(null), 2600);
         }}
+        onUpdateFood={handleUpdateFood}
         onBack={() => setStack('search')}
       />
     );
@@ -493,9 +504,6 @@ export function AppShell() {
         settings={settings}
         onAdd={(food) => {
           setFoodList((prev) => [...prev, food]);
-          setStack('search');
-          setToast(`« ${food.name} » ajouté à ta liste`);
-          setTimeout(() => setToast(null), 2600);
         }}
         onBack={() => setStack('search')}
       />
@@ -602,6 +610,11 @@ export function AppShell() {
       </FadeScreen>
       {showTabs && <Tabbar activeTab={tab} onSelect={showTab} />}
       <Toast message={toast} />
+      <AIQueueBanner
+        jobs={queueJobs}
+        hasTabBar={showTabs}
+        onDismiss={() => aiQueue.dismissCompleted()}
+      />
       <DrawerMenu
         visible={drawerOpen}
         activeTab={tab}

@@ -17,29 +17,17 @@ import { Food } from '../types';
 import { AppSettings } from '../types/settings';
 import { OFFProduct, offProductToFood, searchOFF } from '../services/openFoodFacts';
 import { enrichFoodWithAI, isAIReady } from '../services/aiService';
-
-// ── Elapsed timer ──────────────────────────────────────────────
-
-function ElapsedTimer() {
-  const [secs, setSecs] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setSecs((s) => s + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return <Text style={styles.enrichingTimer}>{secs}s</Text>;
-}
+import { aiQueue } from '../services/aiQueue';
 
 // ── Result card ────────────────────────────────────────────────
 
 function ResultCard({
   product,
   imported,
-  enriching,
   onImport,
 }: {
   product: OFFProduct;
   imported: boolean;
-  enriching: boolean;
   onImport: () => void;
 }) {
   const n = product.nutriments ?? {};
@@ -77,18 +65,12 @@ function ResultCard({
         </View>
       </View>
       <TouchableOpacity
-        style={[styles.importBtn, (imported || enriching) && styles.importBtnDone]}
+        style={[styles.importBtn, imported && styles.importBtnDone]}
         onPress={onImport}
         activeOpacity={0.7}
-        disabled={imported || enriching}
+        disabled={imported}
       >
-        {enriching ? (
-          <>
-            <ActivityIndicator size="small" color={Colors.signal} />
-            <Text style={styles.importBtnDoneText}>Enrichissement IA… </Text>
-            <ElapsedTimer />
-          </>
-        ) : imported ? (
+        {imported ? (
           <>
             <Icon name="check" size={14} color={Colors.ok} />
             <Text style={styles.importBtnDoneText}>Ajouté</Text>
@@ -109,12 +91,13 @@ function ResultCard({
 interface Props {
   existingIds: Set<string>;
   onImport: (food: Food) => void;
+  onUpdateFood: (food: Food) => void;
   onBack: () => void;
   settings?: AppSettings;
   initialQuery?: string;
 }
 
-export function OpenFoodFactsScreen({ existingIds, onImport, onBack, settings, initialQuery = '' }: Props) {
+export function OpenFoodFactsScreen({ existingIds, onImport, onUpdateFood, onBack, settings, initialQuery = '' }: Props) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
 
@@ -124,7 +107,6 @@ export function OpenFoodFactsScreen({ existingIds, onImport, onBack, settings, i
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState('');
   const [importedIds, setImportedIds] = useState<Set<string>>(new Set());
-  const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set());
   const [helpVisible, setHelpVisible] = useState(false);
 
   useEffect(() => {
@@ -152,9 +134,9 @@ export function OpenFoodFactsScreen({ existingIds, onImport, onBack, settings, i
     }
   };
 
-  const handleImport = async (product: OFFProduct) => {
+  const handleImport = (product: OFFProduct) => {
     const pid = product.code || product.id;
-    if (importedIds.has(pid) || enrichingIds.has(pid)) return;
+    if (importedIds.has(pid)) return;
 
     const baseFood = offProductToFood(product);
     if (existingIds.has(baseFood.id)) {
@@ -162,21 +144,16 @@ export function OpenFoodFactsScreen({ existingIds, onImport, onBack, settings, i
       return;
     }
 
-    const aiEnabled = settings && isAIReady(settings);
-    if (aiEnabled) {
-      setEnrichingIds((prev) => new Set([...prev, pid]));
-      let finalFood = baseFood;
-      try {
-        finalFood = await enrichFoodWithAI(baseFood, settings!);
-      } catch {
-        // fallback to partial food
-      }
-      setEnrichingIds((prev) => { const s = new Set(prev); s.delete(pid); return s; });
-      onImport(finalFood);
-    } else {
-      onImport(baseFood);
-    }
+    onImport(baseFood);
     setImportedIds((prev) => new Set([...prev, pid]));
+
+    if (settings && isAIReady(settings)) {
+      const capturedUpdate = onUpdateFood;
+      aiQueue.add(`Enrichissement · ${baseFood.name}`, async () => {
+        const enriched = await enrichFoodWithAI(baseFood, settings!);
+        capturedUpdate(enriched);
+      });
+    }
   };
 
   const isImported = (p: OFFProduct) => {
@@ -285,7 +262,6 @@ export function OpenFoodFactsScreen({ existingIds, onImport, onBack, settings, i
                 key={p.code || p.id}
                 product={p}
                 imported={isImported(p)}
-                enriching={enrichingIds.has(p.code || p.id)}
                 onImport={() => handleImport(p)}
               />
             ))}
@@ -474,5 +450,4 @@ const styles = StyleSheet.create({
   },
   importBtnText: { fontFamily: Fonts.sansMedium, fontSize: 13, color: Colors.ink },
   importBtnDoneText: { fontFamily: Fonts.sansMedium, fontSize: 13, color: Colors.ok },
-  enrichingTimer: { fontFamily: Fonts.monoMedium, fontSize: 13, color: Colors.signal },
 });

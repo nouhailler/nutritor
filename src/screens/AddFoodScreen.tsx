@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -19,8 +17,9 @@ import { Colors, Fonts } from '../theme/tokens';
 import { Food } from '../types';
 import { AppSettings } from '../types/settings';
 import { generateFoodWithAI } from '../services/aiService';
+import { aiQueue } from '../services/aiQueue';
 
-type Phase = 'input' | 'loading' | 'preview' | 'error';
+type Phase = 'input' | 'error';
 
 // ── Preview card ───────────────────────────────────────────────
 
@@ -145,35 +144,26 @@ export function AddFoodScreen({ settings, onAdd, onBack, initialQuery = '' }: Pr
   const [brand, setBrand] = useState('');
   const [helpVisible, setHelpVisible] = useState(false);
   const [context, setContext] = useState('');
-  const [result, setResult] = useState<Food | null>(null);
   const [error, setError] = useState('');
 
   const providerLabel = settings.aiProvider === 'openrouter'
     ? `OpenRouter · ${settings.openrouter.model || '—'}`
     : `Ollama · ${settings.ollama.model || '—'}`;
 
-  const handleGenerate = async () => {
+  const handleGenerate = () => {
     if (!foodName.trim()) return;
-    setPhase('loading');
     setError('');
-    try {
-      const food = await generateFoodWithAI(foodName.trim(), brand.trim(), context.trim(), settings);
-      setResult(food);
-      setPhase('preview');
-    } catch (e: unknown) {
-      setError((e as Error).message);
-      setPhase('error');
-    }
-  };
-
-  const handleAdd = () => {
-    if (!result) return;
-    onAdd(result);
+    const label = foodName.trim();
+    const capturedOnAdd = onAdd;
+    aiQueue.add(label, async () => {
+      const food = await generateFoodWithAI(label, brand.trim(), context.trim(), settings);
+      capturedOnAdd(food);
+    });
+    onBack(); // navigate away immediately — AI runs in background
   };
 
   const handleRetry = () => {
     setPhase('input');
-    setResult(null);
     setError('');
   };
 
@@ -207,124 +197,75 @@ export function AddFoodScreen({ settings, onAdd, onBack, initialQuery = '' }: Pr
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         >
-          {/* ── INPUT PHASE ─────────────────────────────────── */}
-          {(phase === 'input' || phase === 'error') && (
-            <>
-              <View style={styles.formCard}>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Nom de l'aliment *</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="ex. Lentilles vertes du Puy"
-                    placeholderTextColor={Colors.muted2}
-                    value={foodName}
-                    onChangeText={setFoodName}
-                    autoCapitalize="words"
-                    autoFocus
-                    returnKeyType="next"
-                  />
-                </View>
-                <View style={styles.inputDivider} />
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Marque (optionnel)</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="ex. Intermarché Bio, Maison Bertin…"
-                    placeholderTextColor={Colors.muted2}
-                    value={brand}
-                    onChangeText={setBrand}
-                    autoCapitalize="words"
-                    returnKeyType="next"
-                  />
-                </View>
-                <View style={styles.inputDivider} />
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Contexte (optionnel)</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="ex. cuit, cru, en conserve, bio…"
-                    placeholderTextColor={Colors.muted2}
-                    value={context}
-                    onChangeText={setContext}
-                    autoCapitalize="none"
-                    returnKeyType="done"
-                  />
-                </View>
-              </View>
+          <View style={styles.formCard}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Nom de l'aliment *</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="ex. Lentilles vertes du Puy"
+                placeholderTextColor={Colors.muted2}
+                value={foodName}
+                onChangeText={setFoodName}
+                autoCapitalize="words"
+                autoFocus
+                returnKeyType="next"
+              />
+            </View>
+            <View style={styles.inputDivider} />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Marque (optionnel)</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="ex. Intermarché Bio, Maison Bertin…"
+                placeholderTextColor={Colors.muted2}
+                value={brand}
+                onChangeText={setBrand}
+                autoCapitalize="words"
+                returnKeyType="next"
+              />
+            </View>
+            <View style={styles.inputDivider} />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Contexte (optionnel)</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="ex. cuit, cru, en conserve, bio…"
+                placeholderTextColor={Colors.muted2}
+                value={context}
+                onChangeText={setContext}
+                autoCapitalize="none"
+                returnKeyType="done"
+              />
+            </View>
+          </View>
 
-              {phase === 'error' && (
-                <View style={styles.errorBox}>
-                  <Icon name="alert" size={16} color={Colors.warn} />
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              )}
-
-              <Text style={styles.modelHint}>{providerLabel}</Text>
-
-              <TouchableOpacity
-                style={[styles.generateBtn, !foodName.trim() && styles.generateBtnDisabled]}
-                onPress={handleGenerate}
-                activeOpacity={0.8}
-                disabled={!foodName.trim()}
-              >
-                <Icon name="sparkle" size={18} color={Colors.paper2} />
-                <Text style={styles.generateBtnText}>
-                  {phase === 'error' ? 'Réessayer' : 'Générer avec l\'IA'}
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-
-          {/* ── LOADING PHASE ───────────────────────────────── */}
-          {phase === 'loading' && (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator size="large" color={Colors.ink} />
-              <Text style={styles.loadingTitle}>Analyse en cours…</Text>
-              <Text style={styles.loadingDesc}>
-                L'IA recherche les données nutritionnelles{'\n'}pour « {foodName} »
-              </Text>
+          {phase === 'error' && (
+            <View style={styles.errorBox}>
+              <Icon name="alert" size={16} color={Colors.warn} />
+              <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
 
-          {/* ── PREVIEW PHASE ───────────────────────────────── */}
-          {phase === 'preview' && result && (
-            <>
-              <View style={styles.previewHeader}>
-                <Icon name="check" size={16} color={Colors.ok} />
-                <Text style={styles.previewHeaderText}>Données générées — vérifie avant d'ajouter</Text>
-              </View>
+          {/* Background info hint */}
+          <View style={styles.bgHint}>
+            <Icon name="sparkle" size={12} color={Colors.signal} />
+            <Text style={styles.bgHintText}>
+              La génération s'exécute en arrière-plan.{'\n'}
+              Un bandeau apparaîtra en bas de l'écran pendant le traitement.
+            </Text>
+          </View>
 
-              <FoodPreviewCard food={result} />
+          <Text style={styles.modelHint}>{providerLabel}</Text>
 
-              <View style={styles.actions}>
-                <TouchableOpacity
-                  style={styles.retryBtn}
-                  onPress={handleRetry}
-                  activeOpacity={0.7}
-                >
-                  <Icon name="refresh" size={16} color={Colors.muted} />
-                  <Text style={styles.retryBtnText}>Réessayer</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.addBtn}
-                  onPress={handleAdd}
-                  activeOpacity={0.8}
-                >
-                  <Icon name="plus" size={18} color={Colors.paper2} />
-                  <Text style={styles.addBtnText}>Ajouter à ma liste</Text>
-                </TouchableOpacity>
-              </View>
-
-              {result.minerals && result.minerals.length > 0 && (
-                <View style={styles.detailHint}>
-                  <Icon name="leaf" size={13} color={Colors.muted} />
-                  <Text style={styles.detailHintText}>
-                    {result.minerals.length} minéraux · {result.vitamins?.length ?? 0} vitamines · données FODMAP incluses
-                  </Text>
-                </View>
-              )}
-            </>
-          )}
+          <TouchableOpacity
+            style={[styles.generateBtn, !foodName.trim() && styles.generateBtnDisabled]}
+            onPress={handleGenerate}
+            activeOpacity={0.8}
+            disabled={!foodName.trim()}
+          >
+            <Icon name="sparkle" size={18} color={Colors.paper2} />
+            <Text style={styles.generateBtnText}>Générer avec l'IA</Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
     </KeyboardAvoidingView>
@@ -410,6 +351,24 @@ const styles = StyleSheet.create({
   },
   errorText: { flex: 1, fontFamily: Fonts.sans, fontSize: 13, color: Colors.warn, lineHeight: 18 },
 
+  bgHint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.hairline2,
+    borderRadius: 12,
+    padding: 12,
+  },
+  bgHintText: {
+    flex: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    color: Colors.muted,
+    lineHeight: 17,
+  },
+
   modelHint: {
     fontFamily: Fonts.mono,
     fontSize: 9,
@@ -438,70 +397,4 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 
-  // Loading
-  loadingBox: {
-    alignItems: 'center',
-    gap: 16,
-    paddingVertical: 60,
-  },
-  loadingTitle: { fontFamily: Fonts.serif, fontSize: 22, color: Colors.ink, letterSpacing: -0.3 },
-  loadingDesc: {
-    fontFamily: Fonts.sans,
-    fontSize: 13,
-    color: Colors.muted,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-
-  // Preview
-  previewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingTop: 4,
-  },
-  previewHeaderText: {
-    fontFamily: Fonts.sans,
-    fontSize: 12,
-    color: Colors.ok,
-  },
-
-  actions: { flexDirection: 'row', gap: 10 },
-  retryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: Colors.hairline,
-    backgroundColor: Colors.card,
-  },
-  retryBtnText: { fontFamily: Fonts.sans, fontSize: 14, color: Colors.muted },
-  addBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: Colors.ink,
-    borderRadius: 100,
-    paddingVertical: 14,
-  },
-  addBtnText: { fontFamily: Fonts.sansSemiBold, fontSize: 15, color: Colors.paper2 },
-
-  detailHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    justifyContent: 'center',
-  },
-  detailHintText: {
-    fontFamily: Fonts.mono,
-    fontSize: 9,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: Colors.muted2,
-  },
 });

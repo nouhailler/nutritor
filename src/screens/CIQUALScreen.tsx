@@ -17,29 +17,17 @@ import { Food } from '../types';
 import { AppSettings } from '../types/settings';
 import { CIQUALEntry, CIQUAL_DATA, ciqualToFood, searchCIQUAL } from '../services/ciqual';
 import { enrichFoodWithAI, isAIReady } from '../services/aiService';
-
-// ── Elapsed timer ──────────────────────────────────────────────
-
-function ElapsedTimer() {
-  const [secs, setSecs] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setSecs((s) => s + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return <Text style={styles.enrichingTimer}>{secs}s</Text>;
-}
+import { aiQueue } from '../services/aiQueue';
 
 // ── Result row ─────────────────────────────────────────────────
 
 function ResultRow({
   entry,
   imported,
-  enriching,
   onImport,
 }: {
   entry: CIQUALEntry;
   imported: boolean;
-  enriching: boolean;
   onImport: () => void;
 }) {
   const glyph = entry.name.charAt(0).toUpperCase();
@@ -68,25 +56,18 @@ function ResultRow({
           )}
         </View>
       </View>
-      {enriching ? (
-        <View style={styles.enrichingBadge}>
-          <ActivityIndicator size="small" color={Colors.signal} />
-          <ElapsedTimer />
-        </View>
-      ) : (
-        <TouchableOpacity
-          style={[styles.importBtn, imported && styles.importBtnDone]}
-          onPress={onImport}
-          activeOpacity={0.7}
-          disabled={imported}
-        >
-          {imported ? (
-            <Icon name="check" size={16} color={Colors.ok} />
-          ) : (
-            <Icon name="plus" size={16} color={Colors.ink} />
-          )}
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity
+        style={[styles.importBtn, imported && styles.importBtnDone]}
+        onPress={onImport}
+        activeOpacity={0.7}
+        disabled={imported}
+      >
+        {imported ? (
+          <Icon name="check" size={16} color={Colors.ok} />
+        ) : (
+          <Icon name="plus" size={16} color={Colors.ink} />
+        )}
+      </TouchableOpacity>
     </View>
   );
 }
@@ -138,19 +119,19 @@ function matchesGroup(entry: CIQUALEntry, group: string): boolean {
 interface Props {
   existingIds: Set<string>;
   onImport: (food: Food) => void;
+  onUpdateFood: (food: Food) => void;
   onBack: () => void;
   settings?: AppSettings;
   initialQuery?: string;
 }
 
-export function CIQUALScreen({ existingIds, onImport, onBack, settings, initialQuery = '' }: Props) {
+export function CIQUALScreen({ existingIds, onImport, onUpdateFood, onBack, settings, initialQuery = '' }: Props) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
 
   const [query, setQuery] = useState(initialQuery);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const [importedIds, setImportedIds] = useState<Set<string>>(new Set());
-  const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set());
   const [helpVisible, setHelpVisible] = useState(false);
 
   const results = useMemo(() => {
@@ -159,8 +140,8 @@ export function CIQUALScreen({ existingIds, onImport, onBack, settings, initialQ
     return [];
   }, [query, activeGroup]);
 
-  const handleImport = async (entry: CIQUALEntry) => {
-    if (isImported(entry) || enrichingIds.has(entry.id)) return;
+  const handleImport = (entry: CIQUALEntry) => {
+    if (isImported(entry)) return;
 
     const baseFood = ciqualToFood(entry);
     if (existingIds.has(baseFood.id)) {
@@ -168,21 +149,18 @@ export function CIQUALScreen({ existingIds, onImport, onBack, settings, initialQ
       return;
     }
 
-    const aiEnabled = settings && isAIReady(settings);
-    if (aiEnabled) {
-      setEnrichingIds((prev) => new Set([...prev, entry.id]));
-      let finalFood = baseFood;
-      try {
-        finalFood = await enrichFoodWithAI(baseFood, settings!);
-      } catch {
-        // fallback to partial food
-      }
-      setEnrichingIds((prev) => { const s = new Set(prev); s.delete(entry.id); return s; });
-      onImport(finalFood);
-    } else {
-      onImport(baseFood);
-    }
+    // Import immediately with partial data
+    onImport(baseFood);
     setImportedIds((prev) => new Set([...prev, entry.id]));
+
+    // Queue enrichment in background if AI is ready
+    if (settings && isAIReady(settings)) {
+      const capturedUpdate = onUpdateFood;
+      aiQueue.add(`Enrichissement · ${entry.name}`, async () => {
+        const enriched = await enrichFoodWithAI(baseFood, settings);
+        capturedUpdate(enriched);
+      });
+    }
   };
 
   const isImported = (e: CIQUALEntry) =>
@@ -287,7 +265,6 @@ export function CIQUALScreen({ existingIds, onImport, onBack, settings, initialQ
             key={entry.id}
             entry={entry}
             imported={isImported(entry)}
-            enriching={enrichingIds.has(entry.id)}
             onImport={() => handleImport(entry)}
           />
         ))}
