@@ -74,13 +74,14 @@ function ResultRow({
 
 // ── Group badge ────────────────────────────────────────────────
 
-function GroupChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function GroupChip({ label, icon, active, onPress }: { label: string; icon: string; active: boolean; onPress: () => void }) {
   return (
     <TouchableOpacity
       style={[styles.groupChip, active && styles.groupChipActive]}
       onPress={onPress}
       activeOpacity={0.7}
     >
+      <Text style={styles.groupChipIcon}>{icon}</Text>
       <Text style={[styles.groupChipText, active && styles.groupChipTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -88,16 +89,16 @@ function GroupChip({ label, active, onPress }: { label: string; active: boolean;
 
 // ── Main screen ────────────────────────────────────────────────
 
-const GROUPS = [
-  'Céréales',
-  'Légumineuses',
-  'Viandes',
-  'Poissons',
-  'Fruits',
-  'Légumes',
-  'Produits laitiers',
-  'Corps gras',
-  'Boissons',
+const GROUPS: { label: string; icon: string }[] = [
+  { label: 'Céréales',          icon: '🌾' },
+  { label: 'Légumineuses',      icon: '🌱' },
+  { label: 'Viandes',           icon: '🥩' },
+  { label: 'Poissons',          icon: '🐟' },
+  { label: 'Fruits',            icon: '🍎' },
+  { label: 'Légumes',           icon: '🥦' },
+  { label: 'Produits laitiers', icon: '🥛' },
+  { label: 'Corps gras',        icon: '🧈' },
+  { label: 'Boissons',          icon: '🥤' },
 ];
 
 function matchesGroup(entry: CIQUALEntry, group: string): boolean {
@@ -213,11 +214,12 @@ export function CIQUALScreen({ existingIds, onImport, onUpdateFood, onBack, sett
       >
         {GROUPS.map((g) => (
           <GroupChip
-            key={g}
-            label={g}
-            active={activeGroup === g}
+            key={g.label}
+            label={g.label}
+            icon={g.icon}
+            active={activeGroup === g.label}
             onPress={() => {
-              setActiveGroup(activeGroup === g ? null : g);
+              setActiveGroup(activeGroup === g.label ? null : g.label);
               setQuery('');
             }}
           />
@@ -310,10 +312,18 @@ const styles = StyleSheet.create({
 
   groupStrip: { paddingHorizontal: 16, paddingBottom: 10, gap: 6, flexDirection: 'row' },
   groupChip: {
-    paddingVertical: 6, paddingHorizontal: 12, borderRadius: 100,
-    borderWidth: 1, borderColor: Colors.hairline, backgroundColor: Colors.paper2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 5,
+    paddingHorizontal: 9,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.paper2,
   },
   groupChipActive: { backgroundColor: Colors.signal, borderColor: Colors.signal },
+  groupChipIcon: { fontSize: 12 },
   groupChipText: { fontFamily: Fonts.mono, fontSize: 10, letterSpacing: 0.8, color: Colors.muted },
   groupChipTextActive: { color: Colors.paper2 },
 
