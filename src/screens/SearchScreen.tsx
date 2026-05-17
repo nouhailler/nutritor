@@ -24,6 +24,9 @@ import {
 import { useDebounce } from '../hooks/useDebounce';
 import { Colors, Fonts } from '../theme/tokens';
 import { Food } from '../types';
+import { UserProfile } from '../data/user';
+import { computeCompatibilityScore, CompatibilityResult } from '../data/compatibilityScore';
+import { CompatBadge } from '../components/CompatibilityBadge';
 
 function foodToSearchResult(food: Food): SearchResult {
   const kcal = Math.round((food.per100.kcal * food.defaultPortion) / 100);
@@ -64,7 +67,7 @@ function TagPill({ label, kind }: { label: string; kind: TagKind }) {
 // ── Result row ───────────────────────────────────────────────
 
 function ResultRow({
-  name, brand, portion, kcal, glyph, tags, onPress, onDelete,
+  name, brand, portion, kcal, glyph, tags, compat, onPress, onDelete,
 }: {
   name: string;
   brand: string;
@@ -72,6 +75,7 @@ function ResultRow({
   kcal: number;
   glyph: string;
   tags: SearchResult['tags'];
+  compat?: CompatibilityResult;
   onPress: () => void;
   onDelete?: () => void;
 }) {
@@ -87,9 +91,13 @@ function ResultRow({
             <Text style={styles.metaBrand}>{brand.toUpperCase()}</Text>
             <Text style={styles.metaPortion}>· {portion}</Text>
           </View>
-          <View style={styles.tags}>
-            {tags.map((t, i) => <TagPill key={i} label={t.label} kind={t.kind} />)}
-          </View>
+          {compat ? (
+            <CompatBadge result={compat} />
+          ) : (
+            <View style={styles.tags}>
+              {tags.map((t, i) => <TagPill key={i} label={t.label} kind={t.kind} />)}
+            </View>
+          )}
         </View>
         <Text style={styles.kcalRight}>
           {kcal}<Text style={styles.kcalUnit}> kcal</Text>
@@ -119,6 +127,7 @@ function SectionLabel({ left, right }: { left: string; right?: string }) {
 
 interface Props {
   foodList: Food[];
+  profile: UserProfile;
   onBack: () => void;
   onPickItem: (food: Food) => void;
   onDeleteFood: (foodId: string) => void;
@@ -128,7 +137,7 @@ interface Props {
   onOpenScanner: () => void;
 }
 
-export function SearchScreen({ foodList, onBack, onPickItem, onDeleteFood, onAddWithAI, onOpenFoodFacts, onOpenCIQUAL, onOpenScanner }: Props) {
+export function SearchScreen({ foodList, profile, onBack, onPickItem, onDeleteFood, onAddWithAI, onOpenFoodFacts, onOpenCIQUAL, onOpenScanner }: Props) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
@@ -278,6 +287,7 @@ export function SearchScreen({ foodList, onBack, onPickItem, onDeleteFood, onAdd
         />
         {compatible.map((food) => {
           const sr = foodToSearchResult(food);
+          const compat = computeCompatibilityScore(food, profile);
           return (
             <ResultRow
               key={food.id}
@@ -287,6 +297,7 @@ export function SearchScreen({ foodList, onBack, onPickItem, onDeleteFood, onAdd
               kcal={sr.kcal}
               glyph={sr.glyph}
               tags={sr.tags}
+              compat={compat}
               onPress={() => onPickItem(food)}
               onDelete={() => confirmDelete(food)}
             />
@@ -300,6 +311,7 @@ export function SearchScreen({ foodList, onBack, onPickItem, onDeleteFood, onAdd
             <View style={{ opacity: 0.5 }}>
               {incompatible.map((food) => {
                 const sr = foodToSearchResult(food);
+                const compat = computeCompatibilityScore(food, profile);
                 return (
                   <ResultRow
                     key={food.id}
@@ -309,6 +321,7 @@ export function SearchScreen({ foodList, onBack, onPickItem, onDeleteFood, onAdd
                     kcal={sr.kcal}
                     glyph={sr.glyph}
                     tags={sr.tags}
+                    compat={compat}
                     onPress={() => onPickItem(food)}
                     onDelete={() => confirmDelete(food)}
                   />

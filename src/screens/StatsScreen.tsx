@@ -444,9 +444,10 @@ interface Props {
   journal: JournalEntry[];
   todayMeals: Meal[];
   profile: UserProfile;
+  onOpenMenu: () => void;
 }
 
-export function StatsScreen({ journal, todayMeals, profile }: Props) {
+export function StatsScreen({ journal, todayMeals, profile, onOpenMenu }: Props) {
   const insets = useSafeAreaInsets();
   const [weekOffset, setWeekOffset] = useState(0);
   const [helpVisible, setHelpVisible] = useState(false);
@@ -461,6 +462,9 @@ export function StatsScreen({ journal, todayMeals, profile }: Props) {
       >
         {/* ── Topbar ────────────────────────────────────────── */}
         <View style={styles.topbar}>
+          <TouchableOpacity style={styles.menuBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+            <Icon name="menu" size={22} />
+          </TouchableOpacity>
           <View style={styles.topbarLeft}>
             <Text style={styles.eyebrow}>Semaine {stats.weekLabel}</Text>
             <Text style={styles.title}>Statistiques</Text>
@@ -586,6 +590,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 6,
     paddingBottom: 4,
+  },
+  menuBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+    marginBottom: 2,
   },
   topbarLeft: { flex: 1 },
   eyebrow: {

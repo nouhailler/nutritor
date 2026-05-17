@@ -141,6 +141,8 @@ function VitaminRow({ v }: { v: Vitamin }) {
 
 // ── Vitamin panel ────────────────────────────────────────────
 
+const VIT_ROW_HEIGHT = 39; // paddingVertical(18) + border(1) + content(~20)
+
 function VitaminPanel({ vitamins }: { vitamins: Vitamin[] }) {
   const onTarget = vitamins.filter((v) => v.today / v.rda >= 1).length;
   return (
@@ -158,9 +160,15 @@ function VitaminPanel({ vitamins }: { vitamins: Vitamin[] }) {
           <Text style={styles.vitsMetaLabel}>atteintes</Text>
         </View>
       </View>
-      {vitamins.map((v) => (
-        <VitaminRow key={v.name} v={v} />
-      ))}
+      <ScrollView
+        style={{ maxHeight: VIT_ROW_HEIGHT * 3 }}
+        showsVerticalScrollIndicator={true}
+        nestedScrollEnabled={true}
+      >
+        {vitamins.map((v) => (
+          <VitaminRow key={v.name} v={v} />
+        ))}
+      </ScrollView>
       <View style={styles.vitsFoot}>
         <Text style={styles.vitsFootLabel}>ANR · adulte 31-50</Text>
         <View style={styles.vitsLegend}>
@@ -406,19 +414,6 @@ export function HomeScreen({
           </View>
         </View>
 
-        {/* Micronutriments — today only */}
-        {isToday && (
-          <>
-            <View style={styles.sectionHead}>
-              <Text style={styles.sectionTitle}>Micronutriments</Text>
-              <Text style={styles.sectionMeta}>apport du jour</Text>
-            </View>
-            <View style={styles.vitsWrap}>
-              <VitaminPanel vitamins={profile.vitamins} />
-            </View>
-          </>
-        )}
-
         {/* Journal */}
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>{isFuture ? 'Planification' : 'Repas'}</Text>
@@ -434,6 +429,19 @@ export function HomeScreen({
             />
           ))}
         </View>
+
+        {/* Micronutriments — today only */}
+        {isToday && (
+          <>
+            <View style={styles.sectionHead}>
+              <Text style={styles.sectionTitle}>Micronutriments</Text>
+              <Text style={styles.sectionMeta}>apport du jour</Text>
+            </View>
+            <View style={styles.vitsWrap}>
+              <VitaminPanel vitamins={profile.vitamins} />
+            </View>
+          </>
+        )}
       </ScrollView>
 
       {/* FAB */}

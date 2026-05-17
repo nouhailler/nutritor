@@ -14,6 +14,9 @@ import { Icon } from '../components/Icon';
 import { HelpButton, HelpModal } from '../components/HelpModal';
 import { HELP } from '../data/helpContent';
 import { INITIAL_MEALS } from '../data/food';
+import { UserProfile } from '../data/user';
+import { computeCompatibilityScore } from '../data/compatibilityScore';
+import { CompatCard } from '../components/CompatibilityBadge';
 import { Colors, FA_COLORS, Fonts } from '../theme/tokens';
 import {
   Allergen,
@@ -654,6 +657,7 @@ function MealSheet({
 interface DetailScreenProps {
   food: Food;
   meals?: Meal[];
+  profile?: UserProfile;
   onBack?: () => void;
   onAdd?: (params: {
     food: Food;
@@ -666,6 +670,7 @@ interface DetailScreenProps {
 export function DetailScreen({
   food,
   meals = INITIAL_MEALS,
+  profile,
   onBack,
   onAdd,
 }: DetailScreenProps) {
@@ -716,12 +721,19 @@ export function DetailScreen({
           <Text style={styles.heroSubtitle}>{food.subtitle}</Text>
         </View>
 
-        {/* Compat strip */}
-        <View style={styles.compatStrip}>
-          {food.compat.map((c, i) => (
-            <CompatPill key={i} item={c} />
-          ))}
-        </View>
+        {/* Personalized compatibility card */}
+        {profile && (
+          <CompatCard result={computeCompatibilityScore(food, profile)} />
+        )}
+
+        {/* Compat strip (static food properties) */}
+        {food.compat.length > 0 && (
+          <View style={styles.compatStrip}>
+            {food.compat.map((c, i) => (
+              <CompatPill key={i} item={c} />
+            ))}
+          </View>
+        )}
 
         {/* Sections */}
         <ApportsSection food={food} portion={portion} />

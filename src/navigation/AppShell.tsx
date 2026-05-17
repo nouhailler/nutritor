@@ -404,6 +404,7 @@ export function AppShell() {
     screen = (
       <SearchScreen
         foodList={foodList}
+        profile={profile}
         onBack={() => setStack(null)}
         onPickItem={(food) => openDetail(food, 'search')}
         onDeleteFood={(foodId) => {
@@ -422,6 +423,7 @@ export function AppShell() {
       <DetailScreen
         food={selectedFood}
         meals={viewedMeals}
+        profile={profile}
         onBack={() => setStack(detailOrigin ?? null)}
         onAdd={handleAdd}
       />
@@ -555,6 +557,7 @@ export function AppShell() {
               setPlateForEdit(plate);
               setStack('editSavedPlate');
             }}
+            onOpenMenu={() => setDrawerOpen(true)}
           />
         );
         break;
@@ -564,6 +567,7 @@ export function AppShell() {
             journal={journal}
             todayMeals={meals}
             profile={profile}
+            onOpenMenu={() => setDrawerOpen(true)}
           />
         );
         break;
@@ -573,6 +577,7 @@ export function AppShell() {
             profile={profile}
             onEdit={() => setStack('editProfile')}
             onToggleDiet={handleToggleDiet}
+            onOpenMenu={() => setDrawerOpen(true)}
           />
         );
         break;

@@ -89,9 +89,10 @@ interface SavedScreenProps {
   onOpenPlate: (plate: SavedPlate) => void;
   onCreatePlate: () => void;
   onEditPlate: (plate: SavedPlate) => void;
+  onOpenMenu: () => void;
 }
 
-export function SavedScreen({ plates, onOpenPlate, onCreatePlate, onEditPlate }: SavedScreenProps) {
+export function SavedScreen({ plates, onOpenPlate, onCreatePlate, onEditPlate, onOpenMenu }: SavedScreenProps) {
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<PlateFilterState>(DEFAULT_FILTER);
   const [filterVisible, setFilterVisible] = useState(false);
@@ -109,7 +110,10 @@ export function SavedScreen({ plates, onOpenPlate, onCreatePlate, onEditPlate }:
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.topbar}>
-        <View>
+        <TouchableOpacity style={styles.menuBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+          <Icon name="menu" size={22} color={Colors.ink} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
           <Text style={styles.eyebrow}>Bibliothèque</Text>
           <Text style={styles.title}>Plats sauvegardés</Text>
         </View>
@@ -191,10 +195,19 @@ const styles = StyleSheet.create({
   topbar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    justifyContent: 'space-between',
+    gap: 4,
     paddingHorizontal: H_PAD,
     paddingTop: 16,
     paddingBottom: 4,
+  },
+  menuBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 4,
+    marginBottom: 4,
   },
   eyebrow: {
     fontFamily: Fonts.mono,

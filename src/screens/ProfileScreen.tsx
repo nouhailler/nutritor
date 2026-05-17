@@ -38,9 +38,10 @@ interface ProfileScreenProps {
   profile: UserProfile;
   onEdit: () => void;
   onToggleDiet: (id: string) => void;
+  onOpenMenu: () => void;
 }
 
-export function ProfileScreen({ profile, onEdit, onToggleDiet }: ProfileScreenProps) {
+export function ProfileScreen({ profile, onEdit, onToggleDiet, onOpenMenu }: ProfileScreenProps) {
   const insets = useSafeAreaInsets();
   const [helpVisible, setHelpVisible] = useState(false);
   const dietLabel = computeDietLabel(profile.diets);
@@ -54,6 +55,10 @@ export function ProfileScreen({ profile, onEdit, onToggleDiet }: ProfileScreenPr
       >
         {/* Topbar */}
         <View style={styles.topbar}>
+          <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+            <Icon name="menu" size={22} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }} />
           <HelpButton onPress={() => setHelpVisible(true)} />
           <TouchableOpacity style={styles.iconBtn} onPress={onEdit} activeOpacity={0.7}>
             <Icon name="sliders" size={20} />
