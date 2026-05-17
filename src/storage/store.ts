@@ -7,6 +7,7 @@ export const KEYS = {
   profile:      'nutritor:profile',
   settings:     'nutritor:settings',
   savedPlates:  'nutritor:saved_plates',
+  journal:      'nutritor:journal',
   migrationV1:  'nutritor:migration_v1',
 };
 

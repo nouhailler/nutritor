@@ -34,6 +34,7 @@ import { CIQUALScreen } from '../screens/CIQUALScreen';
 import { BarcodeScannerScreen } from '../screens/BarcodeScannerScreen';
 import { AppSettings, DEFAULT_SETTINGS } from '../types/settings';
 import { refreshCiqualAllergens } from '../services/ciqual';
+import { DayLog, computeDayLog } from '../data/weeklyStats';
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -168,23 +169,36 @@ export function AppShell() {
     KEYS.savedPlates,
     SAVED_PLATES,
   );
+  const [journal, setJournal, journalLoading] = usePersistedState<DayLog[]>(
+    KEYS.journal,
+    [],
+  );
 
   console.log(`[AppShell] loading — profile:${profileLoading} foods:${foodsLoading} meals:${mealsLoading}`);
 
-  // Reset meals daily
+  // Reset meals daily — saves previous day to journal before clearing
   useEffect(() => {
-    if (mealsLoading) return;
+    if (mealsLoading || journalLoading) return;
     console.log('[AppShell] checking daily reset…');
     load<string>(KEYS.mealsDate).then((storedDate) => {
       const today = todayStr();
       console.log(`[AppShell] mealsDate stored="${storedDate}" today="${today}"`);
       if (storedDate !== today) {
+        // Archive yesterday's meals before reset
+        if (storedDate && meals.some((m) => m.items.length > 0)) {
+          const log = computeDayLog(meals, storedDate);
+          setJournal((prev) => {
+            const without = prev.filter((d) => d.date !== storedDate);
+            return [...without, log].slice(-56); // keep 8 weeks
+          });
+          console.log(`[AppShell] journal: saved log for ${storedDate}`);
+        }
         console.log('[AppShell] resetting meals for new day');
         setMeals(INITIAL_MEALS);
         save(KEYS.mealsDate, today);
       }
     });
-  }, [mealsLoading]);
+  }, [mealsLoading, journalLoading]);
 
   // One-time migration: recompute CIQUAL allergens for stored foods
   useEffect(() => {
@@ -204,7 +218,7 @@ export function AppShell() {
     });
   }, [foodsLoading]);
 
-  const appLoading = profileLoading || foodsLoading || mealsLoading;
+  const appLoading = profileLoading || foodsLoading || mealsLoading || journalLoading;
 
   if (appLoading) {
     console.log('[AppShell] still loading — showing spinner');
@@ -496,7 +510,13 @@ export function AppShell() {
         );
         break;
       case 'stats':
-        screen = <StatsScreen />;
+        screen = (
+          <StatsScreen
+            journal={journal}
+            todayMeals={meals}
+            profile={profile}
+          />
+        );
         break;
       case 'profile':
         screen = (
