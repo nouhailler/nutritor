@@ -15,7 +15,7 @@ import { HELP } from '../data/helpContent';
 import { Colors, Fonts } from '../theme/tokens';
 import { Food } from '../types';
 import { AppSettings } from '../types/settings';
-import { OFFProduct, offProductToFood, searchOFF } from '../services/openFoodFacts';
+import { OFFProduct, offProductToFood, searchOFF, searchOFFByCategory } from '../services/openFoodFacts';
 import { enrichFoodWithAI, isAIReady } from '../services/aiService';
 import { aiQueue } from '../services/aiQueue';
 
@@ -86,6 +86,33 @@ function ResultCard({
   );
 }
 
+// ── Category chips ─────────────────────────────────────────────
+
+const GROUPS: { label: string; icon: string; tag: string }[] = [
+  { label: 'Céréales',          icon: '🌾', tag: 'en:cereals-and-their-products' },
+  { label: 'Légumineuses',      icon: '🌱', tag: 'en:legumes' },
+  { label: 'Viandes',           icon: '🥩', tag: 'en:meats' },
+  { label: 'Poissons',          icon: '🐟', tag: 'en:seafood' },
+  { label: 'Fruits',            icon: '🍎', tag: 'en:fruits' },
+  { label: 'Légumes',           icon: '🥦', tag: 'en:vegetables' },
+  { label: 'Produits laitiers', icon: '🥛', tag: 'en:dairy-products' },
+  { label: 'Corps gras',        icon: '🧈', tag: 'en:fats' },
+  { label: 'Boissons',          icon: '🥤', tag: 'en:beverages' },
+];
+
+function GroupChip({ label, icon, active, onPress }: { label: string; icon: string; active: boolean; onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      style={[styles.groupChip, active && styles.groupChipActive]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <Text style={styles.groupChipIcon}>{icon}</Text>
+      <Text style={[styles.groupChipText, active && styles.groupChipTextActive]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 // ── Main screen ────────────────────────────────────────────────
 
 interface Props {
@@ -102,6 +129,7 @@ export function OpenFoodFactsScreen({ existingIds, onImport, onUpdateFood, onBac
   const inputRef = useRef<TextInput>(null);
 
   const [query, setQuery] = useState(initialQuery);
+  const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const [products, setProducts] = useState<OFFProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -110,18 +138,17 @@ export function OpenFoodFactsScreen({ existingIds, onImport, onUpdateFood, onBac
   const [helpVisible, setHelpVisible] = useState(false);
 
   useEffect(() => {
-    if (initialQuery.trim()) handleSearch();
+    if (initialQuery.trim()) runSearch({ text: initialQuery.trim() });
   }, []);
 
-  const handleSearch = async () => {
-    const q = query.trim();
-    if (!q) return;
+  const runSearch = async (opts: { text?: string; categoryTag?: string }) => {
     setLoading(true);
     setError('');
     setSearched(true);
     try {
-      const result = await searchOFF(q);
-      // Keep only products with at least a name and kcal
+      const result = opts.categoryTag
+        ? await searchOFFByCategory(opts.categoryTag)
+        : await searchOFF(opts.text ?? '');
       const valid = result.products.filter(
         (p) => (p.product_name_fr || p.product_name) && (p.nutriments?.['energy-kcal_100g'] ?? 0) > 0
       );
@@ -132,6 +159,25 @@ export function OpenFoodFactsScreen({ existingIds, onImport, onUpdateFood, onBac
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = () => {
+    const q = query.trim();
+    if (!q) return;
+    setActiveGroup(null);
+    void runSearch({ text: q });
+  };
+
+  const handleGroupPress = (group: typeof GROUPS[0]) => {
+    if (activeGroup === group.label) {
+      setActiveGroup(null);
+      setProducts([]);
+      setSearched(false);
+      return;
+    }
+    setActiveGroup(group.label);
+    setQuery('');
+    void runSearch({ categoryTag: group.tag });
   };
 
   const handleImport = (product: OFFProduct) => {
@@ -186,7 +232,7 @@ export function OpenFoodFactsScreen({ existingIds, onImport, onUpdateFood, onBac
             placeholder="Rechercher un produit, une marque…"
             placeholderTextColor={Colors.muted2}
             value={query}
-            onChangeText={setQuery}
+            onChangeText={(t) => { setQuery(t); if (t) setActiveGroup(null); }}
             onSubmitEditing={handleSearch}
             returnKeyType="search"
             autoCorrect={false}
@@ -194,7 +240,7 @@ export function OpenFoodFactsScreen({ existingIds, onImport, onUpdateFood, onBac
             autoFocus
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={() => { setQuery(''); setProducts([]); setSearched(false); }} activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => { setQuery(''); setActiveGroup(null); setProducts([]); setSearched(false); }} activeOpacity={0.7}>
               <Text style={styles.clearBtn}>Effacer</Text>
             </TouchableOpacity>
           )}
@@ -212,6 +258,23 @@ export function OpenFoodFactsScreen({ existingIds, onImport, onUpdateFood, onBac
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Category strip */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.groupStrip}
+      >
+        {GROUPS.map((g) => (
+          <GroupChip
+            key={g.label}
+            label={g.label}
+            icon={g.icon}
+            active={activeGroup === g.label}
+            onPress={() => handleGroupPress(g)}
+          />
+        ))}
+      </ScrollView>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -243,7 +306,7 @@ export function OpenFoodFactsScreen({ existingIds, onImport, onUpdateFood, onBac
             <Icon name="database" size={28} color={Colors.muted2} />
             <Text style={styles.introTitle}>3 millions de produits</Text>
             <Text style={styles.introDesc}>
-              Recherche n'importe quel aliment ou produit alimentaire.
+              Recherche par nom ou parcours par catégorie.
               Les données nutritionnelles sont importées directement
               dans ta liste locale.
             </Text>
@@ -345,6 +408,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   searchBtnDisabled: { opacity: 0.4 },
+
+  groupStrip: { paddingHorizontal: 16, paddingBottom: 10, gap: 6, flexDirection: 'row' },
+  groupChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 5,
+    paddingHorizontal: 9,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.paper2,
+  },
+  groupChipActive: { backgroundColor: Colors.ok, borderColor: Colors.ok },
+  groupChipIcon: { fontSize: 12 },
+  groupChipText: { fontFamily: Fonts.mono, fontSize: 10, letterSpacing: 0.8, color: Colors.muted },
+  groupChipTextActive: { color: Colors.paper2 },
 
   list: { paddingHorizontal: 16, gap: 10 },
 
