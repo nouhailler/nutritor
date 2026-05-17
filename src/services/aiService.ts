@@ -1,5 +1,5 @@
 import { AppSettings } from '../types/settings';
-import { Food } from '../types';
+import { Allergen, CompatItem, Food } from '../types';
 
 const FOOD_SCHEMA = `{
   "id": "slug-unique-001",
@@ -181,4 +181,204 @@ export async function generateFoodWithAI(
   }
 
   return parsed as Food;
+}
+
+// ── AI readiness check ────────────────────────────────────────
+
+export function isAIReady(settings: AppSettings): boolean {
+  if (settings.aiProvider === 'openrouter') {
+    return !!(settings.openrouter.apiKey && settings.openrouter.model);
+  }
+  return !!(settings.ollama.model);
+}
+
+// ── Enrichment schema ─────────────────────────────────────────
+
+const ENRICH_SCHEMA = `{
+  "subtitle": "1-2 phrases évocatrices de l'aliment",
+  "origin": "Pays · Région ou null",
+  "proteinDetail": {
+    "totalG": 0, "complete": false, "bcaaG": 0, "pdcaas": 0,
+    "amino": [{"name":"Leucine","qty":"800 mg","role":"Synthèse musculaire","essential":true}]
+  },
+  "carbDetail": {
+    "totalG": 0, "starchG": 0, "sugarsG": 0, "fiberG": 0,
+    "fiberSolubleG": 0, "fiberInsolubleG": 0, "glycemicIndex": 0, "glycemicLoad": 0,
+    "notes": "Commentaire sur le profil glucidique"
+  },
+  "lipidDetail": {
+    "totalG": 0,
+    "fa": [{"name":"Acides gras saturés","qty":"x g","pct":"x %","role":"..."}],
+    "ratioOmega": "x:1 (ω6/ω3)"
+  },
+  "minerals": [{"name":"Calcium","qty":"x mg","anr":"x %","role":"..."}],
+  "vitamins": [{"name":"Vitamine C","qty":"x mg","anr":"x %","role":"..."}],
+  "trace": [{"name":"Fer","qty":"x mg","anr":"x %","role":"..."}],
+  "fodmap": {
+    "overall": "low",
+    "types": [{"name":"Fructanes","present":"oui","level":"faible"}],
+    "elimination": {"portion":"80","status":"safe","note":"..."},
+    "reintroduction": {"portion":"150","status":"safe","note":"..."},
+    "absoluteLimit": {"portion":"250","status":"warn","note":"..."},
+    "alternatives": [{"name":"Riz basmati","why":"Zéro FODMAP"}]
+  },
+  "bioactives": [{"name":"Quercétine","qty":"36 mg","role":"Flavonoïde, anti-oxydant"}],
+  "metabolic": [
+    {"axis":"Glycémie","tone":"low","text":"..."},
+    {"axis":"Satiété","tone":"high","text":"..."},
+    {"axis":"Inflammation","tone":"low","text":"..."},
+    {"axis":"Charge digestive","tone":"mid","text":"..."},
+    {"axis":"Récupération","tone":"high","text":"..."}
+  ],
+  "sensory": {
+    "taste": ["sucré"], "texture": ["croquant"],
+    "aroma": ["fruité"], "pairings": ["Yaourt"]
+  },
+  "allergens": [
+    {"name":"Gluten","status":"absent"},{"name":"Lactose","status":"absent"},
+    {"name":"Œufs","status":"absent"},{"name":"Arachides","status":"absent"},
+    {"name":"Fruits à coque","status":"absent"},{"name":"Soja","status":"absent"},
+    {"name":"Poisson","status":"absent"},{"name":"Crustacés","status":"absent"},
+    {"name":"Sésame","status":"absent"},{"name":"Moutarde","status":"absent"},
+    {"name":"Céleri","status":"absent"},{"name":"Sulfites","status":"absent"},
+    {"name":"Mollusques","status":"absent"},{"name":"Lupin","status":"absent"}
+  ]
+}`;
+
+const ENRICH_SYSTEM_PROMPT = `Tu es un diététicien-nutritionniste expert. Un aliment t'est fourni avec des données partielles issues d'une base officielle (CIQUAL ou Open Food Facts). Tu dois générer UNIQUEMENT les zones manquantes demandées.
+
+Règles absolues :
+- Réponds UNIQUEMENT avec un objet JSON brut, sans markdown ni texte autour
+- Ne retourne QUE les clés listées dans la demande (pas l'objet Food complet)
+- N'invente jamais les données per100 — utilise uniquement celles fournies
+- Base tes réponses sur CIQUAL, USDA et Monash University (FODMAP)
+- tone dans metabolic : "high" (bénéfique), "mid" (neutre), "low" (à surveiller)
+- Pour les allergens : évalue selon le nom, catégorie et ingrédients de l'aliment`;
+
+// Rebuild compat from full food (allergens + nutrition)
+function buildCompatFull(food: Food): CompatItem[] {
+  const compat: CompatItem[] = [];
+
+  if (food.per100.salt < 0.3)   compat.push({ label: 'Pauvre en sel', kind: 'ok' });
+  if (food.per100.sugars < 5)   compat.push({ label: 'Pauvre en sucres', kind: 'ok' });
+  if (food.per100.fat < 3)      compat.push({ label: 'Pauvre en graisses', kind: 'ok' });
+  if (food.per100.fiber > 5)    compat.push({ label: 'Riche en fibres', kind: 'ok' });
+  if (food.per100.protein > 15) compat.push({ label: 'Riche en protéines', kind: 'ok' });
+  if (food.per100.salt > 1.5)   compat.push({ label: 'Riche en sel', kind: 'warn' });
+  if (food.per100.sugars > 15)  compat.push({ label: 'Riche en sucres', kind: 'warn' });
+
+  const map = Object.fromEntries(food.allergens.map((a) => [a.name, a.status]));
+  if (map['Gluten'] === 'absent') compat.push({ label: 'Sans gluten', kind: 'ok' });
+  else if (map['Gluten'] === 'contains') compat.push({ label: 'Contient gluten', kind: 'warn' });
+  if (map['Lactose'] === 'absent') compat.push({ label: 'Sans lactose', kind: 'ok' });
+  else if (map['Lactose'] === 'contains') compat.push({ label: 'Contient lactose', kind: 'warn' });
+
+  const animalFoods = ['Œufs', 'Lactose', 'Poisson', 'Crustacés', 'Mollusques'];
+  if (animalFoods.every((n) => map[n] === 'absent')) {
+    compat.push({ label: 'Vegan', kind: 'ok' });
+  }
+
+  if (food.fodmap) {
+    if (food.fodmap.overall === 'low') {
+      compat.push({ label: `Low FODMAP (≤${food.fodmap.reintroduction?.portion ?? '?'}g)`, kind: 'ok' });
+    } else if (food.fodmap.overall === 'high') {
+      compat.push({ label: 'FODMAP élevé', kind: 'warn' });
+    }
+  }
+
+  for (const a of food.allergens.filter((a) => a.status === 'trace')) {
+    compat.push({ label: `Traces ${a.name.toLowerCase()}`, kind: 'warn' });
+  }
+
+  return compat;
+}
+
+// ── Enrich a partial Food with AI (CIQUAL / OFF import) ──────
+
+export async function enrichFoodWithAI(food: Food, settings: AppSettings): Promise<Food> {
+  const allAllergenAbsent = food.allergens.every((a) => a.status === 'absent');
+
+  const missing: string[] = [];
+  if (!food.proteinDetail) missing.push('proteinDetail');
+  if (!food.carbDetail) missing.push('carbDetail');
+  if (!food.lipidDetail) missing.push('lipidDetail');
+  if (!food.minerals || food.minerals.length === 0) missing.push('minerals');
+  if (!food.vitamins || food.vitamins.length === 0) missing.push('vitamins');
+  if (!food.trace || food.trace.length === 0) missing.push('trace');
+  if (!food.fodmap) missing.push('fodmap');
+  if (!food.bioactives) missing.push('bioactives');
+  if (!food.metabolic) missing.push('metabolic');
+  if (!food.sensory) missing.push('sensory');
+  if (allAllergenAbsent) missing.push('allergens');
+  const genericSubtitle = !food.subtitle
+    || food.subtitle.startsWith('Base CIQUAL')
+    || food.subtitle.startsWith('Importé depuis');
+  if (genericSubtitle) missing.push('subtitle');
+  if (!food.origin) missing.push('origin');
+
+  if (missing.length === 0) return food;
+
+  const knownData: Record<string, unknown> = { per100: food.per100 };
+  if (!allAllergenAbsent) knownData.allergens = food.allergens;
+  if (food.minerals && food.minerals.length > 0) knownData.minerals = food.minerals;
+  if (food.vitamins && food.vitamins.length > 0) knownData.vitamins = food.vitamins;
+  if (food.trace && food.trace.length > 0) knownData.trace = food.trace;
+  if (food.ingredients) knownData.ingredients = food.ingredients;
+
+  const userPrompt = `Aliment : "${food.name}" (${food.category})${
+    food.brand && food.brand !== 'CIQUAL — ANSES' ? `\nMarque : ${food.brand}` : ''
+  }
+
+Données vérifiées à conserver telles quelles :
+${JSON.stringify(knownData, null, 2)}
+
+Zones à générer (UNIQUEMENT ces clés) : ${missing.join(', ')}
+
+Schéma de référence :
+${ENRICH_SCHEMA}`;
+
+  const messages = [
+    { role: 'system', content: ENRICH_SYSTEM_PROMPT },
+    { role: 'user', content: userPrompt },
+  ];
+
+  const raw =
+    settings.aiProvider === 'openrouter'
+      ? await callOpenRouter(settings.openrouter, messages)
+      : await callOllama(settings.ollama, messages);
+
+  if (!raw) throw new Error('Réponse IA vide lors de l\'enrichissement.');
+
+  let enriched: Record<string, unknown>;
+  try {
+    enriched = JSON.parse(extractJSON(raw));
+  } catch {
+    throw new Error('JSON d\'enrichissement invalide.');
+  }
+
+  const enrichedAllergens = (enriched.allergens as Allergen[] | undefined);
+  const finalAllergens: Allergen[] = allAllergenAbsent && enrichedAllergens?.length
+    ? enrichedAllergens
+    : food.allergens;
+
+  const merged: Food = {
+    ...food,
+    subtitle: genericSubtitle ? (enriched.subtitle as string ?? food.subtitle) : food.subtitle,
+    origin: food.origin ?? (enriched.origin as string | undefined),
+    proteinDetail: food.proteinDetail ?? (enriched.proteinDetail as Food['proteinDetail']),
+    carbDetail: food.carbDetail ?? (enriched.carbDetail as Food['carbDetail']),
+    lipidDetail: food.lipidDetail ?? (enriched.lipidDetail as Food['lipidDetail']),
+    minerals: food.minerals?.length ? food.minerals : (enriched.minerals as Food['minerals']),
+    vitamins: food.vitamins?.length ? food.vitamins : (enriched.vitamins as Food['vitamins']),
+    trace: food.trace?.length ? food.trace : (enriched.trace as Food['trace']),
+    fodmap: food.fodmap ?? (enriched.fodmap as Food['fodmap']),
+    bioactives: food.bioactives ?? (enriched.bioactives as Food['bioactives']),
+    metabolic: food.metabolic ?? (enriched.metabolic as Food['metabolic']),
+    sensory: food.sensory ?? (enriched.sensory as Food['sensory']),
+    allergens: finalAllergens,
+  };
+
+  merged.compat = buildCompatFull(merged);
+
+  return merged;
 }

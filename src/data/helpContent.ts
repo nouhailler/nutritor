@@ -1,0 +1,204 @@
+import { HelpContent } from '../components/HelpModal';
+
+export const HELP: Record<string, HelpContent> = {
+
+  home: {
+    title: 'Journal du jour',
+    subtitle: 'Suivi de tes repas quotidiens',
+    blocks: [
+      { type: 'heading', text: 'Comment ça marche' },
+      { type: 'item', icon: 'plus', label: 'Ajouter un aliment', text: 'Appuie sur le bouton + dans un repas pour rechercher et ajouter un aliment à ta journée.' },
+      { type: 'item', icon: 'chart', label: 'Suivi des macros', text: 'Les protéines, glucides et lipides sont calculés automatiquement à partir des quantités saisies.' },
+      { type: 'item', icon: 'target', label: 'Objectif calorique', text: 'La barre de progression en haut indique ta consommation par rapport à ton objectif journalier défini dans ton profil.' },
+      { type: 'divider' },
+      { type: 'heading', text: 'Repas' },
+      { type: 'item', icon: 'clock', label: 'Réinitialisation quotidienne', text: 'Le journal se remet à zéro chaque jour automatiquement à minuit.' },
+      { type: 'item', icon: 'book', label: 'Plats enregistrés', text: 'Va dans l\'onglet Plats pour créer des recettes complètes et les ajouter en un clic à un repas.' },
+      { type: 'tip', text: 'Astuce — Utilise l\'onglet Plats pour préparer tes repas récurrents et gagner du temps chaque jour.' },
+    ],
+  },
+
+  search: {
+    title: 'Rechercher un aliment',
+    subtitle: 'Trouve et gère ta liste d\'aliments',
+    blocks: [
+      { type: 'heading', text: 'Sources de données' },
+      { type: 'item', icon: 'database', label: 'CIQUAL', text: 'Base officielle française de l\'ANSES — 3 167 aliments bruts avec données nutritionnelles certifiées.' },
+      { type: 'item', icon: 'globe', label: 'Open Food Facts', text: 'Base mondiale collaborative — 3+ millions de produits du commerce avec codes-barres.' },
+      { type: 'item', icon: 'sparkle', label: 'Intelligence artificielle', text: 'L\'IA génère une fiche nutritionnelle complète (12 zones) pour n\'importe quel aliment décrit en texte libre.' },
+      { type: 'divider' },
+      { type: 'heading', text: 'Filtres' },
+      { type: 'item', icon: 'sliders', label: 'Filtres actifs', text: 'Sans gluten, Sans lactose, Végétarien, Vegan, Sans fruits à coque, < 200 kcal — ils filtrent ta liste en temps réel.' },
+      { type: 'item', icon: 'shield', label: 'Allergènes', text: 'Les allergènes sont détectés automatiquement depuis la catégorie et le nom de l\'aliment (base CIQUAL) ou depuis l\'étiquette produit (OFF).' },
+      { type: 'divider' },
+      { type: 'heading', text: 'Gestion' },
+      { type: 'item', icon: 'trash', label: 'Supprimer un aliment', text: 'Appuie sur l\'icône corbeille à droite de chaque aliment pour le retirer de ta liste locale.' },
+      { type: 'item', icon: 'scan', label: 'Scanner un code-barres', text: 'L\'icône scanner en haut à droite permet d\'identifier instantanément un produit via sa caméra.' },
+      { type: 'tip', text: 'Astuce — Si tu ne trouves pas ton aliment dans CIQUAL, essaie Open Food Facts qui couvre les produits transformés et les marques.' },
+    ],
+  },
+
+  detail: {
+    title: 'Fiche nutritionnelle',
+    subtitle: 'Les 12 zones d\'analyse',
+    blocks: [
+      { type: 'heading', text: 'Zones nutritionnelles' },
+      { type: 'item', icon: 'target', label: '01 — Apports', text: 'Énergie, protéines, glucides, lipides et sel pour la portion choisie. Les % sont calculés sur les apports de référence adulte.' },
+      { type: 'item', icon: 'zap', label: '02 à 04 — Macronutriments', text: 'Détail des acides aminés (PDCAAS), index glycémique, charge glycémique et profil des acides gras oméga.' },
+      { type: 'item', icon: 'shield', label: '05 à 07 — Micronutriments', text: 'Minéraux (Ca, Mg, P, K), vitamines (A, B, C, D, E) et oligo-éléments (Fe, Zn) avec % ANR adulte.' },
+      { type: 'item', icon: 'leaf', label: '08 — FODMAP', text: 'Fermentescibilité pour les personnes sensibles au syndrome de l\'intestin irritable (SII).' },
+      { type: 'item', icon: 'sparkle', label: '09 à 11 — Zones avancées', text: 'Bioactifs (polyphénols, antioxydants), effets métaboliques et profil sensoriel de l\'aliment.' },
+      { type: 'item', icon: 'info', label: '12 — Composition', text: 'Liste des ingrédients et informations sur l\'origine et la transformation.' },
+      { type: 'divider' },
+      { type: 'heading', text: 'ANR — Apport Nutritionnel de Référence' },
+      { type: 'item', icon: 'chart', label: 'Valeurs de référence', text: 'Les % ANR sont calculés selon les valeurs nutritionnelles de référence de l\'UE pour un adulte moyen (2 000 kcal/jour).' },
+      { type: 'tip', text: 'Astuce — Les zones non renseignées peuvent être complétées en enrichissant l\'aliment avec l\'IA depuis l\'écran de recherche.' },
+    ],
+  },
+
+  ciqual: {
+    title: 'Base CIQUAL',
+    subtitle: 'Table de composition nutritionnelle française',
+    blocks: [
+      { type: 'heading', text: 'À propos de CIQUAL' },
+      { type: 'item', icon: 'shield', label: 'Source officielle', text: 'CIQUAL est la table de référence de l\'ANSES (Agence nationale de sécurité sanitaire). Données validées scientifiquement.' },
+      { type: 'item', icon: 'database', label: '3 167 aliments', text: 'Couvre les aliments bruts et peu transformés consommés en France : fruits, légumes, viandes, poissons, céréales, produits laitiers…' },
+      { type: 'item', icon: 'clock', label: 'Version 2020', text: 'Dernière mise à jour officielle publiée en 2020 par l\'ANSES.' },
+      { type: 'divider' },
+      { type: 'heading', text: 'Recherche' },
+      { type: 'item', icon: 'search', label: 'Recherche textuelle', text: 'Tape au moins 2 caractères pour lancer la recherche. La recherche est insensible aux accents et à la casse.' },
+      { type: 'item', icon: 'sliders', label: 'Filtres par groupe', text: 'Les chips en haut filtrent par groupe alimentaire pour parcourir la base sans taper de texte.' },
+      { type: 'item', icon: 'sparkle', label: 'Enrichissement IA', text: 'Si l\'IA est configurée, l\'import d\'un aliment déclenche automatiquement un enrichissement pour compléter les 12 zones nutritionnelles.' },
+      { type: 'tip', text: 'Astuce — CIQUAL est idéal pour les aliments bruts. Pour les produits de marque ou transformés, utilise plutôt Open Food Facts.' },
+    ],
+  },
+
+  openFoodFacts: {
+    title: 'Open Food Facts',
+    subtitle: 'Base de données mondiale collaborative',
+    blocks: [
+      { type: 'heading', text: 'À propos de la base' },
+      { type: 'item', icon: 'globe', label: '3+ millions de produits', text: 'Base ouverte et collaborative couvrant les produits alimentaires du commerce dans 180+ pays.' },
+      { type: 'item', icon: 'shield', label: 'Licence libre (ODbL)', text: 'Données librement réutilisables. Contribuées par les consommateurs à partir des étiquettes produits.' },
+      { type: 'item', icon: 'clock', label: 'Mise à jour continue', text: 'La base est enrichie en permanence par une communauté mondiale de contributeurs.' },
+      { type: 'divider' },
+      { type: 'heading', text: 'Utilisation' },
+      { type: 'item', icon: 'search', label: 'Recherche par nom ou marque', text: 'Tape le nom du produit, la marque ou une description. La recherche interroge les serveurs Open Food Facts en temps réel.' },
+      { type: 'item', icon: 'alert', label: 'Qualité variable', text: 'Les données provenant des consommateurs, leur qualité peut varier selon les produits. Préfère les produits avec un Nutri-Score renseigné.' },
+      { type: 'item', icon: 'sparkle', label: 'Enrichissement IA', text: 'Après import, l\'IA complète les zones nutritionnelles manquantes (FODMAP, bioactifs, acides aminés, etc.).' },
+      { type: 'tip', text: 'Astuce — Pour les produits français du quotidien (yaourts, pâtes, conserves…), tape la marque directement pour obtenir les meilleurs résultats.' },
+    ],
+  },
+
+  addFood: {
+    title: 'Créer avec l\'IA',
+    subtitle: 'Génération de fiche nutritionnelle complète',
+    blocks: [
+      { type: 'heading', text: 'Comment ça marche' },
+      { type: 'item', icon: 'sparkle', label: 'Génération complète', text: 'L\'IA génère les 12 zones nutritionnelles : macros, acides aminés, vitamines, minéraux, FODMAP, bioactifs, sensoriel…' },
+      { type: 'item', icon: 'cpu', label: 'Modèles supportés', text: 'Compatible OpenRouter (GPT-4, Claude, Mistral…) et Ollama (modèles locaux). Configure le modèle dans Paramètres.' },
+      { type: 'divider' },
+      { type: 'heading', text: 'Conseils pour de bons résultats' },
+      { type: 'item', icon: 'target', label: 'Nom précis', text: 'Plus le nom est précis, meilleure est la fiche. Préfère "Quinoa rouge bio cuit" à "Quinoa".' },
+      { type: 'item', icon: 'edit', label: 'Marque (optionnel)', text: 'Indique la marque pour les produits transformés afin que l\'IA puisse affiner sa réponse.' },
+      { type: 'item', icon: 'info', label: 'Contexte (optionnel)', text: 'Ajoute des infos supplémentaires : "cuit à l\'eau", "avec peau", "fermenté" pour préciser la préparation.' },
+      { type: 'divider' },
+      { type: 'heading', text: 'Limites' },
+      { type: 'item', icon: 'alert', label: 'Données estimées', text: 'Les valeurs générées par l\'IA sont des estimations basées sur les connaissances du modèle — pas des mesures de laboratoire.' },
+      { type: 'tip', text: 'Astuce — Pour les aliments bruts courants, préfère CIQUAL (données certifiées). Utilise l\'IA pour les aliments exotiques, préparations maison ou recettes composées.' },
+    ],
+  },
+
+  saved: {
+    title: 'Mes plats',
+    subtitle: 'Recettes et repas enregistrés',
+    blocks: [
+      { type: 'heading', text: 'Gestion des plats' },
+      { type: 'item', icon: 'plus', label: 'Créer un plat', text: 'Appuie sur le bouton + pour composer une nouvelle recette en sélectionnant des aliments de ta liste et en définissant les quantités.' },
+      { type: 'item', icon: 'edit', label: 'Modifier un plat', text: 'Appuie sur l\'icône crayon sur la carte d\'un plat pour modifier sa composition ou les quantités.' },
+      { type: 'item', icon: 'trash', label: 'Supprimer un plat', text: 'Ouvre le plat puis appuie sur l\'icône corbeille en haut à droite. Une confirmation est demandée.' },
+      { type: 'divider' },
+      { type: 'heading', text: 'Utilisation' },
+      { type: 'item', icon: 'book', label: 'Ajouter au journal', text: 'Depuis la fiche d\'un plat, sélectionne un repas pour l\'ajouter directement à ton journal du jour.' },
+      { type: 'item', icon: 'chart', label: 'Bilan nutritionnel', text: 'Chaque plat affiche automatiquement le total calorique et les macros calculés à partir de sa composition.' },
+      { type: 'tip', text: 'Astuce — Prépare tes repas de la semaine à l\'avance en créant des plats types (petit-déjeuner standard, salade du midi…) pour un ajout en un tap.' },
+    ],
+  },
+
+  savedDetail: {
+    title: 'Fiche du plat',
+    subtitle: 'Composition et utilisation',
+    blocks: [
+      { type: 'heading', text: 'Ajouter au journal' },
+      { type: 'item', icon: 'plus', label: 'Choisir un repas', text: 'Sélectionne un repas dans la liste puis appuie sur "Ajouter" pour incorporer tous les aliments du plat à ton journal.' },
+      { type: 'item', icon: 'chart', label: 'Bilan automatique', text: 'Les calories et macros du plat complet sont affichés en haut, calculés à partir de chaque ingrédient et de sa quantité.' },
+      { type: 'divider' },
+      { type: 'heading', text: 'Gestion' },
+      { type: 'item', icon: 'edit', label: 'Modifier la recette', text: 'Appuie sur le bouton d\'édition pour changer la composition, les quantités ou le nom du plat.' },
+      { type: 'item', icon: 'trash', label: 'Supprimer', text: 'L\'icône corbeille en haut à droite supprime définitivement ce plat de ta liste.' },
+      { type: 'tip', text: 'Astuce — Les plats sont indépendants du journal : les modifier ne change pas les entrées déjà enregistrées dans les repas passés.' },
+    ],
+  },
+
+  profile: {
+    title: 'Mon profil',
+    subtitle: 'Paramètres nutritionnels personnels',
+    blocks: [
+      { type: 'heading', text: 'Profil de base' },
+      { type: 'item', icon: 'user', label: 'Données personnelles', text: 'Âge, taille, poids et niveau d\'activité permettent de calculer ton métabolisme de base (MB) et tes besoins caloriques.' },
+      { type: 'item', icon: 'target', label: 'Objectif', text: 'Perte de poids, maintien ou prise de masse — l\'objectif ajuste automatiquement les recommandations caloriques affichées dans ton journal.' },
+      { type: 'divider' },
+      { type: 'heading', text: 'Régimes alimentaires' },
+      { type: 'item', icon: 'leaf', label: 'Régimes actifs', text: 'Active tes régimes (végétarien, vegan, sans gluten…) pour que Nutritor les prenne en compte dans les suggestions et les filtres.' },
+      { type: 'item', icon: 'shield', label: 'Allergènes', text: 'Les régimes actifs sont croisés avec les données allergènes des aliments pour t\'avertir des incompatibilités.' },
+      { type: 'tip', text: 'Astuce — Maintiens ton poids à jour pour que les calculs caloriques restent précis au fil du temps.' },
+    ],
+  },
+
+  stats: {
+    title: 'Statistiques',
+    subtitle: 'Analyse de tes habitudes alimentaires',
+    blocks: [
+      { type: 'heading', text: 'Données affichées' },
+      { type: 'item', icon: 'chart', label: 'Répartition des macros', text: 'Visualise la part des protéines, glucides et lipides dans ta consommation quotidienne et hebdomadaire.' },
+      { type: 'item', icon: 'target', label: 'Progression vers l\'objectif', text: 'Suis l\'évolution de ta consommation calorique par rapport à ton objectif sur les derniers jours.' },
+      { type: 'item', icon: 'zap', label: 'Tendances', text: 'Identifie tes habitudes alimentaires récurrentes et les nutriments que tu consommes le plus ou le moins.' },
+      { type: 'tip', text: 'Astuce — Pour des statistiques significatives, note tes repas chaque jour pendant au moins une semaine.' },
+    ],
+  },
+
+  settings: {
+    title: 'Paramètres',
+    subtitle: 'Configuration de l\'application',
+    blocks: [
+      { type: 'heading', text: 'Intelligence artificielle' },
+      { type: 'item', icon: 'key', label: 'OpenRouter', text: 'Service en ligne donnant accès à des dizaines de modèles (GPT-4, Claude, Mistral…). Nécessite une clé API OpenRouter.' },
+      { type: 'item', icon: 'cpu', label: 'Ollama', text: 'Modèles d\'IA tournant localement sur ta machine. Aucune donnée envoyée sur Internet. Nécessite Ollama installé sur l\'hôte réseau.' },
+      { type: 'divider' },
+      { type: 'heading', text: 'Données' },
+      { type: 'item', icon: 'upload', label: 'Exporter', text: 'Sauvegarde ta liste d\'aliments en JSON pour la transférer vers un autre appareil ou la conserver.' },
+      { type: 'item', icon: 'download', label: 'Importer', text: 'Charge un fichier JSON exporté précédemment pour restaurer ou fusionner une liste d\'aliments.' },
+      { type: 'divider' },
+      { type: 'heading', text: 'Conseils' },
+      { type: 'item', icon: 'shield', label: 'Sécurité de la clé API', text: 'Ta clé API est stockée uniquement sur cet appareil et n\'est jamais partagée.' },
+      { type: 'tip', text: 'Astuce — Pour tester sans abonnement, Ollama avec le modèle llama3.2 ou gemma2 offre de très bons résultats gratuitement.' },
+    ],
+  },
+
+  scanner: {
+    title: 'Scanner un code-barres',
+    subtitle: 'Identification instantanée de produits',
+    blocks: [
+      { type: 'heading', text: 'Utilisation' },
+      { type: 'item', icon: 'scan', label: 'Scanner le code', text: 'Pointe la caméra vers le code-barres du produit. La détection est automatique, pas besoin d\'appuyer sur un bouton.' },
+      { type: 'item', icon: 'globe', label: 'Source des données', text: 'Le produit est recherché automatiquement dans Open Food Facts (3+ millions de produits mondiaux).' },
+      { type: 'item', icon: 'sparkle', label: 'Enrichissement IA', text: 'Si l\'IA est configurée, la fiche est enrichie automatiquement après l\'import pour compléter les zones manquantes.' },
+      { type: 'divider' },
+      { type: 'heading', text: 'En cas de problème' },
+      { type: 'item', icon: 'alert', label: 'Produit non trouvé', text: 'Si le code-barres n\'est pas reconnu, le produit n\'est peut-être pas encore dans Open Food Facts. Utilise la recherche textuelle à la place.' },
+      { type: 'item', icon: 'info', label: 'Autorisation caméra', text: 'Le scanner nécessite l\'accès à la caméra. Si la permission est refusée, change-la dans les Réglages de ton appareil.' },
+      { type: 'tip', text: 'Astuce — Assure-toi d\'avoir une bonne luminosité et tiens l\'appareil stable à 15-25 cm du code-barres pour une détection rapide.' },
+    ],
+  },
+
+};

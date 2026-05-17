@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
+import { HelpButton, HelpModal } from '../components/HelpModal';
+import { HELP } from '../data/helpContent';
 import { INITIAL_MEALS } from '../data/food';
 import { Colors, FA_COLORS, Fonts } from '../theme/tokens';
 import {
@@ -670,6 +672,7 @@ export function DetailScreen({
   const insets = useSafeAreaInsets();
   const [portion, setPortion] = useState(food.defaultPortion);
   const [showSheet, setShowSheet] = useState(false);
+  const [helpVisible, setHelpVisible] = useState(false);
 
   const factor = portion / 100;
 
@@ -699,14 +702,10 @@ export function DetailScreen({
             <Icon name="back" size={22} />
           </TouchableOpacity>
           <View style={styles.topbarRight}>
-            <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
-              <Icon name="bookmark" size={20} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
-              <Icon name="sparkle" size={20} />
-            </TouchableOpacity>
+            <HelpButton onPress={() => setHelpVisible(true)} />
           </View>
         </View>
+        <HelpModal visible={helpVisible} content={HELP.detail} onClose={() => setHelpVisible(false)} />
 
         {/* Hero */}
         <View style={styles.hero}>
@@ -715,12 +714,6 @@ export function DetailScreen({
           </Text>
           <Text style={styles.heroTitle}>{food.name}</Text>
           <Text style={styles.heroSubtitle}>{food.subtitle}</Text>
-        </View>
-
-        {/* Photo placeholder */}
-        <View style={styles.photoPlaceholder}>
-          <Text style={styles.photoMeta}>PHOTO PRODUIT</Text>
-          <Text style={styles.photoMeta}>{food.origin ?? '200 × 200'}</Text>
         </View>
 
         {/* Compat strip */}

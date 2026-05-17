@@ -1,5 +1,6 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,19 +10,36 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
+import { HelpButton, HelpModal } from '../components/HelpModal';
+import { HELP } from '../data/helpContent';
 import { Colors, Fonts } from '../theme/tokens';
 import { Food } from '../types';
+import { AppSettings } from '../types/settings';
 import { CIQUALEntry, CIQUAL_DATA, ciqualToFood, searchCIQUAL } from '../services/ciqual';
+import { enrichFoodWithAI, isAIReady } from '../services/aiService';
+
+// ── Elapsed timer ──────────────────────────────────────────────
+
+function ElapsedTimer() {
+  const [secs, setSecs] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setSecs((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return <Text style={styles.enrichingTimer}>{secs}s</Text>;
+}
 
 // ── Result row ─────────────────────────────────────────────────
 
 function ResultRow({
   entry,
   imported,
+  enriching,
   onImport,
 }: {
   entry: CIQUALEntry;
   imported: boolean;
+  enriching: boolean;
   onImport: () => void;
 }) {
   const glyph = entry.name.charAt(0).toUpperCase();
@@ -50,16 +68,25 @@ function ResultRow({
           )}
         </View>
       </View>
-      <TouchableOpacity
-        style={[styles.importBtn, imported && styles.importBtnDone]}
-        onPress={onImport}
-        activeOpacity={0.7}
-        disabled={imported}
-      >
-        {imported
-          ? <Icon name="check" size={16} color={Colors.ok} />
-          : <Icon name="plus" size={16} color={Colors.ink} />}
-      </TouchableOpacity>
+      {enriching ? (
+        <View style={styles.enrichingBadge}>
+          <ActivityIndicator size="small" color={Colors.signal} />
+          <ElapsedTimer />
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={[styles.importBtn, imported && styles.importBtnDone]}
+          onPress={onImport}
+          activeOpacity={0.7}
+          disabled={imported}
+        >
+          {imported ? (
+            <Icon name="check" size={16} color={Colors.ok} />
+          ) : (
+            <Icon name="plus" size={16} color={Colors.ink} />
+          )}
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -112,15 +139,19 @@ interface Props {
   existingIds: Set<string>;
   onImport: (food: Food) => void;
   onBack: () => void;
+  settings?: AppSettings;
+  initialQuery?: string;
 }
 
-export function CIQUALScreen({ existingIds, onImport, onBack }: Props) {
+export function CIQUALScreen({ existingIds, onImport, onBack, settings, initialQuery = '' }: Props) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
 
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const [importedIds, setImportedIds] = useState<Set<string>>(new Set());
+  const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set());
+  const [helpVisible, setHelpVisible] = useState(false);
 
   const results = useMemo(() => {
     if (query.trim().length >= 2) return searchCIQUAL(query, 40);
@@ -128,9 +159,29 @@ export function CIQUALScreen({ existingIds, onImport, onBack }: Props) {
     return [];
   }, [query, activeGroup]);
 
-  const handleImport = (entry: CIQUALEntry) => {
-    const food = ciqualToFood(entry);
-    if (!existingIds.has(food.id)) onImport(food);
+  const handleImport = async (entry: CIQUALEntry) => {
+    if (isImported(entry) || enrichingIds.has(entry.id)) return;
+
+    const baseFood = ciqualToFood(entry);
+    if (existingIds.has(baseFood.id)) {
+      setImportedIds((prev) => new Set([...prev, entry.id]));
+      return;
+    }
+
+    const aiEnabled = settings && isAIReady(settings);
+    if (aiEnabled) {
+      setEnrichingIds((prev) => new Set([...prev, entry.id]));
+      let finalFood = baseFood;
+      try {
+        finalFood = await enrichFoodWithAI(baseFood, settings!);
+      } catch {
+        // fallback to partial food
+      }
+      setEnrichingIds((prev) => { const s = new Set(prev); s.delete(entry.id); return s; });
+      onImport(finalFood);
+    } else {
+      onImport(baseFood);
+    }
     setImportedIds((prev) => new Set([...prev, entry.id]));
   };
 
@@ -150,10 +201,9 @@ export function CIQUALScreen({ existingIds, onImport, onBack }: Props) {
           <Text style={styles.eyebrow}>Base officielle française</Text>
           <Text style={styles.title}>CIQUAL — ANSES</Text>
         </View>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>FR</Text>
-        </View>
+        <HelpButton onPress={() => setHelpVisible(true)} />
       </View>
+      <HelpModal visible={helpVisible} content={HELP.ciqual} onClose={() => setHelpVisible(false)} />
 
       {/* Search input */}
       <View style={styles.searchWrap}>
@@ -237,6 +287,7 @@ export function CIQUALScreen({ existingIds, onImport, onBack }: Props) {
             key={entry.id}
             entry={entry}
             imported={isImported(entry)}
+            enriching={enrichingIds.has(entry.id)}
             onImport={() => handleImport(entry)}
           />
         ))}
@@ -338,4 +389,21 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   importBtnDone: { borderColor: 'rgba(63,90,58,0.3)', backgroundColor: 'rgba(63,90,58,0.06)' },
+
+  enrichingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(180,100,30,0.25)',
+    backgroundColor: 'rgba(180,100,30,0.06)',
+  },
+  enrichingTimer: {
+    fontFamily: Fonts.monoMedium,
+    fontSize: 12,
+    color: Colors.signal,
+  },
 });

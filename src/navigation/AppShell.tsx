@@ -33,6 +33,7 @@ import { OpenFoodFactsScreen } from '../screens/OpenFoodFactsScreen';
 import { CIQUALScreen } from '../screens/CIQUALScreen';
 import { BarcodeScannerScreen } from '../screens/BarcodeScannerScreen';
 import { AppSettings, DEFAULT_SETTINGS } from '../types/settings';
+import { refreshCiqualAllergens } from '../services/ciqual';
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -145,6 +146,7 @@ export function AppShell() {
   const [detailOrigin, setDetailOrigin] = useState<'search' | null>(null);
   const [selectedPlate, setSelectedPlate] = useState<SavedPlate | null>(null);
   const [plateForEdit, setPlateForEdit] = useState<SavedPlate | null>(null);
+  const [pendingQuery, setPendingQuery] = useState('');
 
   const [profile, setProfile, profileLoading] = usePersistedState<UserProfile>(
     KEYS.profile,
@@ -183,6 +185,24 @@ export function AppShell() {
       }
     });
   }, [mealsLoading]);
+
+  // One-time migration: recompute CIQUAL allergens for stored foods
+  useEffect(() => {
+    if (foodsLoading) return;
+    load<boolean>(KEYS.migrationV1).then((done) => {
+      if (done) return;
+      let changed = false;
+      const migrated = foodList.map((food) => {
+        if (!food.id.startsWith('ciqual-')) return food;
+        const updated = refreshCiqualAllergens(food);
+        changed = true;
+        return updated;
+      });
+      if (changed) setFoodList(migrated);
+      save(KEYS.migrationV1, true);
+      console.log('[AppShell] migration v1: CIQUAL allergens refreshed');
+    });
+  }, [foodsLoading]);
 
   const appLoading = profileLoading || foodsLoading || mealsLoading;
 
@@ -296,6 +316,14 @@ export function AppShell() {
     }));
   };
 
+  const handleDeletePlate = (plate: SavedPlate) => {
+    setSavedPlates((prev) => prev.filter((p) => p.id !== plate.id));
+    setStack(null);
+    setTab('saved');
+    setToast(`« ${plate.name} » supprimé`);
+    setTimeout(() => setToast(null), 2600);
+  };
+
   const handleSavePlate = (plate: SavedPlate) => {
     setSavedPlates((prev) => {
       const exists = prev.some((p) => p.id === plate.id);
@@ -319,9 +347,14 @@ export function AppShell() {
         foodList={foodList}
         onBack={() => setStack(null)}
         onPickItem={(food) => openDetail(food, 'search')}
-        onAddWithAI={() => setStack('addFood')}
-        onOpenFoodFacts={() => setStack('openFoodFacts')}
-        onOpenCIQUAL={() => setStack('ciqual')}
+        onDeleteFood={(foodId) => {
+          setFoodList((prev) => prev.filter((f) => f.id !== foodId));
+          setToast('Aliment supprimé');
+          setTimeout(() => setToast(null), 2600);
+        }}
+        onAddWithAI={(q) => { setPendingQuery(q); setStack('addFood'); }}
+        onOpenFoodFacts={(q) => { setPendingQuery(q); setStack('openFoodFacts'); }}
+        onOpenCIQUAL={(q) => { setPendingQuery(q); setStack('ciqual'); }}
         onOpenScanner={() => setStack('scanner')}
       />
     );
@@ -341,6 +374,7 @@ export function AppShell() {
         meals={meals}
         onBack={() => setStack(null)}
         onAdd={handleAddPlate}
+        onDelete={() => handleDeletePlate(selectedPlate)}
       />
     );
   } else if (stack === 'editProfile') {
@@ -367,6 +401,8 @@ export function AppShell() {
     screen = (
       <CIQUALScreen
         existingIds={new Set(foodList.map((f) => f.id))}
+        initialQuery={pendingQuery}
+        settings={settings}
         onImport={(food) => {
           setFoodList((prev) => [...prev, food]);
           setToast(`« ${food.name} » ajouté à ta liste`);
@@ -379,6 +415,8 @@ export function AppShell() {
     screen = (
       <OpenFoodFactsScreen
         existingIds={new Set(foodList.map((f) => f.id))}
+        initialQuery={pendingQuery}
+        settings={settings}
         onImport={(food) => {
           setFoodList((prev) => [...prev, food]);
           setToast(`« ${food.name} » ajouté à ta liste`);
@@ -390,6 +428,7 @@ export function AppShell() {
   } else if (stack === 'addFood') {
     screen = (
       <AddFoodScreen
+        initialQuery={pendingQuery}
         settings={settings}
         onAdd={(food) => {
           setFoodList((prev) => [...prev, food]);
@@ -404,6 +443,7 @@ export function AppShell() {
     screen = (
       <EditSavedPlateScreen
         plate={plateForEdit}
+        allPlates={savedPlates}
         onSave={handleSavePlate}
         onBack={() => setStack(null)}
       />

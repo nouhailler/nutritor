@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   Circle,
   Defs,
@@ -12,6 +12,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WEEK, WEEK_SUMMARY, WeekDay } from '../data/stats';
 import { Colors, Fonts } from '../theme/tokens';
+import { HelpButton, HelpModal } from '../components/HelpModal';
+import { HELP } from '../data/helpContent';
 
 // ── Design constants ──────────────────────────────────────────
 
@@ -236,6 +238,7 @@ function HeatStrip({ data }: { data: WeekDay[] }) {
 
 export function StatsScreen() {
   const insets = useSafeAreaInsets();
+  const [helpVisible, setHelpVisible] = useState(false);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -246,11 +249,13 @@ export function StatsScreen() {
       >
         {/* Topbar */}
         <View style={styles.topbar}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.topbarEyebrow}>Semaine du 5 — 11 mai</Text>
             <Text style={styles.topbarTitle}>Statistiques</Text>
           </View>
+          <HelpButton onPress={() => setHelpVisible(true)} />
         </View>
+        <HelpModal visible={helpVisible} content={HELP.stats} onClose={() => setHelpVisible(false)} />
 
         {/* Summary */}
         <View style={styles.summary}>

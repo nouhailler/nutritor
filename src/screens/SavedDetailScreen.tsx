@@ -1,6 +1,8 @@
 import React, { useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +15,8 @@ import { Icon } from '../components/Icon';
 import { SavedPlate } from '../data/saved';
 import { Meal } from '../types';
 import { Colors, Fonts } from '../theme/tokens';
+import { HelpButton, HelpModal } from '../components/HelpModal';
+import { HELP } from '../data/helpContent';
 
 // ── Striped hero ──────────────────────────────────────────────
 
@@ -169,11 +173,13 @@ interface Props {
   meals: Meal[];
   onBack: () => void;
   onAdd: (mealId: string, plate: SavedPlate) => void;
+  onDelete: () => void;
 }
 
-export function SavedDetailScreen({ plate, meals, onBack, onAdd }: Props) {
+export function SavedDetailScreen({ plate, meals, onBack, onAdd, onDelete }: Props) {
   const insets = useSafeAreaInsets();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [helpVisible, setHelpVisible] = useState(false);
 
   const totalMacro = plate.macros.protein + plate.macros.carbs + plate.macros.fat || 1;
 
@@ -188,10 +194,25 @@ export function SavedDetailScreen({ plate, meals, onBack, onAdd }: Props) {
           <Text style={styles.eyebrow}>Plat sauvegardé</Text>
           <Text style={styles.plateTitle} numberOfLines={1}>{plate.name}</Text>
         </View>
-        <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
-          <Icon name="bookmark" size={20} color={Colors.ink} />
+        <TouchableOpacity
+          style={styles.iconBtn}
+          activeOpacity={0.7}
+          onPress={() =>
+            Alert.alert(
+              'Supprimer ce plat ?',
+              `« ${plate.name} » sera supprimé définitivement.`,
+              [
+                { text: 'Annuler', style: 'cancel' },
+                { text: 'Supprimer', style: 'destructive', onPress: onDelete },
+              ]
+            )
+          }
+        >
+          <Icon name="trash" size={18} color={Colors.warn} />
         </TouchableOpacity>
+        <HelpButton onPress={() => setHelpVisible(true)} />
       </View>
+      <HelpModal visible={helpVisible} content={HELP.savedDetail} onClose={() => setHelpVisible(false)} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -199,16 +220,20 @@ export function SavedDetailScreen({ plate, meals, onBack, onAdd }: Props) {
       >
         {/* Hero */}
         <View style={styles.heroWrap}>
-          <StripedHero />
+          {plate.photo ? (
+            <Image source={{ uri: plate.photo }} style={styles.heroPhoto} resizeMode="cover" />
+          ) : (
+            <StripedHero />
+          )}
           {/* Badges over hero */}
           <View style={styles.heroBadges}>
-            <View style={styles.kcalBadge}>
-              <Text style={styles.kcalBadgeValue}>{plate.kcal}</Text>
-              <Text style={styles.kcalBadgeUnit}> kcal</Text>
+            <View style={[styles.kcalBadge, plate.photo && styles.kcalBadgeOnPhoto]}>
+              <Text style={[styles.kcalBadgeValue, plate.photo && styles.kcalBadgeValueOnPhoto]}>{plate.kcal}</Text>
+              <Text style={[styles.kcalBadgeUnit, plate.photo && styles.kcalBadgeValueOnPhoto]}> kcal</Text>
             </View>
-            <View style={styles.timeBadge}>
-              <Icon name="plus" size={10} color={Colors.muted} />
-              <Text style={styles.timeBadgeText}>{plate.time}</Text>
+            <View style={[styles.timeBadge, plate.photo && styles.timeBadgeOnPhoto]}>
+              <Icon name="clock" size={10} color={plate.photo ? Colors.paper2 : Colors.muted} />
+              <Text style={[styles.timeBadgeText, plate.photo && styles.timeBadgeTextOnPhoto]}>{plate.time}</Text>
             </View>
           </View>
         </View>
@@ -398,6 +423,24 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     textTransform: 'uppercase',
     color: Colors.muted,
+  },
+
+  heroPhoto: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  kcalBadgeOnPhoto: {
+    backgroundColor: 'rgba(15,12,8,0.55)',
+    borderColor: 'transparent',
+  },
+  kcalBadgeValueOnPhoto: {
+    color: Colors.paper2,
+  },
+  timeBadgeOnPhoto: {
+    backgroundColor: 'rgba(15,12,8,0.55)',
+    borderColor: 'transparent',
+  },
+  timeBadgeTextOnPhoto: {
+    color: Colors.paper2,
   },
 
   tagsRow: {

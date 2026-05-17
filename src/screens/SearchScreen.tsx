@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react';
 import {
+  Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,10 +11,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
+import { HelpButton, HelpModal } from '../components/HelpModal';
+import { HELP } from '../data/helpContent';
 import {
   RECENT,
   SEARCH_FILTERS,
   SearchFilter,
+  SearchFilterId,
   SearchResult,
   TagKind,
 } from '../data/search';
@@ -59,7 +64,7 @@ function TagPill({ label, kind }: { label: string; kind: TagKind }) {
 // ── Result row ───────────────────────────────────────────────
 
 function ResultRow({
-  name, brand, portion, kcal, glyph, tags, onPress,
+  name, brand, portion, kcal, glyph, tags, onPress, onDelete,
 }: {
   name: string;
   brand: string;
@@ -68,26 +73,34 @@ function ResultRow({
   glyph: string;
   tags: SearchResult['tags'];
   onPress: () => void;
+  onDelete?: () => void;
 }) {
   return (
-    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
-      <View style={styles.thumb}>
-        <Text style={styles.thumbGlyph}>{glyph}</Text>
-      </View>
-      <View style={styles.body}>
-        <Text style={styles.bodyName} numberOfLines={1}>{name}</Text>
-        <View style={styles.meta}>
-          <Text style={styles.metaBrand}>{brand.toUpperCase()}</Text>
-          <Text style={styles.metaPortion}>· {portion}</Text>
+    <View style={styles.row}>
+      <TouchableOpacity style={styles.rowPressable} onPress={onPress} activeOpacity={0.7}>
+        <View style={styles.thumb}>
+          <Text style={styles.thumbGlyph}>{glyph}</Text>
         </View>
-        <View style={styles.tags}>
-          {tags.map((t, i) => <TagPill key={i} label={t.label} kind={t.kind} />)}
+        <View style={styles.body}>
+          <Text style={styles.bodyName} numberOfLines={1}>{name}</Text>
+          <View style={styles.meta}>
+            <Text style={styles.metaBrand}>{brand.toUpperCase()}</Text>
+            <Text style={styles.metaPortion}>· {portion}</Text>
+          </View>
+          <View style={styles.tags}>
+            {tags.map((t, i) => <TagPill key={i} label={t.label} kind={t.kind} />)}
+          </View>
         </View>
-      </View>
-      <Text style={styles.kcalRight}>
-        {kcal}<Text style={styles.kcalUnit}> kcal</Text>
-      </Text>
-    </TouchableOpacity>
+        <Text style={styles.kcalRight}>
+          {kcal}<Text style={styles.kcalUnit}> kcal</Text>
+        </Text>
+      </TouchableOpacity>
+      {onDelete && (
+        <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} activeOpacity={0.7}>
+          <Icon name="trash" size={15} color={Colors.warn} />
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 
@@ -108,28 +121,67 @@ interface Props {
   foodList: Food[];
   onBack: () => void;
   onPickItem: (food: Food) => void;
-  onAddWithAI: () => void;
-  onOpenFoodFacts: () => void;
-  onOpenCIQUAL: () => void;
+  onDeleteFood: (foodId: string) => void;
+  onAddWithAI: (query: string) => void;
+  onOpenFoodFacts: (query: string) => void;
+  onOpenCIQUAL: (query: string) => void;
   onOpenScanner: () => void;
 }
 
-export function SearchScreen({ foodList, onBack, onPickItem, onAddWithAI, onOpenFoodFacts, onOpenCIQUAL, onOpenScanner }: Props) {
+export function SearchScreen({ foodList, onBack, onPickItem, onDeleteFood, onAddWithAI, onOpenFoodFacts, onOpenCIQUAL, onOpenScanner }: Props) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query, 300);
   const [filters, setFilters] = useState<SearchFilter[]>(SEARCH_FILTERS);
+  const [helpVisible, setHelpVisible] = useState(false);
 
   const toggle = (id: string) =>
     setFilters((fs) => fs.map((f) => (f.id === id ? { ...f, active: !f.active } : f)));
 
-  const allResults = foodList.map(foodToSearchResult);
-  const filtered = allResults.filter(
-    (item) => !debouncedQuery || item.name.toLowerCase().includes(debouncedQuery.toLowerCase())
+  const activeFilters = filters.filter((f) => f.active);
+
+  function passesFilter(food: Food, id: SearchFilterId): boolean {
+    const am = Object.fromEntries(food.allergens.map((a) => [a.name, a.status]));
+    const portionKcal = Math.round((food.per100.kcal * food.defaultPortion) / 100);
+    switch (id) {
+      case 'gf':  return am['Gluten'] !== 'contains';
+      case 'lf':  return am['Lactose'] !== 'contains';
+      case 'vg':  return am['Poisson'] !== 'contains' && am['Crustacés'] !== 'contains' && am['Mollusques'] !== 'contains';
+      case 'vgn': return am['Œufs'] !== 'contains' && am['Lactose'] !== 'contains' && am['Poisson'] !== 'contains' && am['Crustacés'] !== 'contains' && am['Mollusques'] !== 'contains';
+      case 'nf':  return am['Fruits à coque'] !== 'contains';
+      case 'low': return portionKcal < 200;
+      default:    return true;
+    }
+  }
+
+  function isCompatible(food: Food): boolean {
+    return activeFilters.every((f) => passesFilter(food, f.id));
+  }
+
+  const textFiltered = foodList.filter(
+    (food) => !debouncedQuery || food.name.toLowerCase().includes(debouncedQuery.toLowerCase())
   );
-  const compatible   = filtered.filter((i) => !i.incompatible);
-  const incompatible = filtered.filter((i) => i.incompatible);
+  const compatible   = textFiltered.filter((f) => isCompatible(f));
+  const incompatible = textFiltered.filter((f) => !isCompatible(f));
+
+  const confirmDelete = (food: Food) => {
+    if (Platform.OS === 'web') {
+      // eslint-disable-next-line no-alert
+      if (window.confirm(`Supprimer « ${food.name} » de ta liste ?`)) {
+        onDeleteFood(food.id);
+      }
+      return;
+    }
+    Alert.alert(
+      'Supprimer cet aliment ?',
+      `« ${food.name} » sera retiré de ta liste.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Supprimer', style: 'destructive', onPress: () => onDeleteFood(food.id) },
+      ]
+    );
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -147,7 +199,9 @@ export function SearchScreen({ foodList, onBack, onPickItem, onAddWithAI, onOpen
         <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={onOpenScanner}>
           <Icon name="scan" size={20} color={Colors.ink} />
         </TouchableOpacity>
+        <HelpButton onPress={() => setHelpVisible(true)} />
       </View>
+      <HelpModal visible={helpVisible} content={HELP.search} onClose={() => setHelpVisible(false)} />
 
       {/* Search input */}
       <View style={styles.searchHead}>
@@ -170,6 +224,22 @@ export function SearchScreen({ foodList, onBack, onPickItem, onAddWithAI, onOpen
             </TouchableOpacity>
           )}
         </View>
+      </View>
+
+      {/* Add source strip */}
+      <View style={styles.addStrip}>
+        <TouchableOpacity style={styles.addChip} onPress={() => onOpenCIQUAL(query)} activeOpacity={0.8}>
+          <Icon name="database" size={12} color={Colors.signal} />
+          <Text style={[styles.addChipText, { color: Colors.signal }]}>CIQUAL</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.addChip} onPress={() => onOpenFoodFacts(query)} activeOpacity={0.8}>
+          <Icon name="search" size={12} color={Colors.ok} />
+          <Text style={[styles.addChipText, { color: Colors.ok }]}>Open Food Facts</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.addChip, styles.addChipAI]} onPress={() => onAddWithAI(query)} activeOpacity={0.8}>
+          <Icon name="sparkle" size={12} color={Colors.paper2} />
+          <Text style={[styles.addChipText, styles.addChipAIText]}>IA</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Filter strip */}
@@ -203,45 +273,47 @@ export function SearchScreen({ foodList, onBack, onPickItem, onAddWithAI, onOpen
       >
         {/* Compatible */}
         <SectionLabel
-          left="Résultats compatibles"
+          left={activeFilters.length ? 'Compatible avec tes filtres' : 'Tous les aliments'}
           right={`${compatible.length} aliment${compatible.length !== 1 ? 's' : ''}`}
         />
-        {compatible.map((item) => (
-          <ResultRow
-            key={item.id}
-            name={item.name}
-            brand={item.brand}
-            portion={item.portion}
-            kcal={item.kcal}
-            glyph={item.glyph}
-            tags={item.tags}
-            onPress={() => {
-              const food = foodList.find((f) => f.id === item.id);
-              if (food) onPickItem(food);
-            }}
-          />
-        ))}
+        {compatible.map((food) => {
+          const sr = foodToSearchResult(food);
+          return (
+            <ResultRow
+              key={food.id}
+              name={sr.name}
+              brand={sr.brand}
+              portion={sr.portion}
+              kcal={sr.kcal}
+              glyph={sr.glyph}
+              tags={sr.tags}
+              onPress={() => onPickItem(food)}
+              onDelete={() => confirmDelete(food)}
+            />
+          );
+        })}
 
         {/* Incompatible */}
         {incompatible.length > 0 && (
           <>
-            <SectionLabel left="Filtré · ne correspond pas à ton profil" />
-            <View style={{ opacity: 0.55 }}>
-              {incompatible.map((item) => (
-                <ResultRow
-                  key={item.id}
-                  name={item.name}
-                  brand={item.brand}
-                  portion={item.portion}
-                  kcal={item.kcal}
-                  glyph={item.glyph}
-                  tags={item.tags}
-                  onPress={() => {
-                    const food = foodList.find((f) => f.id === item.id);
-                    if (food) onPickItem(food);
-                  }}
-                />
-              ))}
+            <SectionLabel left="Filtré · ne correspond pas aux critères actifs" />
+            <View style={{ opacity: 0.5 }}>
+              {incompatible.map((food) => {
+                const sr = foodToSearchResult(food);
+                return (
+                  <ResultRow
+                    key={food.id}
+                    name={sr.name}
+                    brand={sr.brand}
+                    portion={sr.portion}
+                    kcal={sr.kcal}
+                    glyph={sr.glyph}
+                    tags={sr.tags}
+                    onPress={() => onPickItem(food)}
+                    onDelete={() => confirmDelete(food)}
+                  />
+                );
+              })}
             </View>
           </>
         )}
@@ -263,30 +335,6 @@ export function SearchScreen({ foodList, onBack, onPickItem, onAddWithAI, onOpen
             }}
           />
         ))}
-
-        {/* Add with AI / OFF */}
-        <View style={styles.aiSection}>
-          <View style={styles.aiDivider}>
-            <View style={styles.aiDividerLine} />
-            <Text style={styles.aiDividerText}>ajouter un aliment</Text>
-            <View style={styles.aiDividerLine} />
-          </View>
-          <View style={styles.addBtns}>
-            <TouchableOpacity style={styles.ciqualBtn} onPress={onOpenCIQUAL} activeOpacity={0.8}>
-              <Icon name="database" size={14} color={Colors.signal} />
-              <Text style={styles.ciqualBtnText}>CIQUAL</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.offBtn} onPress={onOpenFoodFacts} activeOpacity={0.8}>
-              <Icon name="search" size={14} color={Colors.ok} />
-              <Text style={styles.offBtnText}>Open Food Facts</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.aiBtn} onPress={onAddWithAI} activeOpacity={0.8}>
-              <Icon name="sparkle" size={14} color={Colors.paper2} />
-              <Text style={styles.aiBtnText}>IA</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.aiHint}>CIQUAL · 3 167 FR  ·  OFF · 3M mondial  ·  IA · données complètes</Text>
-        </View>
       </ScrollView>
     </View>
   );
@@ -410,11 +458,28 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
     borderTopWidth: 1,
     borderTopColor: Colors.hairline2,
+    paddingRight: 12,
+  },
+  rowPressable: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+    paddingLeft: 20,
+    paddingRight: 8,
+  },
+  deleteBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(139,58,46,0.25)',
+    backgroundColor: 'rgba(139,58,46,0.06)',
   },
   thumb: {
     width: 52, height: 52,
@@ -506,72 +571,33 @@ const styles = StyleSheet.create({
     color: Colors.muted,
   },
 
-  aiSection: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 12 },
-  aiDivider: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  aiDividerLine: { flex: 1, height: 1, backgroundColor: Colors.hairline2 },
-  aiDividerText: {
+  addStrip: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
+  addChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.card,
+  },
+  addChipText: {
     fontFamily: Fonts.mono,
-    fontSize: 8,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    color: Colors.muted2,
+    fontSize: 10,
+    letterSpacing: 0.5,
   },
-  addBtns: { flexDirection: 'row', gap: 6 },
-  ciqualBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    borderRadius: 100,
-    paddingVertical: 13,
-    borderWidth: 1,
-    borderColor: 'rgba(107,90,46,0.35)',
-    backgroundColor: 'rgba(107,90,46,0.07)',
-  },
-  ciqualBtnText: {
-    fontFamily: Fonts.sansSemiBold,
-    fontSize: 12,
-    color: Colors.signal,
-  },
-  offBtn: {
-    flex: 1.4,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    borderRadius: 100,
-    paddingVertical: 13,
-    borderWidth: 1,
-    borderColor: 'rgba(63,90,58,0.35)',
-    backgroundColor: 'rgba(63,90,58,0.07)',
-  },
-  offBtnText: {
-    fontFamily: Fonts.sansSemiBold,
-    fontSize: 12,
-    color: Colors.ok,
-  },
-  aiBtn: {
-    flex: 0.7,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
+  addChipAI: {
     backgroundColor: Colors.ink,
-    borderRadius: 100,
-    paddingVertical: 13,
+    borderColor: Colors.ink,
   },
-  aiBtnText: {
-    fontFamily: Fonts.sansSemiBold,
-    fontSize: 12,
+  addChipAIText: {
     color: Colors.paper2,
-  },
-  aiHint: {
-    fontFamily: Fonts.mono,
-    fontSize: 9,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: Colors.muted2,
-    textAlign: 'center',
   },
 });

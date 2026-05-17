@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
+import { HelpButton, HelpModal } from '../components/HelpModal';
+import { HELP } from '../data/helpContent';
 import { AllergenLevel, UserProfile, computeDietLabel } from '../data/user';
 import { Colors, Fonts } from '../theme/tokens';
 
@@ -40,6 +42,7 @@ interface ProfileScreenProps {
 
 export function ProfileScreen({ profile, onEdit, onToggleDiet }: ProfileScreenProps) {
   const insets = useSafeAreaInsets();
+  const [helpVisible, setHelpVisible] = useState(false);
   const dietLabel = computeDietLabel(profile.diets);
 
   return (
@@ -51,11 +54,12 @@ export function ProfileScreen({ profile, onEdit, onToggleDiet }: ProfileScreenPr
       >
         {/* Topbar */}
         <View style={styles.topbar}>
-          <View style={styles.topbarPlaceholder} />
+          <HelpButton onPress={() => setHelpVisible(true)} />
           <TouchableOpacity style={styles.iconBtn} onPress={onEdit} activeOpacity={0.7}>
             <Icon name="sliders" size={20} />
           </TouchableOpacity>
         </View>
+        <HelpModal visible={helpVisible} content={HELP.profile} onClose={() => setHelpVisible(false)} />
 
         {/* Hero */}
         <View style={styles.hero}>

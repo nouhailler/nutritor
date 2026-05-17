@@ -10,6 +10,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Icon } from '../components/Icon';
+import { HelpButton, HelpModal } from '../components/HelpModal';
+import { HELP } from '../data/helpContent';
 import { Colors, Fonts } from '../theme/tokens';
 import { Food } from '../types';
 import { getOFFByBarcode, offProductToFood } from '../services/openFoodFacts';
@@ -211,6 +213,7 @@ export function BarcodeScannerScreen({ existingIds, onImport, onBack }: Props) {
   const [phase, setPhase] = useState<Phase>('scanning');
   const [foundFood, setFoundFood] = useState<Food | null>(null);
   const [added, setAdded] = useState(false);
+  const [helpVisible, setHelpVisible] = useState(false);
   const scanLocked = useRef(false);
 
   const handleBarcode = async ({ data }: { data: string }) => {
@@ -286,11 +289,13 @@ export function BarcodeScannerScreen({ existingIds, onImport, onBack }: Props) {
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
           <Icon name="back" size={20} color={Colors.paper2} />
         </TouchableOpacity>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.topTitle}>Scanner un code-barres</Text>
           <Text style={styles.topSub}>Open Food Facts</Text>
         </View>
+        <HelpButton onPress={() => setHelpVisible(true)} />
       </View>
+      <HelpModal visible={helpVisible} content={HELP.scanner} onClose={() => setHelpVisible(false)} />
 
       {/* Status / loading */}
       {phase === 'scanning' && (

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -10,19 +10,36 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
+import { HelpButton, HelpModal } from '../components/HelpModal';
+import { HELP } from '../data/helpContent';
 import { Colors, Fonts } from '../theme/tokens';
 import { Food } from '../types';
+import { AppSettings } from '../types/settings';
 import { OFFProduct, offProductToFood, searchOFF } from '../services/openFoodFacts';
+import { enrichFoodWithAI, isAIReady } from '../services/aiService';
+
+// ── Elapsed timer ──────────────────────────────────────────────
+
+function ElapsedTimer() {
+  const [secs, setSecs] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setSecs((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return <Text style={styles.enrichingTimer}>{secs}s</Text>;
+}
 
 // ── Result card ────────────────────────────────────────────────
 
 function ResultCard({
   product,
   imported,
+  enriching,
   onImport,
 }: {
   product: OFFProduct;
   imported: boolean;
+  enriching: boolean;
   onImport: () => void;
 }) {
   const n = product.nutriments ?? {};
@@ -60,12 +77,18 @@ function ResultCard({
         </View>
       </View>
       <TouchableOpacity
-        style={[styles.importBtn, imported && styles.importBtnDone]}
+        style={[styles.importBtn, (imported || enriching) && styles.importBtnDone]}
         onPress={onImport}
         activeOpacity={0.7}
-        disabled={imported}
+        disabled={imported || enriching}
       >
-        {imported ? (
+        {enriching ? (
+          <>
+            <ActivityIndicator size="small" color={Colors.signal} />
+            <Text style={styles.importBtnDoneText}>Enrichissement IA… </Text>
+            <ElapsedTimer />
+          </>
+        ) : imported ? (
           <>
             <Icon name="check" size={14} color={Colors.ok} />
             <Text style={styles.importBtnDoneText}>Ajouté</Text>
@@ -87,18 +110,26 @@ interface Props {
   existingIds: Set<string>;
   onImport: (food: Food) => void;
   onBack: () => void;
+  settings?: AppSettings;
+  initialQuery?: string;
 }
 
-export function OpenFoodFactsScreen({ existingIds, onImport, onBack }: Props) {
+export function OpenFoodFactsScreen({ existingIds, onImport, onBack, settings, initialQuery = '' }: Props) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
 
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
   const [products, setProducts] = useState<OFFProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState('');
   const [importedIds, setImportedIds] = useState<Set<string>>(new Set());
+  const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set());
+  const [helpVisible, setHelpVisible] = useState(false);
+
+  useEffect(() => {
+    if (initialQuery.trim()) handleSearch();
+  }, []);
 
   const handleSearch = async () => {
     const q = query.trim();
@@ -121,15 +152,37 @@ export function OpenFoodFactsScreen({ existingIds, onImport, onBack }: Props) {
     }
   };
 
-  const handleImport = (product: OFFProduct) => {
-    const food = offProductToFood(product);
-    const alreadyInList = existingIds.has(food.id);
-    if (!alreadyInList) onImport(food);
-    setImportedIds((prev) => new Set([...prev, product.code || product.id]));
+  const handleImport = async (product: OFFProduct) => {
+    const pid = product.code || product.id;
+    if (importedIds.has(pid) || enrichingIds.has(pid)) return;
+
+    const baseFood = offProductToFood(product);
+    if (existingIds.has(baseFood.id)) {
+      setImportedIds((prev) => new Set([...prev, pid]));
+      return;
+    }
+
+    const aiEnabled = settings && isAIReady(settings);
+    if (aiEnabled) {
+      setEnrichingIds((prev) => new Set([...prev, pid]));
+      let finalFood = baseFood;
+      try {
+        finalFood = await enrichFoodWithAI(baseFood, settings!);
+      } catch {
+        // fallback to partial food
+      }
+      setEnrichingIds((prev) => { const s = new Set(prev); s.delete(pid); return s; });
+      onImport(finalFood);
+    } else {
+      onImport(baseFood);
+    }
+    setImportedIds((prev) => new Set([...prev, pid]));
   };
 
-  const isImported = (p: OFFProduct) =>
-    importedIds.has(p.code || p.id) || existingIds.has(`off-${p.code || p.id}-001`);
+  const isImported = (p: OFFProduct) => {
+    const pid = p.code || p.id;
+    return importedIds.has(pid) || existingIds.has(`off-${pid}-001`);
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -142,10 +195,9 @@ export function OpenFoodFactsScreen({ existingIds, onImport, onBack }: Props) {
           <Text style={styles.eyebrow}>Base de données mondiale</Text>
           <Text style={styles.title}>Open Food Facts</Text>
         </View>
-        <View style={styles.offBadge}>
-          <Text style={styles.offBadgeText}>OFF</Text>
-        </View>
+        <HelpButton onPress={() => setHelpVisible(true)} />
       </View>
+      <HelpModal visible={helpVisible} content={HELP.openFoodFacts} onClose={() => setHelpVisible(false)} />
 
       {/* Search input */}
       <View style={styles.searchWrap}>
@@ -233,6 +285,7 @@ export function OpenFoodFactsScreen({ existingIds, onImport, onBack }: Props) {
                 key={p.code || p.id}
                 product={p}
                 imported={isImported(p)}
+                enriching={enrichingIds.has(p.code || p.id)}
                 onImport={() => handleImport(p)}
               />
             ))}
@@ -421,4 +474,5 @@ const styles = StyleSheet.create({
   },
   importBtnText: { fontFamily: Fonts.sansMedium, fontSize: 13, color: Colors.ink },
   importBtnDoneText: { fontFamily: Fonts.sansMedium, fontSize: 13, color: Colors.ok },
+  enrichingTimer: { fontFamily: Fonts.monoMedium, fontSize: 13, color: Colors.signal },
 });

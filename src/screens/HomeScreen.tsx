@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -9,6 +9,8 @@ import {
 import { Circle, Svg } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
+import { HelpButton, HelpModal } from '../components/HelpModal';
+import { HELP } from '../data/helpContent';
 import { UserProfile, Vitamin, computeDietLabel } from '../data/user';
 import { Colors, Fonts } from '../theme/tokens';
 import { Meal } from '../types';
@@ -215,6 +217,7 @@ export function HomeScreen({
   onOpenProfile,
 }: HomeScreenProps) {
   const insets = useSafeAreaInsets();
+  const [helpVisible, setHelpVisible] = useState(false);
 
   const totals = useMemo(() => {
     const t = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
@@ -263,7 +266,9 @@ export function HomeScreen({
             </View>
             <Text style={styles.profileDiet} numberOfLines={1}>{computeDietLabel(profile.diets)}</Text>
           </TouchableOpacity>
+          <HelpButton onPress={() => setHelpVisible(true)} />
         </View>
+        <HelpModal visible={helpVisible} content={HELP.home} onClose={() => setHelpVisible(false)} />
 
         {/* Hero */}
         <View style={styles.hero}>

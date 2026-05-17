@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import {
+  ActionSheetIOS,
+  Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -9,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { SavedPlate, SavedPlateItem } from '../data/saved';
@@ -171,17 +175,22 @@ function AddItemForm({ onAdd }: { onAdd: (item: DraftItem) => void }) {
 
 interface Props {
   plate: SavedPlate | null;
+  allPlates: SavedPlate[];
   onSave: (plate: SavedPlate) => void;
   onBack: () => void;
 }
 
-export function EditSavedPlateScreen({ plate, onSave, onBack }: Props) {
+export function EditSavedPlateScreen({ plate, allPlates, onSave, onBack }: Props) {
   const insets = useSafeAreaInsets();
   const isNew = plate === null;
 
   const [name, setName] = useState(plate?.name ?? '');
   const [timeMin, setTimeMin] = useState(plate ? String(plate.timeMin) : '');
   const [tags, setTags] = useState<string[]>(plate?.tags ?? []);
+  const [photo, setPhoto] = useState<string | undefined>(plate?.photo);
+  const [pairedWith, setPairedWith] = useState<string[]>(plate?.pairedWith ?? []);
+  const [pairingQuery, setPairingQuery] = useState('');
+  const [pairingSugOpen, setPairingSugOpen] = useState(false);
   const [items, setItems] = useState<DraftItem[]>(
     plate?.recipe.map((r, i) => ({
       id: String(i),
@@ -195,8 +204,74 @@ export function EditSavedPlateScreen({ plate, onSave, onBack }: Props) {
   );
   const [error, setError] = useState('');
 
+  const pickFromLibrary = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission requise', 'Autorise l\'accès à ta galerie dans les réglages.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 10],
+      quality: 0.7,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      setPhoto(asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri);
+    }
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission requise', 'Autorise l\'accès à la caméra dans les réglages.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [16, 10],
+      quality: 0.7,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      setPhoto(asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri);
+    }
+  };
+
+  const handlePickPhoto = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options: ['Annuler', 'Choisir dans la galerie', 'Prendre une photo'], cancelButtonIndex: 0 },
+        (i) => { if (i === 1) pickFromLibrary(); if (i === 2) takePhoto(); }
+      );
+    } else {
+      Alert.alert('Ajouter une photo', undefined, [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Galerie', onPress: pickFromLibrary },
+        { text: 'Appareil photo', onPress: takePhoto },
+      ]);
+    }
+  };
+
   const toggleTag = (tag: string) =>
     setTags((ts) => ts.includes(tag) ? ts.filter((t) => t !== tag) : [...ts, tag]);
+
+  const otherPlates = allPlates.filter((p) => p.id !== plate?.id);
+  const pairingSuggestions = pairingQuery.length >= 2
+    ? otherPlates
+        .filter((p) => p.name.toLowerCase().includes(pairingQuery.toLowerCase()) && !pairedWith.includes(p.id))
+        .slice(0, 10)
+    : [];
+
+  const addPairing = (id: string) => {
+    setPairedWith((prev) => prev.includes(id) ? prev : [...prev, id]);
+    setPairingQuery('');
+    setPairingSugOpen(false);
+  };
+  const removePairing = (id: string) => setPairedWith((prev) => prev.filter((x) => x !== id));
 
   const totalKcal = items.reduce((acc, it) => acc + n(it.kcal), 0);
   const totalProtein = items.reduce((acc, it) => acc + n(it.protein), 0);
@@ -235,6 +310,8 @@ export function EditSavedPlateScreen({ plate, onSave, onBack }: Props) {
         fat: Math.round(totalFat * 10) / 10,
       },
       recipe,
+      photo,
+      pairedWith: pairedWith.length > 0 ? pairedWith : undefined,
     };
 
     onSave(saved);
@@ -272,6 +349,35 @@ export function EditSavedPlateScreen({ plate, onSave, onBack }: Props) {
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
+
+          {/* Photo */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Photo du plat</Text>
+            <TouchableOpacity style={styles.photoPicker} onPress={handlePickPhoto} activeOpacity={0.8}>
+              {photo ? (
+                <>
+                  <Image source={{ uri: photo }} style={styles.photoPreview} resizeMode="cover" />
+                  <View style={styles.photoEditOverlay}>
+                    <Icon name="edit" size={16} color={Colors.paper2} />
+                    <Text style={styles.photoEditText}>Modifier</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.photoRemoveBtn}
+                    onPress={() => setPhoto(undefined)}
+                    activeOpacity={0.8}
+                  >
+                    <Icon name="close" size={13} color={Colors.paper2} />
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <View style={styles.photoPlaceholder}>
+                  <Icon name="plus" size={22} color={Colors.muted2} />
+                  <Text style={styles.photoPlaceholderText}>Ajouter une photo</Text>
+                  <Text style={styles.photoPlaceholderSub}>Galerie ou appareil photo</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
 
           {/* Name */}
           <View style={styles.section}>
@@ -321,6 +427,57 @@ export function EditSavedPlateScreen({ plate, onSave, onBack }: Props) {
                 );
               })}
             </View>
+          </View>
+
+          {/* Pairing */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Plats compatibles (pairing)</Text>
+            {pairedWith.length > 0 && (
+              <View style={styles.pairingList}>
+                {pairedWith.map((id) => {
+                  const p = otherPlates.find((x) => x.id === id);
+                  if (!p) return null;
+                  return (
+                    <View key={id} style={styles.pairingPill}>
+                      <Text style={styles.pairingPillText} numberOfLines={1}>{p.name}</Text>
+                      <TouchableOpacity onPress={() => removePairing(id)} activeOpacity={0.7}>
+                        <Icon name="close" size={11} color={Colors.muted} />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+            <TextInput
+              style={styles.pairingInput}
+              placeholder="Taper 2 caractères pour chercher…"
+              placeholderTextColor={Colors.muted2}
+              value={pairingQuery}
+              onChangeText={(t) => { setPairingQuery(t); setPairingSugOpen(t.length >= 2); }}
+              onFocus={() => { if (pairingQuery.length >= 2) setPairingSugOpen(true); }}
+              onBlur={() => setTimeout(() => setPairingSugOpen(false), 150)}
+              autoCorrect={false}
+            />
+            {pairingSugOpen && pairingSuggestions.length > 0 && (
+              <View style={styles.pairingSuggestions}>
+                {pairingSuggestions.map((p) => (
+                  <TouchableOpacity
+                    key={p.id}
+                    style={styles.pairingSuggRow}
+                    onPress={() => addPairing(p.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.pairingSuggText}>{p.name}</Text>
+                    <Text style={styles.pairingSuggMeta}>{p.kcal} kcal</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            {pairingSugOpen && pairingSuggestions.length === 0 && pairingQuery.length >= 2 && (
+              <View style={styles.pairingSuggestions}>
+                <Text style={styles.pairingEmpty}>Aucun plat trouvé</Text>
+              </View>
+            )}
           </View>
 
           {/* Totals */}
@@ -668,5 +825,134 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.sansSemiBold,
     fontSize: 13,
     color: Colors.paper2,
+  },
+
+  pairingList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  pairingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    borderRadius: 100,
+    maxWidth: 200,
+  },
+  pairingPillText: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.ink,
+    flex: 1,
+  },
+  pairingInput: {
+    fontFamily: Fonts.sans,
+    fontSize: 15,
+    color: Colors.ink,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    borderRadius: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    backgroundColor: Colors.card,
+  },
+  pairingSuggestions: {
+    marginTop: 4,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.hairline2,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  pairingSuggRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline2,
+  },
+  pairingSuggText: {
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    color: Colors.ink,
+    flex: 1,
+  },
+  pairingSuggMeta: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    color: Colors.muted2,
+    letterSpacing: 0.5,
+  },
+  pairingEmpty: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.muted,
+    padding: 14,
+    textAlign: 'center',
+  },
+
+  photoPicker: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    aspectRatio: 16 / 10,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.paper2,
+  },
+  photoPreview: {
+    width: '100%',
+    height: '100%',
+  },
+  photoEditOverlay: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(15,12,8,0.55)',
+    borderRadius: 20,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  photoEditText: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 12,
+    color: Colors.paper2,
+  },
+  photoRemoveBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(15,12,8,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  photoPlaceholderText: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 14,
+    color: Colors.muted,
+  },
+  photoPlaceholderSub: {
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    color: Colors.muted2,
   },
 });

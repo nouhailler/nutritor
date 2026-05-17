@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
+import { HelpButton, HelpModal } from '../components/HelpModal';
+import { HELP } from '../data/helpContent';
 import { Colors, Fonts } from '../theme/tokens';
 import { Food } from '../types';
 import { AppSettings } from '../types/settings';
@@ -133,13 +135,15 @@ interface Props {
   settings: AppSettings;
   onAdd: (food: Food) => void;
   onBack: () => void;
+  initialQuery?: string;
 }
 
-export function AddFoodScreen({ settings, onAdd, onBack }: Props) {
+export function AddFoodScreen({ settings, onAdd, onBack, initialQuery = '' }: Props) {
   const insets = useSafeAreaInsets();
   const [phase, setPhase] = useState<Phase>('input');
-  const [foodName, setFoodName] = useState('');
+  const [foodName, setFoodName] = useState(initialQuery);
   const [brand, setBrand] = useState('');
+  const [helpVisible, setHelpVisible] = useState(false);
   const [context, setContext] = useState('');
   const [result, setResult] = useState<Food | null>(null);
   const [error, setError] = useState('');
@@ -194,7 +198,9 @@ export function AddFoodScreen({ settings, onAdd, onBack }: Props) {
               {settings.aiProvider === 'openrouter' ? 'OpenRouter' : 'Ollama'}
             </Text>
           </View>
+          <HelpButton onPress={() => setHelpVisible(true)} />
         </View>
+        <HelpModal visible={helpVisible} content={HELP.addFood} onClose={() => setHelpVisible(false)} />
 
         <ScrollView
           showsVerticalScrollIndicator={false}

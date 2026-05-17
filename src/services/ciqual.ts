@@ -59,23 +59,123 @@ export function searchCIQUAL(query: string, limit = 30): CIQUALEntry[] {
 
 // ── Mapper CIQUAL → Food ───────────────────────────────────────
 
-function buildAllergens(): Allergen[] {
-  // CIQUAL ne fournit pas les allergènes — on initialise tout à "absent"
-  return [
-    'Gluten','Lactose','Œufs','Arachides','Fruits à coque',
-    'Soja','Poisson','Crustacés','Sésame','Moutarde',
-    'Céleri','Sulfites','Mollusques','Lupin',
-  ].map((name) => ({ name, status: 'absent' as const }));
+const ALLERGEN_NAMES = [
+  'Gluten', 'Lactose', 'Œufs', 'Arachides', 'Fruits à coque',
+  'Soja', 'Poisson', 'Crustacés', 'Sésame', 'Moutarde',
+  'Céleri', 'Sulfites', 'Mollusques', 'Lupin',
+];
+
+// Infer allergens from CIQUAL group/subgroup/name (best-effort heuristic)
+function buildAllergens(e: CIQUALEntry): Allergen[] {
+  const g = (e.group + ' ' + (e.sub ?? '')).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const n = e.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+  const contains = new Set<string>();
+
+  // Gluten — céréales panifiables et dérivés
+  // Note: 'céréaliers' normalise en 'cerealiers', donc on teste 'cereal' (préfixe commun)
+  if (
+    g.includes('cereal') || g.includes('farine') || g.includes('pain') ||
+    g.includes('pate') || g.includes('semoule') || g.includes('biscotte') ||
+    g.includes('viennoiserie') || g.includes('biscuit') || g.includes('gateau') ||
+    g.includes('pizza') || g.includes('quiche') || g.includes('crepe') ||
+    n.includes('ble') || n.includes('seigle') || n.includes('orge') ||
+    n.includes('avoine') || n.includes('epeautre') || n.includes('kamut') ||
+    n.includes('gluten') || n.includes('couscous') || n.includes('boulgour') ||
+    n.includes('chapelure') || n.includes('panure')
+  ) contains.add('Gluten');
+
+  // Lactose — produits laitiers
+  if (
+    g.includes('lait') || g.includes('fromage') || g.includes('yaourt') ||
+    g.includes('creme') || g.includes('beurre') || g.includes('laitier') ||
+    g.includes('dessert lactee') || g.includes('glace') ||
+    n.includes('lait') || n.includes('fromage') || n.includes('yaourt') ||
+    n.includes('creme fraiche') || n.includes('beurre') || n.includes('lactose') ||
+    n.includes('lactosérum') || n.includes('lactoserum') || n.includes('ricotta') ||
+    n.includes('mozzarella') || n.includes('parmesan') || n.includes('camembert') ||
+    n.includes('brie') || n.includes('roquefort') || n.includes('emmental')
+  ) contains.add('Lactose');
+
+  // Œufs
+  if (
+    g.includes('oeuf') || n.includes('oeuf') ||
+    n.includes('omelette') || n.includes('meringue')
+  ) contains.add('Œufs');
+
+  // Poisson
+  if (
+    g.includes('poisson') ||
+    n.includes('poisson') || n.includes('thon') || n.includes('saumon') ||
+    n.includes('truite') || n.includes('sardine') || n.includes('maquereau') ||
+    n.includes('hareng') || n.includes('anchois') || n.includes('cabillaud') ||
+    n.includes('lieu') || n.includes('merlan') || n.includes('sole') ||
+    n.includes('dorade') || n.includes('bar ') || n.includes('brochet') ||
+    n.includes('perche') || n.includes('pangasius') || n.includes('tilapia')
+  ) contains.add('Poisson');
+
+  // Crustacés
+  if (
+    g.includes('crustace') ||
+    n.includes('crevette') || n.includes('homard') || n.includes('crabe') ||
+    n.includes('langoustine') || n.includes('ecrevisse') || n.includes('langouste')
+  ) contains.add('Crustacés');
+
+  // Mollusques
+  if (
+    g.includes('mollusque') || g.includes('coquillage') ||
+    n.includes('huitre') || n.includes('moule') || n.includes('coquille') ||
+    n.includes('palourde') || n.includes('poulpe') || n.includes('seiche') ||
+    n.includes('calmar') || n.includes('escargot')
+  ) contains.add('Mollusques');
+
+  // Arachides
+  if (n.includes('arachide') || n.includes('cacahuete') || n.includes('cacahuète'))
+    contains.add('Arachides');
+
+  // Fruits à coque (groupe CIQUAL : "fruits a coque et graines oleagineuses")
+  if (
+    g.includes('coque') ||
+    n.includes('amande') || n.includes('noisette') ||
+    (n.includes('noix') && !n.includes('noix de coco')) ||
+    n.includes('cajou') || n.includes('pistache') ||
+    n.includes('pecan') || n.includes('macadamia') || n.includes('pignon')
+  ) contains.add('Fruits à coque');
+
+  // Soja
+  if (n.includes('soja') || n.includes('tofu') || n.includes('miso') ||
+      n.includes('tempeh') || n.includes('edamame'))
+    contains.add('Soja');
+
+  // Sésame
+  if (n.includes('sesame') || n.includes('tahini') || n.includes('tahina'))
+    contains.add('Sésame');
+
+  // Moutarde
+  if (n.includes('moutarde')) contains.add('Moutarde');
+
+  // Céleri
+  if (n.includes('celeri')) contains.add('Céleri');
+
+  return ALLERGEN_NAMES.map((name) => ({
+    name,
+    status: contains.has(name) ? 'contains' as const : 'absent' as const,
+  }));
 }
 
 function buildMinerals(e: CIQUALEntry) {
   const items = [];
-  if (e.ca  != null) items.push({ name: 'Calcium',    qty: `${e.ca} mg`,   anr: `${Math.round(e.ca/1000*100)}%`,  role: 'Os, dents, contraction musculaire' });
-  if (e.fe  != null) items.push({ name: 'Fer',         qty: `${e.fe} mg`,   anr: `${Math.round(e.fe/14*100)}%`,   role: 'Transport oxygène, enzymes' });
-  if (e.mg  != null) items.push({ name: 'Magnésium',   qty: `${e.mg} mg`,   anr: `${Math.round(e.mg/375*100)}%`,  role: 'Métabolisme énergétique, muscles' });
-  if (e.p   != null) items.push({ name: 'Phosphore',   qty: `${e.p} mg`,    anr: `${Math.round(e.p/700*100)}%`,   role: 'Os, membranes, énergie' });
-  if (e.k   != null) items.push({ name: 'Potassium',   qty: `${e.k} mg`,    anr: `${Math.round(e.k/2000*100)}%`,  role: 'Équilibre hydrique, tension artérielle' });
-  if (e.zn  != null) items.push({ name: 'Zinc',        qty: `${e.zn} mg`,   anr: `${Math.round(e.zn/10*100)}%`,   role: 'Immunité, synthèse protéique' });
+  if (e.ca != null) items.push({ name: 'Calcium',    qty: `${e.ca} mg`,  anr: `${Math.round(e.ca / 800 * 100)} %`,  role: 'Os, dents, contraction musculaire' });
+  if (e.mg != null) items.push({ name: 'Magnésium',  qty: `${e.mg} mg`,  anr: `${Math.round(e.mg / 375 * 100)} %`, role: 'Métabolisme énergétique, détente musculaire' });
+  if (e.p  != null) items.push({ name: 'Phosphore',  qty: `${e.p} mg`,   anr: `${Math.round(e.p / 700 * 100)} %`,  role: 'Os, membranes, énergie (ATP)' });
+  if (e.k  != null) items.push({ name: 'Potassium',  qty: `${e.k} mg`,   anr: `${Math.round(e.k / 2000 * 100)} %`, role: 'Équilibre hydrique, tension artérielle' });
+  return items.length ? items : undefined;
+}
+
+function buildTrace(e: CIQUALEntry) {
+  const items = [];
+  if (e.fe != null) items.push({ name: 'Fer',  qty: `${e.fe} mg`, anr: `${Math.round(e.fe / 14 * 100)} %`, role: 'Transport oxygène (hémoglobine), enzymes' });
+  if (e.zn != null) items.push({ name: 'Zinc', qty: `${e.zn} mg`, anr: `${Math.round(e.zn / 10 * 100)} %`, role: 'Immunité, synthèse protéique, cicatrisation' });
   return items.length ? items : undefined;
 }
 
@@ -93,15 +193,30 @@ function buildVitamins(e: CIQUALEntry) {
   return items.length ? items : undefined;
 }
 
-function buildCompat(e: CIQUALEntry): CompatItem[] {
+function buildCompat(e: CIQUALEntry, allergens: Allergen[]): CompatItem[] {
   const compat: CompatItem[] = [];
-  if (e.salt < 0.3) compat.push({ label: 'Pauvre en sel', kind: 'ok' });
-  if (e.sugars < 5) compat.push({ label: 'Pauvre en sucres', kind: 'ok' });
-  if (e.fat < 3)    compat.push({ label: 'Pauvre en graisses', kind: 'ok' });
-  if (e.fiber > 5)  compat.push({ label: 'Riche en fibres', kind: 'ok' });
-  if (e.protein > 15) compat.push({ label: 'Riche en protéines', kind: 'ok' });
-  if (e.salt > 1.5) compat.push({ label: 'Riche en sel', kind: 'warn' });
-  if (e.sugars > 15) compat.push({ label: 'Riche en sucres', kind: 'warn' });
+  const am = Object.fromEntries(allergens.map((a) => [a.name, a.status]));
+
+  // Nutrition
+  if (e.salt < 0.3)     compat.push({ label: 'Pauvre en sel', kind: 'ok' });
+  if (e.sugars < 5)     compat.push({ label: 'Pauvre en sucres', kind: 'ok' });
+  if (e.fat < 3)        compat.push({ label: 'Pauvre en graisses', kind: 'ok' });
+  if (e.fiber > 5)      compat.push({ label: 'Riche en fibres', kind: 'ok' });
+  if (e.protein > 15)   compat.push({ label: 'Riche en protéines', kind: 'ok' });
+  if (e.salt > 1.5)     compat.push({ label: 'Riche en sel', kind: 'warn' });
+  if (e.sugars > 15)    compat.push({ label: 'Riche en sucres', kind: 'warn' });
+
+  // Allergènes inférés
+  if (am['Gluten'] === 'absent')   compat.push({ label: 'Sans gluten', kind: 'ok' });
+  else                              compat.push({ label: 'Contient gluten', kind: 'warn' });
+
+  if (am['Lactose'] === 'absent')  compat.push({ label: 'Sans lactose', kind: 'ok' });
+  else                              compat.push({ label: 'Contient lactose', kind: 'warn' });
+
+  const animalKeys = ['Œufs', 'Lactose', 'Poisson', 'Crustacés', 'Mollusques'];
+  if (animalKeys.every((k) => am[k] === 'absent'))
+    compat.push({ label: 'Vegan', kind: 'ok' });
+
   return compat;
 }
 
@@ -109,8 +224,19 @@ function slugify(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').slice(0, 35);
 }
 
+// Refresh allergens + compat for a stored CIQUAL food without touching other zones.
+export function refreshCiqualAllergens(food: import('../types').Food): import('../types').Food {
+  const ciqualId = food.id.replace('ciqual-', '');
+  const entry = CIQUAL_DATA.find((e) => e.id === ciqualId);
+  if (!entry) return food;
+  const allergens = buildAllergens(entry);
+  const compat = buildCompat(entry, allergens);
+  return { ...food, allergens, compat };
+}
+
 export function ciqualToFood(e: CIQUALEntry): Food {
   const category = e.sub ? `${e.group} · ${e.sub}` : e.group;
+  const allergens = buildAllergens(e);
 
   return {
     id: `ciqual-${e.id}`,
@@ -121,19 +247,20 @@ export function ciqualToFood(e: CIQUALEntry): Food {
     defaultPortion: 100,
     unit: 'g',
     per100: {
-      kcal:   e.kcal,
-      fat:    e.fat,
-      fatSat: e.fatSat,
-      carbs:  e.carbs,
-      sugars: e.sugars,
-      fiber:  e.fiber,
-      protein:e.protein,
-      salt:   e.salt,
+      kcal:    e.kcal,
+      fat:     e.fat,
+      fatSat:  e.fatSat,
+      carbs:   e.carbs,
+      sugars:  e.sugars,
+      fiber:   e.fiber,
+      protein: e.protein,
+      salt:    e.salt,
     },
-    minerals: buildMinerals(e),
+    minerals:  buildMinerals(e),
     vitamins:  buildVitamins(e),
-    allergens: buildAllergens(),
-    compat: buildCompat(e),
+    trace:     buildTrace(e),
+    allergens,
+    compat:    buildCompat(e, allergens),
     ingredients: e.name,
   };
 }

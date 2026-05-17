@@ -5,6 +5,21 @@ export interface SavedPlateItem {
   macros: { protein: number; carbs: number; fat: number };
 }
 
+export interface PlateNutrition {
+  minerals?: string[];
+  vitamins?: string[];
+  trace?: string[];
+  bioactives?: string[];
+  allergens?: string[];
+  metabolic?: {
+    glycemicImpact?: string;
+    satiety?: string;
+    inflammation?: string;
+    digestive?: string;
+    recovery?: string;
+  };
+}
+
 export interface SavedPlate {
   id: string;
   name: string;
@@ -17,6 +32,9 @@ export interface SavedPlate {
   macros: { protein: number; carbs: number; fat: number };
   recipe: SavedPlateItem[];
   note?: string;
+  photo?: string;
+  pairedWith?: string[];
+  nutrition?: PlateNutrition;
 }
 
 export const SAVED_PLATES: SavedPlate[] = [

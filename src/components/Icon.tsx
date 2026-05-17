@@ -29,7 +29,14 @@ type IconName =
   | 'cpu'
   | 'database'
   | 'trash'
-  | 'edit';
+  | 'edit'
+  | 'help'
+  | 'info'
+  | 'zap'
+  | 'shield'
+  | 'target'
+  | 'clock'
+  | 'globe';
 
 const FEATHER_MAP: Record<IconName, keyof typeof Feather.glyphMap> = {
   menu: 'menu',
@@ -59,6 +66,13 @@ const FEATHER_MAP: Record<IconName, keyof typeof Feather.glyphMap> = {
   database: 'database',
   trash: 'trash-2',
   edit: 'edit-2',
+  help: 'help-circle',
+  info: 'info',
+  zap: 'zap',
+  shield: 'shield',
+  target: 'target',
+  clock: 'clock',
+  globe: 'globe',
 };
 
 interface IconProps {

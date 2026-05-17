@@ -14,6 +14,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Icon } from '../components/Icon';
+import { HelpButton, HelpModal } from '../components/HelpModal';
+import { HELP } from '../data/helpContent';
 import { Colors, Fonts } from '../theme/tokens';
 import { Food } from '../types';
 import { AIProvider, AppSettings, OpenRouterModel } from '../types/settings';
@@ -141,6 +143,7 @@ export function SettingsScreen({
   const [loadingModels, setLoadingModels] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [helpVisible, setHelpVisible] = useState(false);
 
   const update = (patch: Partial<AppSettings>) =>
     setLocal((s) => {
@@ -277,8 +280,9 @@ export function SettingsScreen({
           <Text style={styles.eyebrow}>Application</Text>
           <Text style={styles.title}>Paramètres</Text>
         </View>
-        <View style={styles.iconBtn} />
+        <HelpButton onPress={() => setHelpVisible(true)} />
       </View>
+      <HelpModal visible={helpVisible} content={HELP.settings} onClose={() => setHelpVisible(false)} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}

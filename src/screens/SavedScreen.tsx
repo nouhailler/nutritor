@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,7 +10,17 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, Line, Pattern, Rect } from 'react-native-svg';
 import { Icon } from '../components/Icon';
-import { FILTERS, SavedPlate, FilterId, applyFilter } from '../data/saved';
+import { HelpButton, HelpModal } from '../components/HelpModal';
+import { PlateFilterSheet } from '../components/PlateFilterSheet';
+import { HELP } from '../data/helpContent';
+import { SavedPlate } from '../data/saved';
+import {
+  PlateFilterState,
+  DEFAULT_FILTER,
+  SORT_OPTIONS,
+  applyPlateFilters,
+  countActiveFilters,
+} from '../data/plateFilters';
 import { Colors, Fonts } from '../theme/tokens';
 
 function StripedThumb({ children }: { children: React.ReactNode }) {
@@ -38,14 +49,28 @@ function StripedThumb({ children }: { children: React.ReactNode }) {
 function SavedCard({ plate, onPress, onEdit }: { plate: SavedPlate; onPress: () => void; onEdit: () => void }) {
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.75} onPress={onPress}>
-      <StripedThumb>
-        <Text style={styles.kcalBadge}>
-          {plate.kcal}<Text style={styles.kcalUnit}> kcal</Text>
-        </Text>
-        <TouchableOpacity style={styles.editBadge} onPress={onEdit} activeOpacity={0.7}>
-          <Icon name="edit" size={11} color={Colors.muted} />
-        </TouchableOpacity>
-      </StripedThumb>
+      {plate.photo ? (
+        <View style={styles.photoThumb}>
+          <Image source={{ uri: plate.photo }} style={styles.photoThumbImg} resizeMode="cover" />
+          <View style={styles.photoKcalBadge}>
+            <Text style={styles.kcalBadgeOnPhoto}>
+              {plate.kcal}<Text style={styles.kcalUnitOnPhoto}> kcal</Text>
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.editBadgeOnPhoto} onPress={onEdit} activeOpacity={0.7}>
+            <Icon name="edit" size={11} color={Colors.paper2} />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <StripedThumb>
+          <Text style={styles.kcalBadge}>
+            {plate.kcal}<Text style={styles.kcalUnit}> kcal</Text>
+          </Text>
+          <TouchableOpacity style={styles.editBadge} onPress={onEdit} activeOpacity={0.7}>
+            <Icon name="edit" size={11} color={Colors.muted} />
+          </TouchableOpacity>
+        </StripedThumb>
+      )}
       <Text style={styles.cardName}>{plate.name}</Text>
       <View style={styles.tags}>
         {plate.tags.map((t) => (
@@ -68,9 +93,13 @@ interface SavedScreenProps {
 
 export function SavedScreen({ plates, onOpenPlate, onCreatePlate, onEditPlate }: SavedScreenProps) {
   const insets = useSafeAreaInsets();
-  const [filter, setFilter] = useState<FilterId>('all');
+  const [filter, setFilter] = useState<PlateFilterState>(DEFAULT_FILTER);
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [helpVisible, setHelpVisible] = useState(false);
 
-  const filtered = applyFilter(plates, filter);
+  const filtered = applyPlateFilters(plates, filter);
+  const activeCount = countActiveFilters(filter);
+  const sortLabel = SORT_OPTIONS.find((o) => o.value === filter.sortBy)?.label ?? '';
 
   const pairs: SavedPlate[][] = [];
   for (let i = 0; i < filtered.length; i += 2) {
@@ -87,45 +116,66 @@ export function SavedScreen({ plates, onOpenPlate, onCreatePlate, onEditPlate }:
         <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={onCreatePlate}>
           <Icon name="plus" size={20} color={Colors.ink} />
         </TouchableOpacity>
+        <HelpButton onPress={() => setHelpVisible(true)} />
+      </View>
+      <HelpModal visible={helpVisible} content={HELP.saved} onClose={() => setHelpVisible(false)} />
+      <PlateFilterSheet
+        visible={filterVisible}
+        filter={filter}
+        plates={plates}
+        onApply={setFilter}
+        onClose={() => setFilterVisible(false)}
+      />
+
+      {/* Filter bar */}
+      <View style={styles.filterBar}>
+        <TouchableOpacity
+          style={[styles.filterBtn, activeCount > 0 && styles.filterBtnActive]}
+          onPress={() => setFilterVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Icon name="sliders" size={14} color={activeCount > 0 ? Colors.paper2 : Colors.ink} />
+          <Text style={[styles.filterBtnText, activeCount > 0 && styles.filterBtnTextActive]}>
+            Filtres{activeCount > 0 ? ` · ${activeCount}` : ''}
+          </Text>
+        </TouchableOpacity>
+        <Text style={styles.filterInfo}>
+          {filtered.length}/{plates.length} · {sortLabel}
+        </Text>
+        {activeCount > 0 && (
+          <TouchableOpacity
+            style={styles.resetBtn}
+            onPress={() => setFilter(DEFAULT_FILTER)}
+            activeOpacity={0.7}
+          >
+            <Icon name="close" size={12} color={Colors.muted} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterStrip}
-        >
-          {FILTERS.map((f) => {
-            const active = f.id === filter;
-            const label = f.id === 'all' ? `${f.label} · ${plates.length}` : f.label;
-            return (
-              <TouchableOpacity
-                key={f.id}
-                style={[styles.chip, active && styles.chipActive]}
-                onPress={() => setFilter(f.id)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        <View style={styles.grid}>
-          {pairs.map((pair, rowIdx) => (
-            <View key={rowIdx} style={styles.row}>
-              {pair.map((p) => (
-                <SavedCard
-                  key={p.id}
-                  plate={p}
-                  onPress={() => onOpenPlate(p)}
-                  onEdit={() => onEditPlate(p)}
-                />
-              ))}
-              {pair.length === 1 && <View style={styles.cardSpacer} />}
-            </View>
-          ))}
-        </View>
+        {filtered.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>Aucun plat trouvé</Text>
+            <Text style={styles.emptyHint}>Modifie les filtres pour voir plus de résultats.</Text>
+          </View>
+        ) : (
+          <View style={styles.grid}>
+            {pairs.map((pair, rowIdx) => (
+              <View key={rowIdx} style={styles.row}>
+                {pair.map((p) => (
+                  <SavedCard
+                    key={p.id}
+                    plate={p}
+                    onPress={() => onOpenPlate(p)}
+                    onEdit={() => onEditPlate(p)}
+                  />
+                ))}
+                {pair.length === 1 && <View style={styles.cardSpacer} />}
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -172,14 +222,18 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
-  filterStrip: {
+  filterBar: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    gap: 10,
     paddingHorizontal: H_PAD,
-    paddingTop: 18,
-    paddingBottom: 16,
+    paddingTop: 14,
+    paddingBottom: 12,
   },
-  chip: {
+  filterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 100,
@@ -187,17 +241,52 @@ const styles = StyleSheet.create({
     borderColor: Colors.hairline,
     backgroundColor: 'transparent',
   },
-  chipActive: {
+  filterBtnActive: {
     backgroundColor: Colors.ink,
     borderColor: Colors.ink,
   },
-  chipText: {
+  filterBtnText: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 13,
+    color: Colors.ink,
+  },
+  filterBtnTextActive: {
+    color: Colors.paper2,
+  },
+  filterInfo: {
+    flex: 1,
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    color: Colors.muted2,
+    textAlign: 'right',
+  },
+  resetBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  empty: {
+    paddingTop: 60,
+    alignItems: 'center',
+    gap: 8,
+  },
+  emptyTitle: {
+    fontFamily: Fonts.serif,
+    fontSize: 20,
+    color: Colors.ink,
+  },
+  emptyHint: {
     fontFamily: Fonts.sans,
     fontSize: 13,
-    color: Colors.ink2,
-  },
-  chipTextActive: {
-    color: Colors.paper2,
+    color: Colors.muted,
+    textAlign: 'center',
+    paddingHorizontal: 32,
   },
 
   grid: {
@@ -259,6 +348,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+  },
+
+  photoThumb: {
+    aspectRatio: 4 / 3,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  photoThumbImg: {
+    width: '100%',
+    height: '100%',
+  },
+  photoKcalBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+  },
+  kcalBadgeOnPhoto: {
+    fontFamily: Fonts.serif,
+    fontSize: 18,
+    letterSpacing: -0.2,
+    color: Colors.paper2,
+    backgroundColor: 'rgba(15,12,8,0.55)',
+    paddingVertical: 1,
+    paddingHorizontal: 8,
+    borderRadius: 100,
+    overflow: 'hidden',
+  },
+  kcalUnitOnPhoto: {
+    fontFamily: Fonts.sans,
+    fontSize: 9,
+    color: Colors.paper2,
+  },
+  editBadgeOnPhoto: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(15,12,8,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   cardName: {
