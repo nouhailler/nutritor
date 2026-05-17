@@ -1,6 +1,22 @@
 import { Meal } from '../types/index';
 import { UserProfile } from './user';
 
+// ── Journal entry (persisted) ─────────────────────────────────
+
+export interface JournalEntry {
+  date: string;    // 'YYYY-MM-DD'
+  meals: Meal[];
+}
+
+// Empty meal structure for unlogged days
+export const EMPTY_DAY_MEALS: Meal[] = [
+  { id: 'm-brk', name: 'Petit-déjeuner',   time: '08:00', items: [] },
+  { id: 'm-sn1', name: 'Encas matin',       time: '10:30', items: [] },
+  { id: 'm-lun', name: 'Déjeuner',          time: '13:00', items: [] },
+  { id: 'm-sn2', name: 'Encas après-midi',  time: '16:30', items: [] },
+  { id: 'm-din', name: 'Dîner',             time: '20:00', items: [] },
+];
+
 // ── DayLog ────────────────────────────────────────────────────
 
 export interface DayLog {
@@ -102,7 +118,7 @@ function computeScore(log: DayLog, profile: UserProfile): number {
 // ── Main export ───────────────────────────────────────────────
 
 export function computeWeekStats(
-  journal: DayLog[],
+  journal: JournalEntry[],
   todayMeals: Meal[],
   profile: UserProfile,
   weekOffset: number,
@@ -124,7 +140,11 @@ export function computeWeekStats(
     if (isToday) {
       log = todayLog;
     } else if (!isFuture) {
-      log = journal.find((j) => j.date === dateStr) ?? null;
+      const entry = journal.find((j) => j.date === dateStr);
+      // Guard against old DayLog-format data (no meals field)
+      log = (entry && Array.isArray(entry.meals))
+        ? computeDayLog(entry.meals, dateStr)
+        : null;
     }
     days.push({
       date: dateStr,
@@ -177,12 +197,15 @@ export function computeWeekStats(
     while (true) {
       const ds = dateToStr(checkDate);
       const entry = journal.find((j) => j.date === ds);
-      if (entry && (entry.kcal > 0 || entry.mealsFilled > 0)) {
-        currentStreak++;
-        checkDate.setDate(checkDate.getDate() - 1);
-      } else {
-        break;
+      if (entry && Array.isArray(entry.meals)) {
+        const dl = computeDayLog(entry.meals, ds);
+        if (dl.kcal > 0 || dl.mealsFilled > 0) {
+          currentStreak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+          continue;
+        }
       }
+      break;
     }
   }
 
@@ -202,12 +225,13 @@ export function computeWeekStats(
       d.setDate(prevMonday.getDate() + i);
       return dateToStr(d);
     });
-    const prevLogs = journal.filter(
-      (j) => prevDates.includes(j.date) && (j.kcal > 0 || j.mealsFilled > 0),
-    );
+    const prevLogs = journal
+      .filter((j) => prevDates.includes(j.date) && Array.isArray(j.meals))
+      .map((j) => computeDayLog(j.meals, j.date))
+      .filter((l) => l.kcal > 0 || l.mealsFilled > 0);
     if (prevLogs.length > 0) {
       prevWeekAvgKcal = Math.round(
-        prevLogs.reduce((s, l) => s + l.kcal, 0) / prevLogs.length,
+        prevLogs.reduce((s, l: DayLog) => s + l.kcal, 0) / prevLogs.length,
       );
       if (avgKcal > 0) {
         kcalDeltaPct = Math.round(

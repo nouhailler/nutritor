@@ -9,11 +9,39 @@ import {
 import { Circle, Svg } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
+import { CalendarModal } from '../components/CalendarModal';
 import { HelpButton, HelpModal } from '../components/HelpModal';
 import { HELP } from '../data/helpContent';
 import { UserProfile, Vitamin, computeDietLabel } from '../data/user';
 import { Colors, Fonts } from '../theme/tokens';
 import { Meal } from '../types';
+
+// ── Date helpers ──────────────────────────────────────────────
+
+const DAYS_FR   = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+const MONTHS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+function todayDateStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function addDays(dateStr: string, n: number): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+function formatDateLabel(dateStr: string, todayStr: string): { headline: string; sub: string; isPast: boolean; isFuture: boolean } {
+  const diff = Math.round((new Date(dateStr + 'T12:00:00').getTime() - new Date(todayStr + 'T12:00:00').getTime()) / 86400000);
+  const d = new Date(dateStr + 'T12:00:00');
+  const sub = `${DAYS_FR[d.getDay()]} ${d.getDate()} ${MONTHS_FR[d.getMonth()]} ${d.getFullYear()}`;
+  if (diff === 0)  return { headline: "Aujourd'hui", sub, isPast: false, isFuture: false };
+  if (diff === -1) return { headline: 'Hier',         sub, isPast: true,  isFuture: false };
+  if (diff === -2) return { headline: 'Avant-hier',   sub, isPast: true,  isFuture: false };
+  if (diff === 1)  return { headline: 'Demain',        sub, isPast: false, isFuture: true };
+  if (diff < 0)    return { headline: `Il y a ${Math.abs(diff)} jours`, sub, isPast: true,  isFuture: false };
+  return             { headline: `Dans ${diff} jours`, sub, isPast: false, isFuture: true };
+}
 
 // ── Kcal ring ────────────────────────────────────────────────
 
@@ -155,9 +183,11 @@ function VitaminPanel({ vitamins }: { vitamins: Vitamin[] }) {
 function MealCard({
   meal,
   onAdd,
+  onRemoveItem,
 }: {
   meal: Meal;
   onAdd: (mealId: string) => void;
+  onRemoveItem: (mealId: string, itemIdx: number) => void;
 }) {
   const total = meal.items.reduce((s, i) => s + i.kcal, 0);
   return (
@@ -176,14 +206,21 @@ function MealCard({
       </View>
       {meal.items.map((item, i) => (
         <View key={i} style={styles.foodRow}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.foodName}>{item.name}</Text>
             <Text style={styles.foodQty}>{item.qty}</Text>
           </View>
           <Text style={styles.foodKcal}>{item.kcal} kcal</Text>
+          <TouchableOpacity
+            style={styles.removeItemBtn}
+            onPress={() => onRemoveItem(meal.id, i)}
+            activeOpacity={0.7}
+          >
+            <Icon name="close" size={11} color={Colors.muted2} />
+          </TouchableOpacity>
         </View>
       ))}
-      {meal.items.length === 0 && (
+      {meal.items.length === 0 ? (
         <View style={styles.mealEmpty}>
           <Text style={styles.mealEmptyText}>Aucun aliment enregistré</Text>
           <TouchableOpacity
@@ -194,6 +231,15 @@ function MealCard({
             <Text style={styles.mealEmptyBtnText}>Ajouter</Text>
           </TouchableOpacity>
         </View>
+      ) : (
+        <TouchableOpacity
+          style={styles.addMoreBtn}
+          onPress={() => onAdd(meal.id)}
+          activeOpacity={0.7}
+        >
+          <Icon name="plus" size={12} color={Colors.muted} />
+          <Text style={styles.addMoreText}>Ajouter un aliment</Text>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -204,6 +250,10 @@ function MealCard({
 interface HomeScreenProps {
   meals: Meal[];
   profile: UserProfile;
+  viewingDate: string | null;          // null = today
+  journalDates: string[];              // dates with data (for calendar dots)
+  onDateChange: (date: string | null) => void;
+  onRemoveItem: (mealId: string, itemIdx: number) => void;
   onOpenMenu: () => void;
   onOpenSearch: () => void;
   onOpenProfile: () => void;
@@ -212,12 +262,22 @@ interface HomeScreenProps {
 export function HomeScreen({
   meals,
   profile,
+  viewingDate,
+  journalDates,
+  onDateChange,
+  onRemoveItem,
   onOpenMenu,
   onOpenSearch,
   onOpenProfile,
 }: HomeScreenProps) {
   const insets = useSafeAreaInsets();
   const [helpVisible, setHelpVisible] = useState(false);
+  const [calendarVisible, setCalendarVisible] = useState(false);
+
+  const todayStr = todayDateStr();
+  const effectiveDate = viewingDate ?? todayStr;
+  const { headline, sub: dateSub, isPast, isFuture } = formatDateLabel(effectiveDate, todayStr);
+  const isToday = !isPast && !isFuture;
 
   const totals = useMemo(() => {
     const t = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
@@ -232,17 +292,16 @@ export function HomeScreen({
     return t;
   }, [meals]);
 
-  const kcalPct = Math.min(1, totals.kcal / profile.kcalTarget);
-  const remaining = Math.max(0, Math.round(profile.kcalTarget - totals.kcal));
+  const kcalPct    = Math.min(1, totals.kcal / profile.kcalTarget);
+  const remaining  = Math.max(0, Math.round(profile.kcalTarget - totals.kcal));
   const emptyMeals = meals.filter((m) => m.items.length === 0).length;
   const totalItems = meals.reduce((n, m) => n + m.items.length, 0);
 
-  const today = new Date().toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
-  const todayFmt = today.charAt(0).toUpperCase() + today.slice(1);
+  const goToPrev = () => onDateChange(addDays(effectiveDate, -1) === todayStr ? null : addDays(effectiveDate, -1));
+  const goToNext = () => {
+    const next = addDays(effectiveDate, 1);
+    onDateChange(next === todayStr ? null : next);
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -266,14 +325,47 @@ export function HomeScreen({
             </View>
             <Text style={styles.profileDiet} numberOfLines={1}>{computeDietLabel(profile.diets)}</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => setCalendarVisible(true)} activeOpacity={0.7}>
+            <Icon name="calendar" size={18} color={!isToday ? Colors.signal : Colors.ink} />
+          </TouchableOpacity>
           <HelpButton onPress={() => setHelpVisible(true)} />
         </View>
         <HelpModal visible={helpVisible} content={HELP.home} onClose={() => setHelpVisible(false)} />
+        <CalendarModal
+          visible={calendarVisible}
+          selectedDate={viewingDate}
+          markedDates={journalDates}
+          todayStr={todayStr}
+          onSelect={(d) => onDateChange(d === todayStr ? null : d)}
+          onClose={() => setCalendarVisible(false)}
+        />
+
+        {/* Date navigation bar */}
+        <View style={styles.dateBar}>
+          <TouchableOpacity style={styles.dateNavBtn} onPress={goToPrev} activeOpacity={0.7}>
+            <Icon name="back" size={16} color={Colors.ink} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.dateCenterBtn}
+            onPress={() => setCalendarVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.dateHeadline, !isToday && isPast && styles.dateHeadlinePast, isFuture && styles.dateHeadlineFuture]}>
+              {headline}
+            </Text>
+            <Text style={styles.dateSub}>{dateSub}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.dateNavBtn} onPress={goToNext} activeOpacity={0.7}>
+            <Icon name="chevron-right" size={16} color={Colors.ink} />
+          </TouchableOpacity>
+        </View>
 
         {/* Hero */}
         <View style={styles.hero}>
-          <Text style={styles.heroEyebrow}>{todayFmt}</Text>
-          <Text style={styles.heroTitle}>Aujourd'hui</Text>
+          <Text style={styles.heroEyebrow}>
+            {isFuture ? 'Planification' : isPast ? 'Historique' : 'Journal du jour'}
+          </Text>
+          <Text style={styles.heroTitle}>{headline}</Text>
 
           {/* Calorie card */}
           <View style={styles.calorieCard}>
@@ -295,50 +387,51 @@ export function HomeScreen({
                   <Text style={styles.kcalMetaOf}>/ {profile.kcalTarget}</Text>
                 </Text>
                 <Text style={styles.kcalMetaSub}>
-                  Tu es à {Math.round(kcalPct * 100)}% de ton objectif.{'\n'}
-                  {emptyMeals} repas à enregistrer.
+                  {totals.kcal === 0
+                    ? isFuture
+                      ? 'Aucun repas planifié pour ce jour.'
+                      : 'Aucun repas enregistré.'
+                    : `${Math.round(kcalPct * 100)}% de l'objectif · ${emptyMeals} créneau${emptyMeals > 1 ? 'x' : ''} vide${emptyMeals > 1 ? 's' : ''}.`
+                  }
                 </Text>
               </View>
             </View>
 
             {/* Macros */}
             <View style={styles.macros}>
-              <MacroBar
-                name="Protéines"
-                value={totals.protein}
-                target={profile.macroTargets.protein}
-              />
-              <MacroBar
-                name="Glucides"
-                value={totals.carbs}
-                target={profile.macroTargets.carbs}
-              />
-              <MacroBar
-                name="Lipides"
-                value={totals.fat}
-                target={profile.macroTargets.fat}
-              />
+              <MacroBar name="Protéines" value={totals.protein} target={profile.macroTargets.protein} />
+              <MacroBar name="Glucides"  value={totals.carbs}   target={profile.macroTargets.carbs} />
+              <MacroBar name="Lipides"   value={totals.fat}     target={profile.macroTargets.fat} />
             </View>
           </View>
         </View>
 
-        {/* Micronutriments */}
-        <View style={styles.sectionHead}>
-          <Text style={styles.sectionTitle}>Micronutriments</Text>
-          <Text style={styles.sectionMeta}>apport du jour</Text>
-        </View>
-        <View style={styles.vitsWrap}>
-          <VitaminPanel vitamins={profile.vitamins} />
-        </View>
+        {/* Micronutriments — today only */}
+        {isToday && (
+          <>
+            <View style={styles.sectionHead}>
+              <Text style={styles.sectionTitle}>Micronutriments</Text>
+              <Text style={styles.sectionMeta}>apport du jour</Text>
+            </View>
+            <View style={styles.vitsWrap}>
+              <VitaminPanel vitamins={profile.vitamins} />
+            </View>
+          </>
+        )}
 
         {/* Journal */}
         <View style={styles.sectionHead}>
-          <Text style={styles.sectionTitle}>Journal</Text>
-          <Text style={styles.sectionMeta}>{totalItems} aliments</Text>
+          <Text style={styles.sectionTitle}>{isFuture ? 'Planification' : 'Repas'}</Text>
+          <Text style={styles.sectionMeta}>{totalItems} aliment{totalItems > 1 ? 's' : ''}</Text>
         </View>
         <View style={styles.mealBlock}>
           {meals.map((m) => (
-            <MealCard key={m.id} meal={m} onAdd={onOpenSearch} />
+            <MealCard
+              key={m.id}
+              meal={m}
+              onAdd={onOpenSearch}
+              onRemoveItem={onRemoveItem}
+            />
           ))}
         </View>
       </ScrollView>
@@ -350,7 +443,7 @@ export function HomeScreen({
         activeOpacity={0.85}
       >
         <Icon name="plus" size={20} color={Colors.paper2} />
-        <Text style={styles.fabText}>Ajouter un aliment</Text>
+        <Text style={styles.fabText}>{isFuture ? 'Planifier un repas' : 'Ajouter un aliment'}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -405,6 +498,50 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.ink2,
     flexShrink: 1,
+  },
+
+  // Date nav bar
+  dateBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline2,
+    marginBottom: 4,
+    gap: 8,
+  },
+  dateNavBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateCenterBtn: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 1,
+  },
+  dateHeadline: {
+    fontFamily: Fonts.sansSemiBold,
+    fontSize: 15,
+    color: Colors.ink,
+    letterSpacing: -0.2,
+  },
+  dateHeadlinePast: {
+    color: Colors.muted,
+  },
+  dateHeadlineFuture: {
+    color: Colors.signal,
+  },
+  dateSub: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 0.5,
+    color: Colors.muted2,
   },
 
   // Hero
@@ -742,7 +879,31 @@ const styles = StyleSheet.create({
     marginTop: 1,
     letterSpacing: 0.3,
   },
-  foodKcal: { fontFamily: Fonts.mono, fontSize: 12, color: Colors.ink },
+  foodKcal: { fontFamily: Fonts.mono, fontSize: 12, color: Colors.ink, marginLeft: 8 },
+  removeItemBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: Colors.hairline2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
+  },
+  addMoreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.hairline2,
+  },
+  addMoreText: {
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    color: Colors.muted,
+  },
   mealEmpty: {
     flexDirection: 'row',
     alignItems: 'center',

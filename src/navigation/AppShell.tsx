@@ -34,7 +34,7 @@ import { CIQUALScreen } from '../screens/CIQUALScreen';
 import { BarcodeScannerScreen } from '../screens/BarcodeScannerScreen';
 import { AppSettings, DEFAULT_SETTINGS } from '../types/settings';
 import { refreshCiqualAllergens } from '../services/ciqual';
-import { DayLog, computeDayLog } from '../data/weeklyStats';
+import { JournalEntry, EMPTY_DAY_MEALS, computeDayLog } from '../data/weeklyStats';
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -169,10 +169,11 @@ export function AppShell() {
     KEYS.savedPlates,
     SAVED_PLATES,
   );
-  const [journal, setJournal, journalLoading] = usePersistedState<DayLog[]>(
+  const [journal, setJournal, journalLoading] = usePersistedState<JournalEntry[]>(
     KEYS.journal,
     [],
   );
+  const [viewingDate, setViewingDate] = useState<string | null>(null); // null = today
 
   console.log(`[AppShell] loading — profile:${profileLoading} foods:${foodsLoading} meals:${mealsLoading}`);
 
@@ -185,13 +186,12 @@ export function AppShell() {
       console.log(`[AppShell] mealsDate stored="${storedDate}" today="${today}"`);
       if (storedDate !== today) {
         // Archive yesterday's meals before reset
-        if (storedDate && meals.some((m) => m.items.length > 0)) {
-          const log = computeDayLog(meals, storedDate);
+        if (storedDate) {
           setJournal((prev) => {
-            const without = prev.filter((d) => d.date !== storedDate);
-            return [...without, log].slice(-56); // keep 8 weeks
+            const without = prev.filter((e) => e.date !== storedDate);
+            return [...without, { date: storedDate, meals }].slice(-365); // keep 1 year
           });
-          console.log(`[AppShell] journal: saved log for ${storedDate}`);
+          console.log(`[AppShell] journal: archived ${storedDate}`);
         }
         console.log('[AppShell] resetting meals for new day');
         setMeals(INITIAL_MEALS);
@@ -231,6 +231,41 @@ export function AppShell() {
 
   console.log(`[AppShell] ready — tab:${tab} stack:${stack} foods:${foodList.length} plates:${savedPlates.length}`);
 
+  // ── Viewed date helpers ──────────────────────────────────────
+
+  const today = todayStr();
+
+  // Meals for the currently viewed date
+  const viewedMeals = (() => {
+    if (!viewingDate || viewingDate === today) return meals;
+    const entry = journal.find((e) => e.date === viewingDate);
+    return (entry && Array.isArray(entry.meals)) ? entry.meals : EMPTY_DAY_MEALS;
+  })();
+
+  // Dates that have data (for calendar dots)
+  const journalDates = (() => {
+    const dates = journal
+      .filter((e) => Array.isArray(e.meals) && e.meals.some((m) => m.items.length > 0))
+      .map((e) => e.date);
+    if (meals.some((m) => m.items.length > 0)) dates.push(today);
+    return [...new Set(dates)];
+  })();
+
+  // Update meals for viewingDate (routes to meals or journal)
+  const updateViewedMeals = (updater: (prev: Meal[]) => Meal[]) => {
+    if (!viewingDate || viewingDate === today) {
+      setMeals(updater);
+    } else {
+      setJournal((prev) => {
+        const entry = prev.find((e) => e.date === viewingDate);
+        const current = (entry && Array.isArray(entry.meals)) ? entry.meals : EMPTY_DAY_MEALS;
+        const updated = updater(current);
+        const without = prev.filter((e) => e.date !== viewingDate);
+        return [...without, { date: viewingDate, meals: updated }].slice(-365);
+      });
+    }
+  };
+
   const showTab = (t: Tab) => {
     console.log(`[AppShell] showTab → ${t}`);
     setStack(null);
@@ -251,8 +286,8 @@ export function AppShell() {
   };
 
   const handleAddPlate = (mealId: string, plate: SavedPlate) => {
-    const mealName = meals.find((m) => m.id === mealId)?.name;
-    setMeals((ms) =>
+    const mealName = viewedMeals.find((m) => m.id === mealId)?.name;
+    updateViewedMeals((ms) =>
       ms.map((m) =>
         m.id === mealId
           ? {
@@ -272,7 +307,7 @@ export function AppShell() {
     );
     setStack(null);
     setTab('home');
-    setToast(`${plate.name} ajouté à ${mealName}`);
+    setToast(`${plate.name} ajouté à ${mealName ?? 'un repas'}`);
     setTimeout(() => setToast(null), 2600);
   };
 
@@ -287,8 +322,8 @@ export function AppShell() {
     mealId: string;
     kcal: number;
   }) => {
-    const mealName = meals.find((m) => m.id === mealId)?.name;
-    setMeals((ms) =>
+    const mealName = viewedMeals.find((m) => m.id === mealId)?.name;
+    updateViewedMeals((ms) =>
       ms.map((m) =>
         m.id === mealId
           ? {
@@ -312,8 +347,18 @@ export function AppShell() {
     );
     setStack(null);
     setTab('home');
-    setToast(`Ajouté à ${mealName}`);
+    setToast(`Ajouté à ${mealName ?? 'un repas'}`);
     setTimeout(() => setToast(null), 2600);
+  };
+
+  const handleRemoveItem = (mealId: string, itemIdx: number) => {
+    updateViewedMeals((ms) =>
+      ms.map((m) =>
+        m.id === mealId
+          ? { ...m, items: m.items.filter((_, i) => i !== itemIdx) }
+          : m
+      )
+    );
   };
 
   const handleSaveProfile = (updated: UserProfile) => {
@@ -376,7 +421,7 @@ export function AppShell() {
     screen = (
       <DetailScreen
         food={selectedFood}
-        meals={meals}
+        meals={viewedMeals}
         onBack={() => setStack(detailOrigin ?? null)}
         onAdd={handleAdd}
       />
@@ -385,7 +430,7 @@ export function AppShell() {
     screen = (
       <SavedDetailScreen
         plate={selectedPlate}
-        meals={meals}
+        meals={viewedMeals}
         onBack={() => setStack(null)}
         onAdd={handleAddPlate}
         onDelete={() => handleDeletePlate(selectedPlate)}
@@ -485,8 +530,12 @@ export function AppShell() {
       case 'home':
         screen = (
           <HomeScreen
-            meals={meals}
+            meals={viewedMeals}
             profile={profile}
+            viewingDate={viewingDate}
+            journalDates={journalDates}
+            onDateChange={setViewingDate}
+            onRemoveItem={handleRemoveItem}
             onOpenMenu={() => setDrawerOpen(true)}
             onOpenSearch={openSearch}
             onOpenProfile={() => showTab('profile')}

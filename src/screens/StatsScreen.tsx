@@ -20,7 +20,7 @@ import { Icon } from '../components/Icon';
 import { HelpButton, HelpModal } from '../components/HelpModal';
 import { HELP } from '../data/helpContent';
 import {
-  DayLog,
+  JournalEntry,
   WeekStats,
   WeekDayData,
   MEAL_SLOT_NAMES,
@@ -441,7 +441,7 @@ function InsightsList({ insights }: { insights: WeekStats['insights'] }) {
 // ── Stats Screen ──────────────────────────────────────────────
 
 interface Props {
-  journal: DayLog[];
+  journal: JournalEntry[];
   todayMeals: Meal[];
   profile: UserProfile;
 }
