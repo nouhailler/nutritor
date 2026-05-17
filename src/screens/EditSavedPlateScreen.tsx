@@ -17,6 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { SavedPlate, SavedPlateItem } from '../data/saved';
+import { Food } from '../types';
 import { Colors, Fonts } from '../theme/tokens';
 
 const AVAILABLE_TAGS = [
@@ -68,12 +69,41 @@ function ItemRow({ item, onDelete }: { item: DraftItem; onDelete: () => void }) 
 
 // ── Add ingredient form ───────────────────────────────────────
 
-function AddItemForm({ onAdd }: { onAdd: (item: DraftItem) => void }) {
-  const [draft, setDraft] = useState<DraftItem>(emptyDraft);
+function AddItemForm({ foodList, onAdd }: { foodList: Food[]; onAdd: (item: DraftItem) => void }) {
+  const [draft, setDraft] = useState<DraftItem>(emptyDraft());
   const [open, setOpen] = useState(false);
+  const [showSugg, setShowSugg] = useState(false);
 
   const set = (field: keyof DraftItem) => (val: string) =>
     setDraft((d) => ({ ...d, [field]: val }));
+
+  const handleNameChange = (val: string) => {
+    setDraft((d) => ({ ...d, name: val }));
+    setShowSugg(val.length >= 2);
+  };
+
+  const suggestions: Food[] = showSugg
+    ? foodList
+        .filter((f) =>
+          f.name.toLowerCase().includes(draft.name.toLowerCase()) ||
+          f.brand.toLowerCase().includes(draft.name.toLowerCase())
+        )
+        .slice(0, 6)
+    : [];
+
+  const selectFood = (food: Food) => {
+    const p = food.defaultPortion;
+    setDraft((d) => ({
+      ...d,
+      name: food.name,
+      qty: `${p} ${food.unit}`,
+      kcal: String(Math.round((food.per100.kcal * p) / 100)),
+      protein: String(Math.round((food.per100.protein * p) / 100 * 10) / 10),
+      carbs: String(Math.round((food.per100.carbs * p) / 100 * 10) / 10),
+      fat: String(Math.round((food.per100.fat * p) / 100 * 10) / 10),
+    }));
+    setShowSugg(false);
+  };
 
   const handleAdd = () => {
     if (!draft.name.trim()) return;
@@ -95,14 +125,39 @@ function AddItemForm({ onAdd }: { onAdd: (item: DraftItem) => void }) {
     <View style={styles.addForm}>
       <Text style={styles.addFormTitle}>Nouvel ingrédient</Text>
 
+      {/* Name + autocomplete */}
       <TextInput
         style={styles.fieldInput}
         placeholder="Nom de l'ingrédient"
         placeholderTextColor={Colors.muted2}
         value={draft.name}
-        onChangeText={set('name')}
+        onChangeText={handleNameChange}
         autoCorrect={false}
+        autoFocus
       />
+
+      {suggestions.length > 0 && (
+        <View style={styles.suggestions}>
+          {suggestions.map((food, idx) => {
+            const portionKcal = Math.round((food.per100.kcal * food.defaultPortion) / 100);
+            return (
+              <TouchableOpacity
+                key={food.id}
+                style={[styles.suggRow, idx === suggestions.length - 1 && styles.suggRowLast]}
+                onPress={() => selectFood(food)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.suggLeft}>
+                  <Text style={styles.suggName} numberOfLines={1}>{food.name}</Text>
+                  {food.brand ? <Text style={styles.suggBrand}>{food.brand}</Text> : null}
+                </View>
+                <Text style={styles.suggKcal}>{portionKcal} kcal</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+
       <TextInput
         style={styles.fieldInput}
         placeholder="Quantité (ex: 100 g)"
@@ -177,11 +232,12 @@ function AddItemForm({ onAdd }: { onAdd: (item: DraftItem) => void }) {
 interface Props {
   plate: SavedPlate | null;
   allPlates: SavedPlate[];
+  foodList?: Food[];
   onSave: (plate: SavedPlate) => void;
   onBack: () => void;
 }
 
-export function EditSavedPlateScreen({ plate, allPlates, onSave, onBack }: Props) {
+export function EditSavedPlateScreen({ plate, allPlates, foodList = [], onSave, onBack }: Props) {
   const insets = useSafeAreaInsets();
   const isNew = plate === null;
 
@@ -567,7 +623,7 @@ export function EditSavedPlateScreen({ plate, allPlates, onSave, onBack }: Props
               />
             ))}
 
-            <AddItemForm onAdd={(item) => setItems((prev) => [...prev, item])} />
+            <AddItemForm foodList={foodList} onAdd={(item) => setItems((prev) => [...prev, item])} />
           </View>
         </ScrollView>
       </View>
@@ -1000,6 +1056,45 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.sans,
     fontSize: 12,
     color: Colors.muted2,
+  },
+
+  // ── Autocomplete suggestions ──────────────────────────────
+  suggestions: {
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.hairline2,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginTop: -8,
+    marginBottom: 4,
+  },
+  suggRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline2,
+  },
+  suggRowLast: { borderBottomWidth: 0 },
+  suggLeft: { flex: 1, marginRight: 10 },
+  suggName: {
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    color: Colors.ink,
+  },
+  suggBrand: {
+    fontFamily: Fonts.sans,
+    fontSize: 11,
+    color: Colors.muted,
+    marginTop: 1,
+  },
+  suggKcal: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    color: Colors.muted2,
+    letterSpacing: 0.5,
   },
 
   // ── Photo confirmation modal ───────────────────────────────

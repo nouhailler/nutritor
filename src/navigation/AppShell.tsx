@@ -546,6 +546,7 @@ export function AppShell() {
       <EditSavedPlateScreen
         plate={plateForEdit}
         allPlates={savedPlates}
+        foodList={foodList}
         onSave={handleSavePlate}
         onBack={() => setStack(null)}
       />
