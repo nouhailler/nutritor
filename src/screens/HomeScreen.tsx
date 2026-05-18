@@ -22,6 +22,8 @@ import { UserProfile, Vitamin } from '../data/user';
 import { Colors, Fonts } from '../theme/tokens';
 import { Meal } from '../types';
 import { SymptomEntry, SymptomScores } from '../types/symptoms';
+import { OnboardingTip } from '../components/OnboardingTip';
+import { TIPS } from '../data/onboarding';
 
 // ── Date helpers ──────────────────────────────────────────────
 
@@ -322,6 +324,12 @@ export function HomeScreen({
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      <OnboardingTip
+        tipKey={TIPS.journal.key}
+        title={TIPS.journal.title}
+        message={TIPS.journal.message}
+        delay={1200}
+      />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}

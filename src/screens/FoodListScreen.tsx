@@ -22,6 +22,8 @@ import { SavedPlate } from '../data/saved';
 import { useDebounce } from '../hooks/useDebounce';
 import { computeCompatibilityScore } from '../data/compatibilityScore';
 import { CompatBadge } from '../components/CompatibilityBadge';
+import { OnboardingTip } from '../components/OnboardingTip';
+import { TIPS } from '../data/onboarding';
 
 // ── Plate picker bottom sheet ─────────────────────────────────
 
@@ -271,6 +273,12 @@ export function FoodListScreen({
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      <OnboardingTip
+        tipKey={TIPS.foods.key}
+        title={TIPS.foods.title}
+        message={TIPS.foods.message}
+        delay={1000}
+      />
       {/* Topbar */}
       <View style={styles.topbar}>
         <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>

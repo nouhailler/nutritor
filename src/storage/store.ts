@@ -11,6 +11,7 @@ export const KEYS = {
   symptoms:        'nutritor:symptoms',
   fodmapProtocol:  'nutritor:fodmap_protocol',
   migrationV1:     'nutritor:migration_v1',
+  onboardingDone:  'nutritor:onboarding_done',
 };
 
 export async function load<T>(key: string): Promise<T | null> {

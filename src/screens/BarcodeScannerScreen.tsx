@@ -20,6 +20,8 @@ import { HELP } from '../data/helpContent';
 import { Colors, Fonts } from '../theme/tokens';
 import { Food } from '../types';
 import { getOFFByBarcode, offProductToFood } from '../services/openFoodFacts';
+import { OnboardingTip } from '../components/OnboardingTip';
+import { TIPS } from '../data/onboarding';
 
 type Phase = 'scanning' | 'loading' | 'found' | 'not_found' | 'permission_denied';
 
@@ -277,6 +279,12 @@ export function BarcodeScannerScreen({ existingIds, onImport, onBack, onOpenMenu
 
   return (
     <View style={styles.bg}>
+      <OnboardingTip
+        tipKey={TIPS.scanner.key}
+        title={TIPS.scanner.title}
+        message={TIPS.scanner.message}
+        delay={600}
+      />
       {/* Camera */}
       <CameraView
         style={StyleSheet.absoluteFill}

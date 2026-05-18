@@ -12,6 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { DrawerMenu } from '../components/DrawerMenu';
 import { AIQueueBanner } from '../components/AIQueueBanner';
+import { OnboardingFlow } from '../components/OnboardingFlow';
+import { resetOnboarding } from '../data/onboarding';
 import { aiQueue, AIJobSnapshot } from '../services/aiQueue';
 import { DETAIL_FOOD, INITIAL_MEALS } from '../data/food';
 import { DEFAULT_PROFILE, UserProfile, computeDietLabel } from '../data/user';
@@ -191,6 +193,10 @@ export function AppShell() {
   const [fodmapProtocol, setFodmapProtocol] = usePersistedState<FodmapProtocol>(
     KEYS.fodmapProtocol,
     DEFAULT_FODMAP_PROTOCOL,
+  );
+  const [onboardingDone, setOnboardingDone] = usePersistedState<boolean>(
+    KEYS.onboardingDone,
+    false,
   );
   const [viewingDate, setViewingDate] = useState<string | null>(null); // null = today
 
@@ -636,6 +642,11 @@ export function AppShell() {
         }}
         onBack={() => setStack(null)}
         onOpenMenu={openMenu}
+        onResetOnboarding={async () => {
+          await resetOnboarding();
+          setOnboardingDone(false);
+          setStack(null);
+        }}
         showToast={(msg) => {
           setToast(msg);
           setTimeout(() => setToast(null), 2600);
@@ -752,6 +763,14 @@ export function AppShell() {
         onOpenMealGenerator={() => setStack('mealGenerator')}
         onOpenKnowledge={() => setStack('knowledge')}
         onClose={() => setDrawerOpen(false)}
+      />
+      <OnboardingFlow
+        visible={!onboardingDone}
+        profile={profile}
+        onComplete={(updatedProfile) => {
+          setProfile(updatedProfile);
+          setOnboardingDone(true);
+        }}
       />
     </View>
   );

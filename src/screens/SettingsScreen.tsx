@@ -134,6 +134,7 @@ interface Props {
   onImportFoods: (foods: Food[]) => void;
   onBack: () => void;
   onOpenMenu: () => void;
+  onResetOnboarding: () => Promise<void>;
   showToast: (msg: string) => void;
 }
 
@@ -144,6 +145,7 @@ export function SettingsScreen({
   onImportFoods,
   onBack,
   onOpenMenu,
+  onResetOnboarding,
   showToast,
 }: Props) {
   const insets = useSafeAreaInsets();
@@ -436,6 +438,18 @@ export function SettingsScreen({
                 <Icon name="download" size={18} color={Colors.muted} />
               )
             }
+          />
+        </Card>
+
+        {/* ── Onboarding ──────────────────────────────────────── */}
+        <SectionHeader icon="info" label="Visite guidée" />
+        <Card>
+          <Row
+            label="Revoir l'introduction"
+            description="Relance les écrans de démarrage et les conseils contextuels"
+            borderBottom={false}
+            onPress={onResetOnboarding}
+            right={<Icon name="arrow-right" size={18} color={Colors.muted} />}
           />
         </Card>
 
