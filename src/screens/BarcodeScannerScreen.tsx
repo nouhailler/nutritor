@@ -1,3 +1,8 @@
+/**
+ * BarcodeScannerScreen — stack 'scanner'
+ * Scan code-barres EAN-13/8 et UPC via expo-camera.
+ * Interroge Open Food Facts au scan, importe la fiche aliment si trouvée.
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,

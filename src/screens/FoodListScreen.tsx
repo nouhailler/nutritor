@@ -1,3 +1,9 @@
+/**
+ * FoodListScreen — tab 'foods'
+ * Bibliothèque d'aliments personnelle avec recherche debounce.
+ * Accès aux sources (CIQUAL, Open Food Facts, scanner, IA, photo).
+ * Ajout rapide d'un aliment à un plat sauvegardé via bottom sheet.
+ */
 import React, { useState } from 'react';
 import {
   ScrollView,

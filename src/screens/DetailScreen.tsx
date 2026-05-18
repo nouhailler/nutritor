@@ -1,3 +1,9 @@
+/**
+ * DetailScreen — stack 'detail'
+ * Fiche complète d'un aliment : macros, acides aminés, acides gras, vitamines,
+ * minéraux, FODMAP, composés bioactifs, profil sensoriel.
+ * Permet l'ajout au repas du journal du jour.
+ */
 import React, { useRef, useState } from 'react';
 import {
   Animated,

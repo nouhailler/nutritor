@@ -1,3 +1,8 @@
+/**
+ * SavedDetailScreen — stack 'savedDetail'
+ * Détail d'un plat sauvegardé : recette par ingrédient, macros totales,
+ * photo, ajout au repas du journal, suppression avec confirmation.
+ */
 import React, { useRef, useState } from 'react';
 import {
   Alert,

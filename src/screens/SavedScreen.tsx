@@ -1,3 +1,8 @@
+/**
+ * SavedScreen — tab 'saved'
+ * Bibliothèque de plats sauvegardés : grille 2 colonnes avec photo,
+ * filtres (tag, tri, texte), création et édition depuis ce même écran.
+ */
 import React, { useState } from 'react';
 import {
   Image,

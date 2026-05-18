@@ -4,10 +4,11 @@
 
 ---
 
-## État actuel (2026-05-17)
+## État actuel (2026-05-18)
 
-### Dernier commit
-`66b7fc1` — feat: autocomplete d'ingrédients dans le formulaire de plat
+### Derniers commits
+- `a1fd554` — feat: journal symptômes ↔ alimentation + reconnaissance photo IA
+- Ce commit (à venir) — feat: encyclopédie nutritionnelle + générateur de repas IA + docs
 
 ### Dernier build APK
 - **Build ID** : `8fc6725c-7e2b-484a-9e06-1ddb494e4840`
@@ -59,7 +60,8 @@ type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile';
 type StackScreen =
   | 'search' | 'detail' | 'savedDetail' | 'editProfile'
   | 'settings' | 'addFood' | 'openFoodFacts' | 'ciqual'
-  | 'scanner' | 'editSavedPlate' | null;
+  | 'scanner' | 'editSavedPlate' | 'foodPhoto'
+  | 'fodmap' | 'mealGenerator' | 'knowledge' | null;
 ```
 
 - `stack === null` → écran de l'onglet actif, tabbar visible
@@ -77,6 +79,12 @@ type StackScreen =
 | `stats` | Stats | `chart` | `StatsScreen` |
 | `profile` | Profil | `user` | `ProfileScreen` |
 
+### DrawerMenu
+
+En plus des 5 onglets, le drawer expose une section "Intelligence artificielle" :
+- **Générateur de repas** → `stack('mealGenerator')`
+- **Encyclopédie** → `stack('knowledge')`
+
 ---
 
 ## Persistance AsyncStorage (`src/storage/`)
@@ -85,14 +93,16 @@ type StackScreen =
 
 ```typescript
 KEYS = {
-  foods:        'nutritor:foods',
-  meals:        'nutritor:meals',
-  mealsDate:    'nutritor:meals_date',
-  profile:      'nutritor:profile',
-  settings:     'nutritor:settings',
-  savedPlates:  'nutritor:saved_plates',
-  journal:      'nutritor:journal',
-  migrationV1:  'nutritor:migration_v1',
+  foods:          'nutritor:foods',
+  meals:          'nutritor:meals',
+  mealsDate:      'nutritor:meals_date',
+  profile:        'nutritor:profile',
+  settings:       'nutritor:settings',
+  savedPlates:    'nutritor:saved_plates',
+  journal:        'nutritor:journal',
+  symptoms:       'nutritor:symptoms',
+  fodmapProtocol: 'nutritor:fodmap_protocol',
+  migrationV1:    'nutritor:migration_v1',
 }
 ```
 
@@ -106,6 +116,10 @@ Au démarrage (après chargement), `AppShell` compare `KEYS.mealsDate` à `today
 
 ### Journal historique
 `journal: JournalEntry[]` (max 365 entrées) — chaque entrée : `{ date: string; meals: Meal[] }`. Utilisé par `StatsScreen` et le calendrier de `HomeScreen`.
+
+### Symptômes
+`symptoms: SymptomEntry[]` — chaque entrée : `{ date: string; scores: SymptomScores }`.
+`SymptomScores = { digestion, energie, humeur, douleur: number (0-4) }`.
 
 ### Migration V1
 Au premier démarrage après mise à jour, recompute les allergènes CIQUAL pour tous les aliments `ciqual-*` existants via `refreshCiqualAllergens`.
@@ -131,13 +145,25 @@ Au premier démarrage après mise à jour, recompute les allergènes CIQUAL pour
 ### IA (`src/services/aiService.ts`)
 - Providers : `'openrouter'` | `'ollama'`
 - `generateFoodWithAI(name, brand, context, settings): Promise<Food>`
-- Valide : `id`, `name`, `per100`, `allergens`, `compat` ; strips markdown fences avant `JSON.parse`
+- `enrichFoodWithAI(food, settings): Promise<Food>`
+- `generateMeals(query, profile, fodmapPhase, settings): Promise<MealGeneratorResult>`
+- `analyzeFoodPhoto(imageBase64, settings): Promise<VisionItem[]>`
+- `isAIReady(settings): boolean` — vérifie si un provider est configuré
+- Valide les réponses JSON, strips markdown fences avant `JSON.parse`
 
 ### File d'attente IA (`src/services/aiQueue.ts`)
 - Singleton `aiQueue` (module-level) avec pattern subscriber
 - `aiQueue.subscribe(callback)` → retourne un `unsubscribe`
 - `AIQueueBanner` s'abonne dans `AppShell` via `useEffect`
 - Bandeau fixe au-dessus de la tab bar, snooze 10 s sur tap
+
+### Encyclopédie (`src/data/knowledgeBase.ts`)
+- 80 entrées statiques, 100 % hors-ligne, aucune IA nécessaire
+- Catégories : `vitamin` (13), `mineral` (14), `aminoacid` (16), `bioactive` (21), `concept` (16)
+- Chaque entrée : `simple` (what, why, sources, deficiency) + `expert` (mechanism, interactions, dosage, clinicalNote, fodmapNote)
+- `relatedIds` pour navigation croisée
+- Utilitaires : `searchKnowledge(query)`, `getByCategory(cat)`, `getRelated(entry)`, `getCategoryCounts()`
+- Recherche insensible aux accents (`NFD + strip combining`)
 
 ---
 
@@ -172,6 +198,33 @@ interface JournalEntry {
   date: string;   // 'YYYY-MM-DD'
   meals: Meal[];
 }
+
+interface SymptomEntry {
+  date: string;
+  scores: SymptomScores;   // digestion, energie, humeur, douleur (0-4)
+}
+
+interface GeneratedMeal {
+  name: string; emoji: string; description: string; mealType: string;
+  prepTime: number; cookTime?: number; servings: number;
+  ingredients: GeneratedMealIngredient[];
+  per_serving: { kcal: number; protein: number; carbs: number; fat: number; fiber?: number };
+  micronutrients?: Array<{ name: string; amount: string; pct_anr?: string }>;
+  tags: string[];
+  fodmapCompatibility?: string;
+  antiInflammatoryScore?: number;
+  whyGood?: string;
+}
+
+type KnowledgeCategory = 'vitamin' | 'mineral' | 'aminoacid' | 'bioactive' | 'concept';
+
+interface KnowledgeEntry {
+  id: string; category: KnowledgeCategory; name: string;
+  aliases?: string[]; emoji: string; tagline: string;
+  simple: { what: string; why: string; sources: string[]; deficiency?: string };
+  expert: { mechanism: string; interactions: string[]; dosage?: {...}; clinicalNote?: string; fodmapNote?: string };
+  relatedIds?: string[];
+}
 ```
 
 ---
@@ -182,19 +235,41 @@ interface JournalEntry {
 |-------|---------|-------|
 | Journal | `HomeScreen.tsx` | tab `home` |
 | Liste aliments | `FoodListScreen.tsx` | tab `foods` |
+| Plats sauvegardés | `SavedScreen.tsx` | tab `saved` |
+| Statistiques | `StatsScreen.tsx` | tab `stats` |
+| Profil | `ProfileScreen.tsx` | tab `profile` |
 | Recherche | `SearchScreen.tsx` | stack `'search'` |
 | Détail aliment | `DetailScreen.tsx` | stack `'detail'` |
-| Plats sauvegardés | `SavedScreen.tsx` | tab `saved` |
 | Détail plat | `SavedDetailScreen.tsx` | stack `'savedDetail'` |
 | Créer/éditer plat | `EditSavedPlateScreen.tsx` | stack `'editSavedPlate'` |
-| Stats | `StatsScreen.tsx` | tab `stats` |
-| Profil | `ProfileScreen.tsx` | tab `profile` |
 | Éditer profil | `EditProfileScreen.tsx` | stack `'editProfile'` |
 | Paramètres | `SettingsScreen.tsx` | stack `'settings'` |
 | Ajouter via IA | `AddFoodScreen.tsx` | stack `'addFood'` |
 | Open Food Facts | `OpenFoodFactsScreen.tsx` | stack `'openFoodFacts'` |
 | CIQUAL | `CIQUALScreen.tsx` | stack `'ciqual'` |
 | Scanner | `BarcodeScannerScreen.tsx` | stack `'scanner'` |
+| Photo IA | `FoodPhotoScreen.tsx` | stack `'foodPhoto'` |
+| Protocole FODMAP | `FodmapScreen.tsx` | stack `'fodmap'` |
+| Générateur repas | `MealGeneratorScreen.tsx` | stack `'mealGenerator'` (drawer) |
+| Encyclopédie | `KnowledgeScreen.tsx` | stack `'knowledge'` (drawer) |
+
+---
+
+## Navigation interne `KnowledgeScreen`
+
+La navigation dans l'encyclopédie est gérée par un état local `KView` (pas de StackScreen supplémentaire) :
+
+```typescript
+type KView =
+  | { type: 'home' }
+  | { type: 'list'; category: KnowledgeCategory | null; query: string }
+  | { type: 'entry'; entry: KnowledgeEntry; from: KView };
+```
+
+- `home` → grille de catégories + barre de recherche + 6 entrées vedettes
+- `list` → liste filtrée par catégorie ou par requête
+- `entry` → fiche complète avec toggle simple/expert + entrées liées
+- `from` dans `entry` permet un retour multi-niveaux (entrée liée → retour à la liste précédente)
 
 ---
 
@@ -202,9 +277,14 @@ interface JournalEntry {
 
 | Composant | Fichier | Rôle |
 |-----------|---------|------|
-| `DrawerMenu` | `components/DrawerMenu.tsx` | Menu latéral animé (slide 300ms) |
+| `DrawerMenu` | `components/DrawerMenu.tsx` | Menu latéral animé (slide 300ms), section IA (générateur + encyclopédie) |
 | `AIQueueBanner` | `components/AIQueueBanner.tsx` | Bandeau IA en bas, snooze 10 s sur tap |
 | `Icon` | `components/Icon.tsx` | Feather icons wrappés |
+| `CalendarModal` | `components/CalendarModal.tsx` | Sélecteur de date pour navigation journal |
+| `CompatibilityBadge` | `components/CompatibilityBadge.tsx` | Badge/carte compatibilité allergènes |
+| `HelpModal` | `components/HelpModal.tsx` | Modales d'aide contextuelles |
+| `PlateFilterSheet` | `components/PlateFilterSheet.tsx` | Bottom sheet filtres plats |
+| `SymptomWidget` | `components/SymptomWidget.tsx` | Widget saisie symptômes quotidiens |
 
 ---
 
@@ -226,9 +306,27 @@ interface JournalEntry {
 
 ### Liste aliments (`FoodListScreen`)
 - Barre de recherche avec debounce
-- Chips « Découvrir » (CIQUAL, OFF, Scanner, IA)
+- Chips « Découvrir » (CIQUAL, OFF, Scanner, IA, Photo)
 - Tap sur un aliment → `DetailScreen` (pour ajouter au journal)
 - Tap icône livre → `PlatePickerSheet` (bottom sheet maison, pour ajouter à un plat)
+
+### Générateur de repas IA (`MealGeneratorScreen`)
+- Profile-aware : allergènes avec sévérité, régimes actifs, phase FODMAP, kcal cible, macros
+- Chips de suggestions générées à partir du profil
+- Cartes expandables : macros, ingrédients (avec note FODMAP par ingrédient), micronutriments, score anti-inflammatoire (barre SVG), note FODMAP globale, "pourquoi c'est adapté"
+- Requiert `isAIReady(settings)` — affiche un avertissement si aucune IA configurée
+
+### Encyclopédie nutritionnelle (`KnowledgeScreen` + `src/data/knowledgeBase.ts`)
+- 80 entrées statiques, aucune connexion requise
+- Mode **simple** : what/why/sources/carence en langage accessible
+- Mode **expert** : mécanisme biochimique, interactions, dosage (RDA/upper), notes cliniques, note FODMAP
+- Recherche insensible aux accents (`normalize('NFD')`) sur nom, aliases, tagline
+- Navigation croisée via `relatedIds`
+
+### Suivi symptômes (`HomeScreen` → `SymptomWidget`)
+- 4 axes : digestion, énergie, humeur, douleur (scores 0–4)
+- Persisté par date dans `KEYS.symptoms`
+- Corrélations visibles dans `StatsScreen`
 
 ---
 
@@ -241,6 +339,7 @@ interface JournalEntry {
 - **Chips de filtre** : ne pas mettre `backgroundColor: 'transparent'` sur fond beige — utiliser `Colors.paper2` pour que les bordures soient visibles.
 - **ScrollView dans flex-column** : ajouter `flex: 1` sur le `ScrollView` si le contenu ne s'affiche pas.
 - **Bottom sheet** : utiliser un overlay `View` absolu (pas `Modal`) pour éviter les problèmes de z-index Android.
+- **KnowledgeScreen** : la navigation interne (`KView`) est locale à l'écran — pas de StackScreen supplémentaire dans `AppShell`.
 
 ---
 
@@ -265,10 +364,9 @@ python3 scripts/gen_icon.py
 ## Prochaines étapes suggérées
 
 - [ ] Thème dark / thème sage
-- [ ] Statistiques hebdomadaires avancées (graphes macros)
 - [ ] Notifications de repas (rappels)
-- [ ] Synchronisation cloud / export JSON
+- [ ] Synchronisation cloud / export JSON complet
 - [ ] Build iOS (TestFlight)
-- [ ] Données Monash FODMAP (licence commerciale)
+- [ ] Données Monash FODMAP officielles (licence commerciale)
 - [ ] Retirer les `console.log` de débogage avant la production
 - [ ] Mode hors-ligne complet (cache OFF)

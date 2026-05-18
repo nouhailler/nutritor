@@ -1,3 +1,8 @@
+/**
+ * AddFoodScreen — stack 'addFood'
+ * Création d'une fiche aliment via IA (OpenRouter / Ollama).
+ * Saisie du nom + contexte optionnel → JSON Food structuré enfilé dans aiQueue.
+ */
 import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,

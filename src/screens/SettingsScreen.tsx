@@ -1,3 +1,9 @@
+/**
+ * SettingsScreen — stack 'settings'
+ * Configuration de l'IA (OpenRouter avec clé API + sélection modèle,
+ * ou Ollama local avec URL + test de connexion).
+ * Import et export JSON de la bibliothèque d'aliments.
+ */
 import React, { useState } from 'react';
 import {
   ActivityIndicator,

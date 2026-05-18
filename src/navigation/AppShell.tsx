@@ -36,7 +36,11 @@ import { OpenFoodFactsScreen } from '../screens/OpenFoodFactsScreen';
 import { CIQUALScreen } from '../screens/CIQUALScreen';
 import { BarcodeScannerScreen } from '../screens/BarcodeScannerScreen';
 import { FoodPhotoScreen } from '../screens/FoodPhotoScreen';
+import { FodmapScreen } from '../screens/FodmapScreen';
+import { MealGeneratorScreen } from '../screens/MealGeneratorScreen';
+import { KnowledgeScreen } from '../screens/KnowledgeScreen';
 import { AppSettings, DEFAULT_SETTINGS } from '../types/settings';
+import { FodmapProtocol, DEFAULT_FODMAP_PROTOCOL } from '../data/fodmapProtocol';
 import { refreshCiqualAllergens } from '../services/ciqual';
 import { JournalEntry, EMPTY_DAY_MEALS, computeDayLog } from '../data/weeklyStats';
 import { SymptomEntry, SymptomScores } from '../types/symptoms';
@@ -46,7 +50,7 @@ function todayStr() {
 }
 
 type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile';
-type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | 'foodPhoto' | null;
+type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge' | null;
 
 const TABS: { id: Tab; label: string; icon: 'home' | 'leaf' | 'book' | 'chart' | 'user' }[] = [
   { id: 'home',    label: 'Journal',  icon: 'home' },
@@ -183,6 +187,10 @@ export function AppShell() {
   const [symptoms, setSymptoms] = usePersistedState<SymptomEntry[]>(
     KEYS.symptoms,
     [],
+  );
+  const [fodmapProtocol, setFodmapProtocol] = usePersistedState<FodmapProtocol>(
+    KEYS.fodmapProtocol,
+    DEFAULT_FODMAP_PROTOCOL,
   );
   const [viewingDate, setViewingDate] = useState<string | null>(null); // null = today
 
@@ -541,6 +549,7 @@ export function AppShell() {
       <OpenFoodFactsScreen
         existingIds={new Set(foodList.map((f) => f.id))}
         initialQuery={pendingQuery}
+        profile={profile}
         settings={settings}
         onImport={(food) => {
           setFoodList((prev) => [...prev, food]);
@@ -580,6 +589,27 @@ export function AppShell() {
         onSave={handleSavePlate}
         onBack={() => setStack(null)}
       />
+    );
+  } else if (stack === 'fodmap') {
+    screen = (
+      <FodmapScreen
+        protocol={fodmapProtocol}
+        onUpdate={setFodmapProtocol}
+        onBack={() => setStack(null)}
+      />
+    );
+  } else if (stack === 'mealGenerator') {
+    screen = (
+      <MealGeneratorScreen
+        profile={profile}
+        fodmapProtocol={fodmapProtocol}
+        settings={settings}
+        onBack={() => setStack(null)}
+      />
+    );
+  } else if (stack === 'knowledge') {
+    screen = (
+      <KnowledgeScreen onBack={() => setStack(null)} />
     );
   } else if (stack === 'settings') {
     screen = (
@@ -670,6 +700,7 @@ export function AppShell() {
             onEdit={() => setStack('editProfile')}
             onToggleDiet={handleToggleDiet}
             onOpenMenu={() => setDrawerOpen(true)}
+            onOpenFodmap={() => setStack('fodmap')}
           />
         );
         break;
@@ -705,6 +736,8 @@ export function AppShell() {
         profile={drawerProfile}
         onNavigate={(t) => showTab(t)}
         onOpenSettings={() => setStack('settings')}
+        onOpenMealGenerator={() => setStack('mealGenerator')}
+        onOpenKnowledge={() => setStack('knowledge')}
         onClose={() => setDrawerOpen(false)}
       />
     </View>

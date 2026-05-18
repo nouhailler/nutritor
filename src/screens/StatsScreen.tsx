@@ -1,3 +1,8 @@
+/**
+ * StatsScreen — tab 'stats'
+ * Statistiques hebdomadaires : bar chart kcal 7 jours (SVG), sparklines macros,
+ * corrélations symptômes/alimentation, heatmap conformité régime.
+ */
 import React, { useState } from 'react';
 import {
   ScrollView,

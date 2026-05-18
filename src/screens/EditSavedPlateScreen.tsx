@@ -1,3 +1,8 @@
+/**
+ * EditSavedPlateScreen — stack 'editSavedPlate'
+ * Création et édition d'un plat sauvegardé : ingrédients avec autocomplete
+ * depuis foodList, photo galerie/caméra, note libre, plats associés (pairing).
+ */
 import React, { useState } from 'react';
 import {
   ActionSheetIOS,

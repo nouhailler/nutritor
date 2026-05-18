@@ -38,6 +38,8 @@ interface DrawerMenuProps {
   profile: { initial: string; name: string; diet: string; goal: string };
   onNavigate: (tab: Tab) => void;
   onOpenSettings: () => void;
+  onOpenMealGenerator: () => void;
+  onOpenKnowledge: () => void;
   onClose: () => void;
 }
 
@@ -47,6 +49,8 @@ export function DrawerMenu({
   profile,
   onNavigate,
   onOpenSettings,
+  onOpenMealGenerator,
+  onOpenKnowledge,
   onClose,
 }: DrawerMenuProps) {
   const insets = useSafeAreaInsets();
@@ -155,6 +159,39 @@ export function DrawerMenu({
               </TouchableOpacity>
             );
           })}
+        </View>
+
+        {/* IA section */}
+        <View style={styles.iaSection}>
+          <Text style={styles.iaSectionLabel}>Intelligence artificielle</Text>
+          <TouchableOpacity
+            style={styles.iaItem}
+            onPress={() => { onOpenMealGenerator(); onClose(); }}
+            activeOpacity={0.7}
+          >
+            <View style={styles.iaIcon}>
+              <Icon name="sparkle" size={16} color={Colors.paper2} />
+            </View>
+            <View style={styles.navText}>
+              <Text style={styles.iaLabel}>Générateur de repas</Text>
+              <Text style={styles.navDesc}>Recettes personnalisées par IA</Text>
+            </View>
+            <Icon name="chevron-right" size={14} color={Colors.muted2} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.iaItem, { marginTop: 8 }]}
+            onPress={() => { onOpenKnowledge(); onClose(); }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.iaIcon, { backgroundColor: '#2E5A8B' }]}>
+              <Icon name="book" size={16} color={Colors.paper2} />
+            </View>
+            <View style={styles.navText}>
+              <Text style={styles.iaLabel}>Encyclopédie</Text>
+              <Text style={styles.navDesc}>Vitamines, minéraux, bioactifs</Text>
+            </View>
+            <Icon name="chevron-right" size={14} color={Colors.muted2} />
+          </TouchableOpacity>
         </View>
 
         {/* Footer */}
@@ -308,6 +345,49 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: Colors.muted,
     marginTop: 1,
+  },
+
+  // IA section
+  iaSection: {
+    marginTop: 12,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.hairline2,
+  },
+  iaSectionLabel: {
+    fontFamily: Fonts.mono,
+    fontSize: 8,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    color: Colors.muted2,
+    marginBottom: 8,
+  },
+  iaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.hairline2,
+  },
+  iaIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  iaLabel: {
+    fontFamily: Fonts.serif,
+    fontSize: 18,
+    color: Colors.ink,
+    letterSpacing: -0.2,
+    lineHeight: 20,
   },
 
   // Footer

@@ -1,3 +1,8 @@
+/**
+ * CIQUALScreen — stack 'ciqual'
+ * Recherche dans la base CIQUAL 2020 embarquée (3 167 aliments français).
+ * Chips de catégories, enrichissement optionnel via IA, import direct dans la bibliothèque.
+ */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,

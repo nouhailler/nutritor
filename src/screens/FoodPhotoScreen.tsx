@@ -1,3 +1,8 @@
+/**
+ * FoodPhotoScreen — stack 'foodPhoto'
+ * Reconnaissance d'aliments par photo via IA vision (OpenRouter).
+ * Sélection depuis galerie ou caméra → liste d'aliments identifiés à importer.
+ */
 import React, { useState } from 'react';
 import {
   ActivityIndicator,

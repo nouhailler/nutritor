@@ -1,3 +1,8 @@
+/**
+ * HomeScreen — tab 'home'
+ * Journal nutritionnel du jour : anneau kcal SVG, 5 repas, résumé macros,
+ * micronutriments, widget symptômes et calendrier de navigation historique.
+ */
 import React, { useMemo, useState } from 'react';
 import {
   ScrollView,

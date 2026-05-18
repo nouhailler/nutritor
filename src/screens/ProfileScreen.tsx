@@ -1,3 +1,8 @@
+/**
+ * ProfileScreen — tab 'profile'
+ * Résumé du profil utilisateur : allergènes actifs avec niveaux de sévérité,
+ * régimes actifs, objectif calorique. Accès au protocole FODMAP et à l'édition.
+ */
 import React, { useState } from 'react';
 import {
   ScrollView,
@@ -39,9 +44,10 @@ interface ProfileScreenProps {
   onEdit: () => void;
   onToggleDiet: (id: string) => void;
   onOpenMenu: () => void;
+  onOpenFodmap: () => void;
 }
 
-export function ProfileScreen({ profile, onEdit, onToggleDiet, onOpenMenu }: ProfileScreenProps) {
+export function ProfileScreen({ profile, onEdit, onToggleDiet, onOpenMenu, onOpenFodmap }: ProfileScreenProps) {
   const insets = useSafeAreaInsets();
   const [helpVisible, setHelpVisible] = useState(false);
   const dietLabel = computeDietLabel(profile.diets);
@@ -102,6 +108,17 @@ export function ProfileScreen({ profile, onEdit, onToggleDiet, onOpenMenu }: Pro
 
           <Text style={styles.activity}>{profile.activity}</Text>
         </View>
+
+        {/* Section: Mode Low FODMAP */}
+        <TouchableOpacity style={styles.fodmapCard} onPress={onOpenFodmap} activeOpacity={0.85}>
+          <View style={styles.fodmapLeft}>
+            <Text style={styles.fodmapTitle}>Mode Low FODMAP</Text>
+            <Text style={styles.fodmapDesc}>
+              Phases · Timers · Aliments testés · Réactions · Carte de tolérance
+            </Text>
+          </View>
+          <Icon name="activity" size={18} color={Colors.ok} />
+        </TouchableOpacity>
 
         {/* Section: Allergènes */}
         <View style={styles.section}>
@@ -273,6 +290,35 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.sans,
     fontSize: 13,
     color: Colors.muted,
+  },
+
+  // FODMAP card
+  fodmapCard: {
+    marginHorizontal: 24,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(63,90,58,0.3)',
+    borderRadius: 16,
+    backgroundColor: 'rgba(63,90,58,0.06)',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  fodmapLeft: { flex: 1, gap: 3 },
+  fodmapTitle: {
+    fontFamily: Fonts.sansSemiBold,
+    fontSize: 14,
+    color: Colors.ok,
+    letterSpacing: -0.1,
+  },
+  fodmapDesc: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    color: Colors.muted,
+    letterSpacing: 0.3,
+    lineHeight: 14,
   },
 
   // Section

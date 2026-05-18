@@ -1,3 +1,9 @@
+/**
+ * SearchScreen — stack 'search'
+ * Recherche dans la bibliothèque personnelle avec filtres de régime et
+ * compatibilité allergènes en temps réel. Suggestions récentes, accès direct
+ * à CIQUAL, Open Food Facts, scanner code-barres et ajout via IA.
+ */
 import React, { useRef, useState } from 'react';
 import {
   Alert,
@@ -21,6 +27,13 @@ import {
   SearchResult,
   TagKind,
 } from '../data/search';
+import {
+  NLPIntent,
+  NLP_FILTER_LABELS,
+  parseNLPQuery,
+  passesNLPCriteria,
+  smartSearch,
+} from '../data/smartSearch';
 import { useDebounce } from '../hooks/useDebounce';
 import { Colors, Fonts } from '../theme/tokens';
 import { Food } from '../types';
@@ -150,6 +163,15 @@ export function SearchScreen({ foodList, profile, onBack, onPickItem, onDeleteFo
 
   const activeFilters = filters.filter((f) => f.active);
 
+  // NLP: parse the query for intent (filters + nutrition criteria)
+  const intent: NLPIntent = parseNLPQuery(debouncedQuery);
+
+  // Merge user-toggled filters with NLP-implied filters
+  const allActiveFilterIds = new Set<SearchFilterId>([
+    ...activeFilters.map((f) => f.id),
+    ...intent.impliedFilters,
+  ]);
+
   function passesFilter(food: Food, id: SearchFilterId): boolean {
     const am = Object.fromEntries(food.allergens.map((a) => [a.name, a.status]));
     const portionKcal = Math.round((food.per100.kcal * food.defaultPortion) / 100);
@@ -165,14 +187,25 @@ export function SearchScreen({ foodList, profile, onBack, onPickItem, onDeleteFo
   }
 
   function isCompatible(food: Food): boolean {
-    return activeFilters.every((f) => passesFilter(food, f.id));
+    return Array.from(allActiveFilterIds).every((id) => passesFilter(food, id));
   }
 
-  const textFiltered = foodList.filter(
-    (food) => !debouncedQuery || food.name.toLowerCase().includes(debouncedQuery.toLowerCase())
-  );
+  // Smart search: synonyms + fuzzy matching + NLP nutrition criteria
+  const smartResults = smartSearch(foodList, debouncedQuery, intent);
+  const textFiltered = smartResults.filter((food) => passesNLPCriteria(food, intent));
   const compatible   = textFiltered.filter((f) => isCompatible(f));
   const incompatible = textFiltered.filter((f) => !isCompatible(f));
+
+  // NLP intent chips to display (filters inferred from natural language)
+  const nlpOnlyFilters = intent.impliedFilters.filter(
+    (id) => !activeFilters.some((f) => f.id === id),
+  );
+  const hasNLPContent =
+    nlpOnlyFilters.length > 0 ||
+    intent.minProteinG !== undefined ||
+    intent.lowFodmap ||
+    intent.highFiber ||
+    (intent.maxKcalPortion !== undefined && !allActiveFilterIds.has('low'));
 
   const confirmDelete = (food: Food) => {
     if (Platform.OS === 'web') {
@@ -219,7 +252,7 @@ export function SearchScreen({ foodList, profile, onBack, onPickItem, onDeleteFo
           <TextInput
             ref={inputRef}
             style={styles.input}
-            placeholder="Rechercher un aliment, une marque…"
+            placeholder="Pain sans gluten, snack low FODMAP…"
             placeholderTextColor={Colors.muted2}
             value={query}
             onChangeText={setQuery}
@@ -234,6 +267,39 @@ export function SearchScreen({ foodList, profile, onBack, onPickItem, onDeleteFo
           )}
         </View>
       </View>
+
+      {/* NLP intent strip */}
+      {hasNLPContent && (
+        <View style={styles.nlpStrip}>
+          <Icon name="sparkle" size={11} color={Colors.ok} />
+          <Text style={styles.nlpLabel}>Compris :</Text>
+          {nlpOnlyFilters.map((id) => (
+            <View key={id} style={styles.nlpChip}>
+              <Text style={styles.nlpChipText}>{NLP_FILTER_LABELS[id]}</Text>
+            </View>
+          ))}
+          {intent.minProteinG !== undefined && (
+            <View style={styles.nlpChip}>
+              <Text style={styles.nlpChipText}>Protéines ≥{intent.minProteinG} g</Text>
+            </View>
+          )}
+          {intent.lowFodmap && (
+            <View style={styles.nlpChip}>
+              <Text style={styles.nlpChipText}>Low FODMAP</Text>
+            </View>
+          )}
+          {intent.highFiber && (
+            <View style={styles.nlpChip}>
+              <Text style={styles.nlpChipText}>Riche en fibres</Text>
+            </View>
+          )}
+          {intent.maxKcalPortion !== undefined && !allActiveFilterIds.has('low') && (
+            <View style={styles.nlpChip}>
+              <Text style={styles.nlpChipText}>{'<'}{intent.maxKcalPortion} kcal</Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Add source strip */}
       <View style={styles.addStrip}>
@@ -585,6 +651,35 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.sans,
     fontSize: 10,
     color: Colors.muted,
+  },
+
+  nlpStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
+  nlpLabel: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    color: Colors.ok,
+  },
+  nlpChip: {
+    paddingVertical: 3,
+    paddingHorizontal: 9,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: 'rgba(63,90,58,0.35)',
+    backgroundColor: 'rgba(63,90,58,0.07)',
+  },
+  nlpChipText: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    letterSpacing: 0.3,
+    color: Colors.ok,
   },
 
   addStrip: {

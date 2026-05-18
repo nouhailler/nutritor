@@ -1,3 +1,8 @@
+/**
+ * EditProfileScreen — stack 'editProfile'
+ * Formulaire d'édition du profil : nom, objectif calorique, macros cibles,
+ * 14 allergènes avec niveaux de sévérité, 6 régimes actifs.
+ */
 import React, { useState } from 'react';
 import {
   Alert,
