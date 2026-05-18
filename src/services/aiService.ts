@@ -1,5 +1,8 @@
 import { AppSettings } from '../types/settings';
 import { Allergen, CompatItem, Food } from '../types';
+import { UserProfile } from '../data/user';
+import { FodmapPhase } from '../data/fodmapProtocol';
+import { GeneratedMeal, MealGeneratorResult } from '../types/mealGenerator';
 
 const FOOD_SCHEMA = `{
   "id": "slug-unique-001",
@@ -381,4 +384,139 @@ ${ENRICH_SCHEMA}`;
   merged.compat = buildCompatFull(merged);
 
   return merged;
+}
+
+// ── Meal Generator ────────────────────────────────────────────
+
+const MEAL_SCHEMA = `[
+  {
+    "name": "Nom du repas",
+    "emoji": "🥗",
+    "description": "Description appétissante en 1-2 phrases",
+    "mealType": "Déjeuner",
+    "prepTime": 15,
+    "cookTime": 20,
+    "servings": 2,
+    "ingredients": [
+      { "name": "Quinoa", "amount": "80 g (cru)", "fodmapNote": "Safe jusqu'à 155 g cuit" }
+    ],
+    "per_serving": { "kcal": 480, "protein": 28, "carbs": 52, "fat": 14, "fiber": 7 },
+    "micronutrients": [
+      { "name": "Fer", "amount": "4.2 mg", "pct_anr": "30 %" }
+    ],
+    "tags": ["low-fodmap", "sans-gluten", "végétarien"],
+    "fodmapCompatibility": "Compatible élimination — tous les ingrédients respectent les seuils Monash",
+    "antiInflammatoryScore": 78,
+    "whyGood": "Riche en oméga-3, faible en fructanes, apporte magnésium et zinc"
+  }
+]`;
+
+const MEAL_SYSTEM_PROMPT = `Tu es un diététicien-nutritionniste spécialisé en FODMAP, micronutriments et alimentation thérapeutique. Tu génères des recettes personnalisées en JSON strict.
+
+Règles absolues :
+- Réponds UNIQUEMENT avec un tableau JSON brut (un array), sans markdown, sans texte autour
+- Génère exactement 3 repas différents adaptés à la demande
+- Valeurs nutritionnelles précises (par portion, pas pour 100g)
+- FODMAP : base-toi sur les données Monash University avec portions exactes
+- Si le profil a "Low FODMAP" actif : chaque ingrédient doit être dans les limites Monash
+- Respecte les allergènes "sévère" et "modéré" comme des interdits absolus
+- Respecte les allergènes "trace" en mentionnant le risque si pertinent
+- antiInflammatoryScore : 0-100, basé sur oméga-3/6, polyphénols, index glycémique
+- whyGood : explique en 1-2 phrases pourquoi ce repas est adapté AU profil fourni`;
+
+function buildMealPrompt(
+  query: string,
+  profile: UserProfile,
+  fodmapPhase?: FodmapPhase,
+): string {
+  const activeDiets = profile.diets.filter((d) => d.on).map((d) => d.label);
+  const activeAllergens = profile.allergens.filter((a) => a.level !== 'aucun');
+  const isLowFodmap = profile.diets.some((d) => d.id === 'low' && d.on);
+
+  let prompt = `Demande : ${query}\n\nProfil :\n`;
+  prompt += `- Objectif calorique : ${profile.kcalTarget} kcal/jour\n`;
+  prompt += `- Objectifs macros : ${profile.macroTargets.protein}g protéines, ${profile.macroTargets.carbs}g glucides, ${profile.macroTargets.fat}g lipides\n`;
+
+  if (activeDiets.length > 0) {
+    prompt += `- Régimes actifs : ${activeDiets.join(', ')}\n`;
+  }
+  if (activeAllergens.length > 0) {
+    prompt += `- Allergènes/intolérances :\n`;
+    for (const a of activeAllergens) {
+      prompt += `  • ${a.name} — niveau ${a.level}${a.note ? ` (${a.note})` : ''}\n`;
+    }
+  }
+  if (isLowFodmap && fodmapPhase) {
+    const phaseLabels: Record<FodmapPhase, string> = {
+      elimination: 'Élimination (phase stricte)',
+      reintroduction: 'Réintroduction (tester un groupe à la fois)',
+      stabilization: 'Stabilisation (personnalisation des seuils)',
+    };
+    prompt += `- Phase FODMAP : ${phaseLabels[fodmapPhase]}\n`;
+  }
+
+  prompt += `\nSchéma attendu pour chaque repas :\n${MEAL_SCHEMA}`;
+  return prompt;
+}
+
+function extractJSONArray(raw: string): string {
+  let s = raw.trim();
+  const fenced = s.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenced) s = fenced[1].trim();
+  const start = s.indexOf('[');
+  const end = s.lastIndexOf(']');
+  if (start !== -1 && end !== -1) return s.slice(start, end + 1);
+  // Fallback: maybe wrapped in object
+  const objStart = s.indexOf('{');
+  if (objStart !== -1) {
+    try {
+      const parsed = JSON.parse(s.slice(objStart, s.lastIndexOf('}') + 1)) as Record<string, unknown>;
+      if (parsed.meals && Array.isArray(parsed.meals)) return JSON.stringify(parsed.meals);
+    } catch { /* ignore */ }
+  }
+  return s;
+}
+
+export async function generateMeals(
+  query: string,
+  profile: UserProfile,
+  fodmapPhase: FodmapPhase | undefined,
+  appSettings: AppSettings,
+): Promise<MealGeneratorResult> {
+  if (appSettings.aiProvider === 'openrouter' && !appSettings.openrouter.apiKey) {
+    throw new Error('Clé API OpenRouter manquante. Configure-la dans les Paramètres.');
+  }
+  if (appSettings.aiProvider === 'openrouter' && !appSettings.openrouter.model) {
+    throw new Error('Aucun modèle OpenRouter sélectionné. Actualise la liste dans les Paramètres.');
+  }
+  if (appSettings.aiProvider === 'ollama' && !appSettings.ollama.model) {
+    throw new Error('Aucun modèle Ollama configuré. Teste la connexion dans les Paramètres.');
+  }
+
+  const messages = [
+    { role: 'system', content: MEAL_SYSTEM_PROMPT },
+    { role: 'user', content: buildMealPrompt(query, profile, fodmapPhase) },
+  ];
+
+  const raw =
+    appSettings.aiProvider === 'openrouter'
+      ? await callOpenRouter(appSettings.openrouter, messages)
+      : await callOllama(appSettings.ollama, messages);
+
+  if (!raw) throw new Error('L\'IA n\'a retourné aucune réponse.');
+
+  const jsonStr = extractJSONArray(raw);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonStr);
+  } catch {
+    throw new Error('La réponse de l\'IA n\'est pas un JSON valide. Réessaie.');
+  }
+
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw new Error('Format inattendu — aucun repas retourné. Réessaie.');
+  }
+
+  const meals = parsed as GeneratedMeal[];
+  return { meals };
 }

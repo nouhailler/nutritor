@@ -11,11 +11,16 @@ export interface CompatReason {
   severity: 'critical' | 'high' | 'medium' | 'low';
 }
 
+export interface CompatPositive {
+  label: string;
+  detail?: string;
+}
+
 export interface CompatibilityResult {
   score: number;            // 0–100
   level: CompatLevel;
   reasons: CompatReason[];  // penalty factors
-  positives: string[];      // positive signals
+  positives: CompatPositive[];
 }
 
 // ── Constants ─────────────────────────────────────────────────
@@ -52,7 +57,7 @@ export function computeCompatibilityScore(
 ): CompatibilityResult {
   let penalty = 0;
   const reasons: CompatReason[] = [];
-  const positives: string[] = [];
+  const positives: CompatPositive[] = [];
   const penalizedKeys = new Set<string>();
 
   // Normalize food allergen map
@@ -163,7 +168,16 @@ export function computeCompatibilityScore(
         severity: 'medium',
       });
     } else if (food.fodmap.overall === 'low') {
-      positives.push('FODMAP faible — digestibilité optimale');
+      const portion = food.fodmap.elimination?.portion;
+      const lowTypes = (food.fodmap.types ?? [])
+        .filter((t) => t.level === 'low' || t.level === 'faible')
+        .map((t) => t.name);
+      positives.push({
+        label: portion
+          ? `Low FODMAP · sûr jusqu'à ${portion}${portion.match(/\d/) && !portion.includes('g') ? ' g' : ''}`
+          : 'Low FODMAP',
+        detail: lowTypes.length > 0 ? `${lowTypes.join(', ')} en quantité faible` : food.fodmap.elimination?.note,
+      });
     }
   }
 
@@ -203,13 +217,35 @@ export function computeCompatibilityScore(
   const portionKcal = (food.per100.kcal * food.defaultPortion) / 100;
 
   if (portionProtein >= 20) {
-    positives.push(`Riche en protéines — ${Math.round(portionProtein)} g/portion`);
+    positives.push({
+      label: `Riche en protéines — ${Math.round(portionProtein)} g/portion`,
+      detail: food.proteinDetail?.complete ? 'Protéines complètes (tous acides aminés essentiels)' : undefined,
+    });
   } else if (portionKcal > 0 && portionProtein / portionKcal >= 0.1) {
-    positives.push(`Bonne densité protéique — ${Math.round(portionProtein)} g`);
+    positives.push({
+      label: `Bonne densité protéique — ${Math.round(portionProtein)} g/portion`,
+    });
   }
 
   if (!activeDiets.has('low') && food.fodmap?.overall === 'low') {
-    positives.push('FODMAP faible');
+    const portion = food.fodmap.elimination?.portion;
+    const lowTypes = (food.fodmap.types ?? [])
+      .filter((t) => t.level === 'low' || t.level === 'faible')
+      .map((t) => t.name);
+    positives.push({
+      label: portion
+        ? `Low FODMAP · sûr jusqu'à ${portion}${portion.match(/\d/) && !portion.includes('g') ? ' g' : ''}`
+        : 'Low FODMAP',
+      detail: lowTypes.length > 0 ? `${lowTypes.join(', ')} en quantité faible` : food.fodmap.elimination?.note,
+    });
+  }
+
+  // Per-allergen absence (active diets)
+  if (activeDiets.has('lf') && (foodMap['lactose'] === 'absent' || !foodMap['lactose'])) {
+    positives.push({ label: 'Sans lactose', detail: 'Absent des ingrédients déclarés' });
+  }
+  if (activeDiets.has('gf') && (foodMap['gluten'] === 'absent' || !foodMap['gluten'])) {
+    positives.push({ label: 'Sans gluten', detail: 'Absent des ingrédients déclarés' });
   }
 
   // All severe/moderate allergens absent
@@ -218,13 +254,15 @@ export function computeCompatibilityScore(
   );
   if (
     top.length > 0 &&
-    penalty === 0 &&
     top.every((a) => {
       const s = foodMap[a.name.toLowerCase()];
       return !s || s === 'absent';
     })
   ) {
-    positives.push('Aucun de vos allergènes prioritaires détecté');
+    positives.push({
+      label: 'Aucun allergène prioritaire détecté',
+      detail: top.map((a) => a.name).join(', ') + ' — absents',
+    });
   }
 
   // ── 4. Final ───────────────────────────────────────────────

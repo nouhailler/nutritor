@@ -1,15 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const KEYS = {
-  foods:        'nutritor:foods',
-  meals:        'nutritor:meals',
-  mealsDate:    'nutritor:meals_date',
-  profile:      'nutritor:profile',
-  settings:     'nutritor:settings',
-  savedPlates:  'nutritor:saved_plates',
-  journal:      'nutritor:journal',
-  symptoms:     'nutritor:symptoms',
-  migrationV1:  'nutritor:migration_v1',
+  foods:           'nutritor:foods',
+  meals:           'nutritor:meals',
+  mealsDate:       'nutritor:meals_date',
+  profile:         'nutritor:profile',
+  settings:        'nutritor:settings',
+  savedPlates:     'nutritor:saved_plates',
+  journal:         'nutritor:journal',
+  symptoms:        'nutritor:symptoms',
+  fodmapProtocol:  'nutritor:fodmap_protocol',
+  migrationV1:     'nutritor:migration_v1',
 };
 
 export async function load<T>(key: string): Promise<T | null> {

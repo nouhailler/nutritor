@@ -44,7 +44,14 @@ type IconName =
   | 'image'
   | 'alert-circle'
   | 'eye'
-  | 'alert-triangle';
+  | 'alert-triangle'
+  | 'activity'
+  | 'flask'
+  | 'layers'
+  | 'flag'
+  | 'award'
+  | 'chevron-down'
+  | 'chevron-up';
 
 const FEATHER_MAP: Record<IconName, keyof typeof Feather.glyphMap> = {
   menu: 'menu',
@@ -89,6 +96,13 @@ const FEATHER_MAP: Record<IconName, keyof typeof Feather.glyphMap> = {
   'alert-circle': 'alert-circle',
   eye: 'eye',
   'alert-triangle': 'alert-triangle',
+  'activity':       'activity',
+  'flask':          'thermometer',
+  'layers':         'layers',
+  'flag':           'flag',
+  'award':          'award',
+  'chevron-down':   'chevron-down',
+  'chevron-up':     'chevron-up',
 };
 
 interface IconProps {

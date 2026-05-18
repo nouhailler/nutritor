@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   CompatibilityResult,
   CompatLevel,
@@ -11,30 +11,7 @@ import {
 } from '../data/compatibilityScore';
 import { Colors, Fonts } from '../theme/tokens';
 
-// ── Compact badge (search list) ───────────────────────────────
-
-export function CompatBadge({ result }: { result: CompatibilityResult }) {
-  const color = COMPAT_COLORS[result.level];
-  const bg = COMPAT_BG[result.level];
-  const border = COMPAT_BORDER[result.level];
-  const label = COMPAT_LABELS[result.level];
-  // Show first reason label inline when not compatible
-  const hint = result.level !== 'compatible' && result.reasons.length > 0
-    ? result.reasons[0].label
-    : null;
-
-  return (
-    <View style={[styles.badge, { backgroundColor: bg, borderColor: border }]}>
-      <View style={[styles.dot, { backgroundColor: color }]} />
-      <Text style={[styles.badgeLabel, { color }]}>{label} · {result.score}%</Text>
-      {hint && (
-        <Text style={[styles.badgeHint, { color }]} numberOfLines={1}>· {hint}</Text>
-      )}
-    </View>
-  );
-}
-
-// ── Severity icon character ────────────────────────────────────
+// ── Severity helpers ──────────────────────────────────────────
 
 function severityIcon(severity: CompatReason['severity']): string {
   if (severity === 'critical') return '✕';
@@ -48,6 +25,69 @@ function severityColor(severity: CompatReason['severity']): string {
   if (severity === 'high') return '#8B3A2E';
   if (severity === 'medium') return '#6B5A2E';
   return Colors.muted;
+}
+
+// ── Compact badge (search list) — expandable ─────────────────
+
+export function CompatBadge({ result }: { result: CompatibilityResult }) {
+  const [expanded, setExpanded] = useState(false);
+  const color = COMPAT_COLORS[result.level];
+  const bg = COMPAT_BG[result.level];
+  const border = COMPAT_BORDER[result.level];
+  const label = COMPAT_LABELS[result.level];
+
+  const showPositives = result.level === 'compatible' && result.positives.length > 0;
+  const showReasons   = result.level !== 'compatible' && result.reasons.length > 0;
+  const hasDetails    = showPositives || showReasons || result.positives.length > 0;
+
+  return (
+    <View style={styles.badgeWrap}>
+      <TouchableOpacity
+        onPress={() => hasDetails && setExpanded((e) => !e)}
+        activeOpacity={hasDetails ? 0.7 : 1}
+      >
+        <View style={[styles.badge, { backgroundColor: bg, borderColor: border }]}>
+          <View style={[styles.dot, { backgroundColor: color }]} />
+          <Text style={[styles.badgeLabel, { color }]}>{label} · {result.score}%</Text>
+          {!expanded && result.level !== 'compatible' && result.reasons.length > 0 && (
+            <Text style={[styles.badgeHint, { color }]} numberOfLines={1}>
+              · {result.reasons[0].label}
+            </Text>
+          )}
+          {hasDetails && (
+            <Text style={[styles.badgeChevron, { color }]}>{expanded ? '▲' : '▼'}</Text>
+          )}
+        </View>
+      </TouchableOpacity>
+
+      {expanded && hasDetails && (
+        <View style={[styles.expandPanel, { borderColor: border }]}>
+          {/* "Pourquoi compatible?" — positives */}
+          {result.positives.map((p, i) => (
+            <View key={`p-${i}`} style={styles.expandRow}>
+              <Text style={[styles.expandIcon, { color: COMPAT_COLORS.compatible }]}>✓</Text>
+              <View style={styles.expandText}>
+                <Text style={[styles.expandLabel, { color: COMPAT_COLORS.compatible }]}>{p.label}</Text>
+                {p.detail ? <Text style={styles.expandDetail}>{p.detail}</Text> : null}
+              </View>
+            </View>
+          ))}
+          {/* Risk reasons for non-compatible */}
+          {result.level !== 'compatible' && result.reasons.map((r, i) => (
+            <View key={`r-${i}`} style={styles.expandRow}>
+              <Text style={[styles.expandIcon, { color: severityColor(r.severity) }]}>
+                {severityIcon(r.severity)}
+              </Text>
+              <View style={styles.expandText}>
+                <Text style={[styles.expandLabel, { color: severityColor(r.severity) }]}>{r.label}</Text>
+                {r.detail ? <Text style={styles.expandDetail}>{r.detail}</Text> : null}
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
 }
 
 // ── Full card (detail screen) ─────────────────────────────────
@@ -127,7 +167,10 @@ export function CompatCard({ result }: { result: CompatibilityResult }) {
           {result.positives.map((p, i) => (
             <View key={i} style={styles.posRow}>
               <Text style={styles.posIcon}>✓</Text>
-              <Text style={styles.posLabel}>{p}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.posLabel}>{p.label}</Text>
+                {p.detail ? <Text style={styles.posDetail}>{p.detail}</Text> : null}
+              </View>
             </View>
           ))}
         </View>
@@ -146,6 +189,7 @@ export function CompatCard({ result }: { result: CompatibilityResult }) {
 
 const styles = StyleSheet.create({
   // Compact badge
+  badgeWrap: { marginTop: 6 },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -155,7 +199,6 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     paddingVertical: 4,
     paddingHorizontal: 10,
-    marginTop: 6,
     flexShrink: 1,
     maxWidth: '100%',
   },
@@ -177,6 +220,47 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 0.4,
     flexShrink: 1,
+  },
+  badgeChevron: {
+    fontFamily: Fonts.mono,
+    fontSize: 8,
+    flexShrink: 0,
+  },
+  expandPanel: {
+    marginTop: 6,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    gap: 0,
+    backgroundColor: Colors.paper2,
+  },
+  expandRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline2,
+  },
+  expandIcon: {
+    fontFamily: Fonts.sans,
+    fontSize: 11,
+    width: 14,
+    textAlign: 'center',
+    marginTop: 1,
+    flexShrink: 0,
+  },
+  expandText: { flex: 1, gap: 1 },
+  expandLabel: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 11,
+    lineHeight: 14,
+  },
+  expandDetail: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    color: Colors.muted,
+    letterSpacing: 0.2,
   },
 
   // Full card
@@ -366,6 +450,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.ink2,
     flex: 1,
+  },
+  posDetail: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    color: Colors.muted,
+    letterSpacing: 0.2,
+    marginTop: 1,
   },
 
   // Disclaimer
