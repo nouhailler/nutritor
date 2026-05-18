@@ -11,10 +11,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { CalendarModal } from '../components/CalendarModal';
 import { HelpButton, HelpModal } from '../components/HelpModal';
+import { SymptomWidget } from '../components/SymptomWidget';
 import { HELP } from '../data/helpContent';
 import { UserProfile, Vitamin } from '../data/user';
 import { Colors, Fonts } from '../theme/tokens';
 import { Meal } from '../types';
+import { SymptomEntry, SymptomScores } from '../types/symptoms';
 
 // ── Date helpers ──────────────────────────────────────────────
 
@@ -258,10 +260,12 @@ function MealCard({
 interface HomeScreenProps {
   meals: Meal[];
   profile: UserProfile;
-  viewingDate: string | null;          // null = today
-  journalDates: string[];              // dates with data (for calendar dots)
+  viewingDate: string | null;
+  journalDates: string[];
+  symptomEntry: SymptomEntry | null;
   onDateChange: (date: string | null) => void;
   onRemoveItem: (mealId: string, itemIdx: number) => void;
+  onSaveSymptom: (date: string, scores: SymptomScores) => void;
   onOpenMenu: () => void;
   onOpenSearch: () => void;
 }
@@ -271,8 +275,10 @@ export function HomeScreen({
   profile,
   viewingDate,
   journalDates,
+  symptomEntry,
   onDateChange,
   onRemoveItem,
+  onSaveSymptom,
   onOpenMenu,
   onOpenSearch,
 }: HomeScreenProps) {
@@ -428,6 +434,22 @@ export function HomeScreen({
             <View style={styles.vitsWrap}>
               <VitaminPanel vitamins={profile.vitamins} />
             </View>
+          </>
+        )}
+
+        {/* Bien-être — toujours visible (éditable aujourd'hui, lecture seule pour le passé) */}
+        {!isFuture && (
+          <>
+            <View style={styles.sectionHead}>
+              <Text style={styles.sectionTitle}>Bien-être</Text>
+              <Text style={styles.sectionMeta}>{isToday ? 'comment tu te sens' : 'ressenti du jour'}</Text>
+            </View>
+            <SymptomWidget
+              entry={symptomEntry}
+              date={effectiveDate}
+              readOnly={!isToday}
+              onSave={(scores) => onSaveSymptom(effectiveDate, scores)}
+            />
           </>
         )}
       </ScrollView>

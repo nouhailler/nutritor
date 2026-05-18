@@ -235,6 +235,7 @@ interface Props {
   onOpenFoodFacts: (query: string) => void;
   onOpenCIQUAL: (query: string) => void;
   onOpenScanner: () => void;
+  onOpenPhotoAI: () => void;
 }
 
 export function FoodListScreen({
@@ -248,6 +249,7 @@ export function FoodListScreen({
   onOpenFoodFacts,
   onOpenCIQUAL,
   onOpenScanner,
+  onOpenPhotoAI,
 }: Props) {
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
@@ -314,6 +316,10 @@ export function FoodListScreen({
         <TouchableOpacity style={[styles.discoverChip, styles.discoverChipAI]} onPress={() => onAddWithAI(query)} activeOpacity={0.8}>
           <Icon name="sparkle" size={12} color={Colors.paper2} />
           <Text style={[styles.discoverChipText, styles.discoverChipAIText]}>IA</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.discoverChip, styles.discoverChipPhoto]} onPress={onOpenPhotoAI} activeOpacity={0.8}>
+          <Icon name="camera" size={12} color={Colors.paper2} />
+          <Text style={[styles.discoverChipText, styles.discoverChipPhotoText]}>Photo</Text>
         </TouchableOpacity>
       </View>
 
@@ -472,6 +478,11 @@ const styles = StyleSheet.create({
     borderColor: Colors.ink,
   },
   discoverChipAIText: { color: Colors.paper2 },
+  discoverChipPhoto: {
+    backgroundColor: Colors.ok,
+    borderColor: Colors.ok,
+  },
+  discoverChipPhotoText: { color: Colors.paper2 },
 
   list: { flex: 1 },
 

@@ -38,7 +38,13 @@ type IconName =
   | 'clock'
   | 'globe'
   | 'calendar'
-  | 'chevron-right';
+  | 'chevron-right'
+  | 'camera'
+  | 'camera-off'
+  | 'image'
+  | 'alert-circle'
+  | 'eye'
+  | 'alert-triangle';
 
 const FEATHER_MAP: Record<IconName, keyof typeof Feather.glyphMap> = {
   menu: 'menu',
@@ -77,6 +83,12 @@ const FEATHER_MAP: Record<IconName, keyof typeof Feather.glyphMap> = {
   globe: 'globe',
   calendar: 'calendar',
   'chevron-right': 'chevron-right',
+  camera: 'camera',
+  'camera-off': 'camera-off',
+  image: 'image',
+  'alert-circle': 'alert-circle',
+  eye: 'eye',
+  'alert-triangle': 'alert-triangle',
 };
 
 interface IconProps {

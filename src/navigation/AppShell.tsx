@@ -35,16 +35,18 @@ import { AddFoodScreen } from '../screens/AddFoodScreen';
 import { OpenFoodFactsScreen } from '../screens/OpenFoodFactsScreen';
 import { CIQUALScreen } from '../screens/CIQUALScreen';
 import { BarcodeScannerScreen } from '../screens/BarcodeScannerScreen';
+import { FoodPhotoScreen } from '../screens/FoodPhotoScreen';
 import { AppSettings, DEFAULT_SETTINGS } from '../types/settings';
 import { refreshCiqualAllergens } from '../services/ciqual';
 import { JournalEntry, EMPTY_DAY_MEALS, computeDayLog } from '../data/weeklyStats';
+import { SymptomEntry, SymptomScores } from '../types/symptoms';
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
 type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile';
-type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | null;
+type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | 'foodPhoto' | null;
 
 const TABS: { id: Tab; label: string; icon: 'home' | 'leaf' | 'book' | 'chart' | 'user' }[] = [
   { id: 'home',    label: 'Journal',  icon: 'home' },
@@ -178,6 +180,10 @@ export function AppShell() {
     KEYS.journal,
     [],
   );
+  const [symptoms, setSymptoms] = usePersistedState<SymptomEntry[]>(
+    KEYS.symptoms,
+    [],
+  );
   const [viewingDate, setViewingDate] = useState<string | null>(null); // null = today
 
   console.log(`[AppShell] loading — profile:${profileLoading} foods:${foodsLoading} meals:${mealsLoading}`);
@@ -242,6 +248,15 @@ export function AppShell() {
 
   console.log(`[AppShell] ready — tab:${tab} stack:${stack} foods:${foodList.length} plates:${savedPlates.length}`);
 
+  // ── Symptom helpers ──────────────────────────────────────────
+
+  const handleSaveSymptom = (date: string, scores: SymptomScores) => {
+    setSymptoms((prev) => {
+      const without = prev.filter((e) => e.date !== date);
+      return [...without, { date, scores }].sort((a, b) => a.date.localeCompare(b.date));
+    });
+  };
+
   // ── Viewed date helpers ──────────────────────────────────────
 
   const today = todayStr();
@@ -252,6 +267,10 @@ export function AppShell() {
     const entry = journal.find((e) => e.date === viewingDate);
     return (entry && Array.isArray(entry.meals)) ? entry.meals : EMPTY_DAY_MEALS;
   })();
+
+  // Symptom entry for the currently viewed date
+  const effectiveDate = viewingDate ?? today;
+  const symptomEntry = symptoms.find((e) => e.date === effectiveDate) ?? null;
 
   // Dates that have data (for calendar dots)
   const journalDates = (() => {
@@ -541,6 +560,17 @@ export function AppShell() {
         onBack={() => setStack('search')}
       />
     );
+  } else if (stack === 'foodPhoto') {
+    screen = (
+      <FoodPhotoScreen
+        existingIds={new Set(foodList.map((f) => f.id))}
+        settings={settings}
+        onImport={(food) => {
+          setFoodList((prev) => [...prev, food]);
+        }}
+        onBack={() => setStack('search')}
+      />
+    );
   } else if (stack === 'editSavedPlate') {
     screen = (
       <EditSavedPlateScreen
@@ -578,10 +608,12 @@ export function AppShell() {
             profile={profile}
             viewingDate={viewingDate}
             journalDates={journalDates}
+            symptomEntry={symptomEntry}
             onDateChange={setViewingDate}
             onRemoveItem={handleRemoveItem}
             onOpenMenu={() => setDrawerOpen(true)}
             onOpenSearch={openSearch}
+            onSaveSymptom={handleSaveSymptom}
           />
         );
         break;
@@ -598,6 +630,7 @@ export function AppShell() {
             onOpenFoodFacts={(q) => { setPendingQuery(q); setStack('openFoodFacts'); }}
             onOpenCIQUAL={(q) => { setPendingQuery(q); setStack('ciqual'); }}
             onOpenScanner={() => setStack('scanner')}
+            onOpenPhotoAI={() => setStack('foodPhoto')}
           />
         );
         break;
@@ -624,6 +657,8 @@ export function AppShell() {
             journal={journal}
             todayMeals={meals}
             profile={profile}
+            symptoms={symptoms}
+            foodList={foodList}
             onOpenMenu={() => setDrawerOpen(true)}
           />
         );

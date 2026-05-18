@@ -324,3 +324,124 @@ export const MEAL_SLOT_NAMES = [
 ];
 
 export const MEAL_SLOT_SHORT = ['P-dèj', 'Encas↑', 'Déj', 'Encas↓', 'Dîner'];
+
+// ── Multi-week trends ─────────────────────────────────────────
+
+export interface WeekTrendPoint {
+  weekLabel: string;
+  weekOffset: number;
+  avgKcal: number;
+  avgP: number;
+  avgC: number;
+  avgF: number;
+  weekScore: number;
+  loggedDays: number;
+}
+
+export function computeMultiWeekTrends(
+  journal: JournalEntry[],
+  todayMeals: Meal[],
+  profile: UserProfile,
+  numWeeks: number = 4,
+): WeekTrendPoint[] {
+  const results: WeekTrendPoint[] = [];
+  for (let offset = -(numWeeks - 1); offset <= 0; offset++) {
+    const s = computeWeekStats(journal, todayMeals, profile, offset);
+    results.push({
+      weekLabel: s.weekLabel,
+      weekOffset: offset,
+      avgKcal: s.avgKcal,
+      avgP: s.avgP,
+      avgC: s.avgC,
+      avgF: s.avgF,
+      weekScore: s.weekScore,
+      loggedDays: s.loggedDays,
+    });
+  }
+  return results;
+}
+
+// ── Monthly stats ─────────────────────────────────────────────
+
+export interface MonthDayData {
+  date: string;
+  dayNum: number;
+  weekday: number;   // 0=Sun … 6=Sat
+  log: DayLog | null;
+  isToday: boolean;
+  isFuture: boolean;
+}
+
+export interface MonthStats {
+  monthLabel: string;
+  year: number;
+  month: number;
+  days: MonthDayData[];
+  avgKcal: number;
+  avgP: number;
+  avgC: number;
+  avgF: number;
+  loggedDays: number;
+  totalPastDays: number;
+  startWeekday: number;  // weekday of day 1 (0=Sun)
+}
+
+export function computeMonthStats(
+  journal: JournalEntry[],
+  todayMeals: Meal[],
+  profile: UserProfile,
+  monthOffset: number = 0,
+): MonthStats {
+  const now = new Date();
+  const todayStr = dateToStr(now);
+  const todayLog = computeDayLog(todayMeals, todayStr);
+
+  const first = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  const year = first.getFullYear();
+  const month = first.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const days: MonthDayData[] = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month, d);
+    const dateStr = dateToStr(date);
+    const isToday = dateStr === todayStr;
+    const isFuture = date > now && !isToday;
+
+    let log: DayLog | null = null;
+    if (isToday) {
+      log = todayLog;
+    } else if (!isFuture) {
+      const entry = journal.find((j) => j.date === dateStr);
+      log = entry && Array.isArray(entry.meals)
+        ? computeDayLog(entry.meals, dateStr)
+        : null;
+    }
+
+    days.push({ date: dateStr, dayNum: d, weekday: date.getDay(), log, isToday, isFuture });
+  }
+
+  const logged = days.filter((d) => d.log && (d.log.kcal > 0 || d.log.mealsFilled > 0));
+  const loggedDays = logged.length;
+  const avg = (fn: (l: DayLog) => number) =>
+    loggedDays > 0
+      ? Math.round((logged.reduce((s, d) => s + fn(d.log!), 0) / loggedDays) * 10) / 10
+      : 0;
+
+  const label = MONTH_SHORT[month];
+  const capitalized = label.charAt(0).toUpperCase() + label.slice(1);
+
+  return {
+    monthLabel: `${capitalized} ${year}`,
+    year,
+    month,
+    days,
+    avgKcal: Math.round(avg((l) => l.kcal)),
+    avgP: avg((l) => l.p),
+    avgC: avg((l) => l.c),
+    avgF: avg((l) => l.f),
+    loggedDays,
+    totalPastDays: days.filter((d) => !d.isFuture).length,
+    startWeekday: first.getDay(),
+  };
+}

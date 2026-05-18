@@ -23,12 +23,19 @@ import {
   JournalEntry,
   WeekStats,
   WeekDayData,
+  MonthStats,
+  MonthDayData,
+  WeekTrendPoint,
   MEAL_SLOT_NAMES,
   MEAL_SLOT_SHORT,
   computeWeekStats,
+  computeMultiWeekTrends,
+  computeMonthStats,
 } from '../data/weeklyStats';
 import { UserProfile } from '../data/user';
-import { Meal } from '../types/index';
+import { Meal, Food } from '../types/index';
+import { SymptomEntry, SYMPTOM_KEYS, SYMPTOM_CONFIG, symptomScoreColor } from '../types/symptoms';
+import { computeWellnessStats, CorrelationInsight } from '../data/symptomCorrelations';
 import { Colors, Fonts } from '../theme/tokens';
 
 // ── Design tokens ─────────────────────────────────────────────
@@ -178,69 +185,130 @@ function KpiStrip({ stats, profile }: { stats: WeekStats; profile: UserProfile }
   );
 }
 
-// ── Kcal bar chart ────────────────────────────────────────────
+// ── Stacked macro bar chart ───────────────────────────────────
 
-function KcalBars({ days, target }: { days: WeekDayData[]; target: number }) {
+function StackedMacroBars({ days, target }: { days: WeekDayData[]; target: number }) {
   const [containerWidth, setContainerWidth] = useState(0);
   const maxKcal = Math.max(...days.map((d) => d.log?.kcal ?? 0), target) * 1.08;
   const targetY = maxKcal > 0 ? ((maxKcal - target) / maxKcal) * BAR_H : 0;
 
   return (
-    <View
-      style={styles.barsWrap}
-      onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
-    >
-      {containerWidth > 0 && (
-        <Svg
-          width={containerWidth}
-          height={BAR_H}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        >
-          <Line
-            x1={0} y1={targetY}
-            x2={containerWidth} y2={targetY}
-            stroke={Colors.muted2}
-            strokeWidth={1}
-            strokeDasharray="5,3"
-          />
-        </Svg>
-      )}
-      {days.map((d) => {
-        const kcal = d.log?.kcal ?? 0;
-        const barH = d.isToday
-          ? 12
-          : d.isFuture
-          ? 0
-          : !d.log
-          ? 3
-          : Math.max(3, (kcal / maxKcal) * BAR_H);
-        const over = !d.isToday && !d.isFuture && kcal > target * 1.1;
-        const empty = !d.log || kcal === 0;
+    <>
+      <View
+        style={styles.barsWrap}
+        onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+      >
+        {containerWidth > 0 && (
+          <Svg
+            width={containerWidth}
+            height={BAR_H}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          >
+            <Line
+              x1={0} y1={targetY}
+              x2={containerWidth} y2={targetY}
+              stroke={Colors.muted2}
+              strokeWidth={1}
+              strokeDasharray="5,3"
+            />
+          </Svg>
+        )}
+        {days.map((d) => {
+          const kcal = d.log?.kcal ?? 0;
+          const p = d.log?.p ?? 0;
+          const c = d.log?.c ?? 0;
+          const f = d.log?.f ?? 0;
+          const totalBarH = d.isToday
+            ? 12
+            : d.isFuture
+            ? 0
+            : !d.log
+            ? 3
+            : Math.max(3, (kcal / maxKcal) * BAR_H);
+          const empty = !d.log || kcal === 0;
+          const macroKcal = p * 4 + c * 4 + f * 9;
+          const hasStacked = !d.isToday && !empty && macroKcal > 0;
 
-        return (
-          <View key={d.date} style={styles.barCol}>
-            {!d.isFuture && (
-              <View
-                style={[
-                  styles.bar,
-                  { height: barH },
-                  d.isToday && styles.barToday,
-                  over && styles.barOver,
-                  empty && !d.isToday && styles.barEmpty,
-                ]}
-              />
-            )}
-            {d.isFuture && <View style={{ height: BAR_H }} />}
-            <Text style={[styles.barDayLabel, d.isToday && styles.barDayToday]}>
-              {d.dayLabel}
-            </Text>
-            {!d.isToday && !d.isFuture && d.log && d.log.kcal > 0 && (
-              <Text style={styles.barKcal}>{d.log.kcal}</Text>
-            )}
+          return (
+            <View key={d.date} style={styles.barCol}>
+              {!d.isFuture && (
+                hasStacked ? (
+                  <View style={[styles.barStacked, { height: totalBarH }]}>
+                    <View style={{ flex: Math.max(0.001, p * 4), backgroundColor: MACRO_COLORS.p }} />
+                    <View style={{ flex: Math.max(0.001, c * 4), backgroundColor: MACRO_COLORS.c }} />
+                    <View style={{ flex: Math.max(0.001, f * 9), backgroundColor: MACRO_COLORS.f }} />
+                  </View>
+                ) : (
+                  <View
+                    style={[
+                      styles.bar,
+                      { height: totalBarH },
+                      d.isToday && styles.barToday,
+                      empty && !d.isToday && styles.barEmpty,
+                    ]}
+                  />
+                )
+              )}
+              {d.isFuture && <View style={{ height: BAR_H }} />}
+              <Text style={[styles.barDayLabel, d.isToday && styles.barDayToday]}>
+                {d.dayLabel}
+              </Text>
+              {!d.isToday && !d.isFuture && d.log && d.log.kcal > 0 && (
+                <Text style={styles.barKcal}>{d.log.kcal}</Text>
+              )}
+            </View>
+          );
+        })}
+      </View>
+      <View style={styles.macroBarLegend}>
+        {([
+          { label: 'Prot.', color: MACRO_COLORS.p },
+          { label: 'Gluc.', color: MACRO_COLORS.c },
+          { label: 'Lip.',  color: MACRO_COLORS.f },
+        ] as const).map((item) => (
+          <View key={item.label} style={styles.macroBarLegendItem}>
+            <View style={[styles.macroBarLegendDot, { backgroundColor: item.color }]} />
+            <Text style={styles.macroBarLegendText}>{item.label}</Text>
           </View>
-        );
-      })}
+        ))}
+      </View>
+    </>
+  );
+}
+
+// ── Caloric distribution bar ──────────────────────────────────
+
+function MacroCalorieBar({ avgP, avgC, avgF }: { avgP: number; avgC: number; avgF: number }) {
+  const pKcal = avgP * 4;
+  const cKcal = avgC * 4;
+  const fKcal = avgF * 9;
+  const total = pKcal + cKcal + fKcal;
+  if (total === 0) return null;
+
+  const pPct = Math.round((pKcal / total) * 100);
+  const cPct = Math.round((cKcal / total) * 100);
+  const fPct = 100 - pPct - cPct;
+
+  return (
+    <View style={styles.calorieBarWrap}>
+      <Text style={styles.calorieBarTitle}>Répartition calorique</Text>
+      <View style={styles.calorieBarTrack}>
+        <View style={[styles.calorieBarSeg, {
+          flex: pKcal, backgroundColor: MACRO_COLORS.p,
+          borderTopLeftRadius: 4, borderBottomLeftRadius: 4,
+        }]} />
+        <View style={[styles.calorieBarSeg, { flex: cKcal, backgroundColor: MACRO_COLORS.c }]} />
+        <View style={[styles.calorieBarSeg, {
+          flex: fKcal, backgroundColor: MACRO_COLORS.f,
+          borderTopRightRadius: 4, borderBottomRightRadius: 4,
+        }]} />
+      </View>
+      <View style={styles.calorieBarLabels}>
+        <Text style={[styles.calorieBarLabel, { color: MACRO_COLORS.p }]}>Prot. {pPct}%</Text>
+        <Text style={[styles.calorieBarLabel, { color: MACRO_COLORS.c }]}>Gluc. {cPct}%</Text>
+        <Text style={[styles.calorieBarLabel, { color: MACRO_COLORS.f }]}>Lip. {fPct}%</Text>
+      </View>
     </View>
   );
 }
@@ -414,6 +482,384 @@ function MealGrid({ days }: { days: WeekDayData[] }) {
   );
 }
 
+// ── Four-week trends card ─────────────────────────────────────
+
+const TREND_BAR_H = 56;
+const TREND_WEEK_LABELS = ['S−3', 'S−2', 'S−1', 'Sem.'];
+
+function FourWeekTrendsCard({
+  journal,
+  todayMeals,
+  profile,
+}: {
+  journal: JournalEntry[];
+  todayMeals: Meal[];
+  profile: UserProfile;
+}) {
+  const trends = computeMultiWeekTrends(journal, todayMeals, profile, 4);
+
+  return (
+    <ChartCard title="Tendances" sub="4 dernières semaines">
+      {/* Score bars */}
+      <View style={styles.trendBarsRow}>
+        {trends.map((week, i) => {
+          const barH = Math.max(3, (week.weekScore / 100) * TREND_BAR_H);
+          const color = week.weekScore > 0 ? SCORE_COLOR(week.weekScore) : Colors.hairline2;
+          const isCurrent = week.weekOffset === 0;
+          return (
+            <View key={i} style={styles.trendBarCol}>
+              <Text style={[styles.trendScoreLabel, { color }]}>
+                {week.loggedDays > 0 ? week.weekScore : '—'}
+              </Text>
+              <View style={{ height: TREND_BAR_H, justifyContent: 'flex-end' }}>
+                <View style={[
+                  styles.trendBar,
+                  { height: barH, backgroundColor: color, opacity: isCurrent ? 1 : 0.55 },
+                  isCurrent && styles.trendBarCurrent,
+                ]} />
+              </View>
+              <Text style={[styles.trendWeekLabel, isCurrent && styles.trendWeekCurrent]}>
+                {TREND_WEEK_LABELS[i]}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+
+      {/* Macro sparklines over 4 weeks */}
+      <View style={styles.sparkSep} />
+      <View style={styles.sparkRows}>
+        {([
+          { label: 'Protéines', values: trends.map((w) => w.avgP), color: MACRO_COLORS.p, id: 'tw-p' },
+          { label: 'Glucides',  values: trends.map((w) => w.avgC), color: MACRO_COLORS.c, id: 'tw-c' },
+          { label: 'Lipides',   values: trends.map((w) => w.avgF), color: MACRO_COLORS.f, id: 'tw-f' },
+        ] as const).map((row) => (
+          <View key={row.id} style={styles.sparkRow}>
+            <Text style={styles.sparkLabel}>{row.label}</Text>
+            <MacroSparkline
+              values={row.values}
+              color={row.color}
+              max={Math.max(...row.values, 1) * 1.2}
+              gradId={row.id}
+            />
+            <Text style={styles.sparkVal}>
+              {Math.round(row.values[row.values.length - 1])} g
+            </Text>
+          </View>
+        ))}
+      </View>
+    </ChartCard>
+  );
+}
+
+// ── Monthly calendar heatmap ──────────────────────────────────
+
+function dayKcalColor(kcal: number, target: number): string {
+  if (kcal === 0) return Colors.muted2;
+  const ratio = Math.abs(kcal - target) / target;
+  if (ratio <= 0.1) return Colors.ok;
+  if (ratio <= 0.25) return Colors.signal;
+  return Colors.warn;
+}
+
+const MONTH_CAL_HEADERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
+function MonthCalendar({
+  days,
+  target,
+  startWeekday,
+}: {
+  days: MonthDayData[];
+  target: number;
+  startWeekday: number;
+}) {
+  const monOffset = (startWeekday + 6) % 7;
+  const grid: (MonthDayData | null)[] = [...Array(monOffset).fill(null), ...days];
+  while (grid.length % 7 !== 0) grid.push(null);
+  const rows: (MonthDayData | null)[][] = [];
+  for (let i = 0; i < grid.length; i += 7) rows.push(grid.slice(i, i + 7));
+
+  return (
+    <View style={styles.monthCal}>
+      <View style={styles.monthCalRow}>
+        {MONTH_CAL_HEADERS.map((h, i) => (
+          <Text key={i} style={styles.monthCalHeader}>{h}</Text>
+        ))}
+      </View>
+      {rows.map((row, ri) => (
+        <View key={ri} style={styles.monthCalRow}>
+          {row.map((day, di) => {
+            if (!day) return <View key={di} style={styles.monthCalCell} />;
+            const kcal = day.log?.kcal ?? 0;
+            const hasLog = !!(day.log && (kcal > 0 || day.log.mealsFilled > 0));
+            const color = hasLog ? dayKcalColor(kcal, target) : null;
+            const bgColor = color ? color + '28' : 'transparent';
+            const textColor = day.isFuture
+              ? Colors.hairline
+              : hasLog
+              ? color!
+              : Colors.muted2;
+
+            return (
+              <View
+                key={di}
+                style={[
+                  styles.monthCalCell,
+                  !day.isFuture && !hasLog && styles.monthCalCellEmpty,
+                  { backgroundColor: bgColor },
+                  day.isToday && styles.monthCalToday,
+                ]}
+              >
+                <Text style={[styles.monthCalDay, { color: textColor }, day.isToday && styles.monthCalTodayText]}>
+                  {day.dayNum}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      ))}
+      <View style={styles.monthCalLegend}>
+        {([
+          { color: Colors.ok,     label: 'Dans la cible' },
+          { color: Colors.signal, label: '±25%' },
+          { color: Colors.warn,   label: 'Hors cible' },
+        ] as const).map((item) => (
+          <View key={item.label} style={styles.monthCalLegendItem}>
+            <View style={[styles.monthCalLegendDot, { backgroundColor: item.color + '55' }]} />
+            <Text style={styles.monthCalLegendText}>{item.label}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ── View toggle ───────────────────────────────────────────────
+
+type ViewMode = 'week' | 'month' | 'wellness';
+const VIEW_LABELS: Record<ViewMode, string> = {
+  week:     'Semaine',
+  month:    'Mois',
+  wellness: 'Bien-être',
+};
+
+function ViewToggle({
+  mode,
+  onToggle,
+}: {
+  mode: ViewMode;
+  onToggle: (m: ViewMode) => void;
+}) {
+  return (
+    <View style={styles.viewToggleWrap}>
+      <View style={styles.viewToggle}>
+        {(['week', 'month', 'wellness'] as ViewMode[]).map((m) => (
+          <TouchableOpacity
+            key={m}
+            style={[styles.viewToggleBtn, mode === m && styles.viewToggleBtnActive]}
+            onPress={() => onToggle(m)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.viewToggleLabel, mode === m && styles.viewToggleLabelActive]}>
+              {VIEW_LABELS[m]}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ── Wellness symptom sparklines ───────────────────────────────
+
+const TONE_COLORS_MAP = {
+  ok:      Colors.ok,
+  mid:     Colors.signal,
+  warn:    Colors.warn,
+  neutral: Colors.muted2,
+};
+
+function SymptomSparkRow({
+  symptomKey,
+  values,  // array of {date, score} last 14 days
+}: {
+  symptomKey: typeof SYMPTOM_KEYS[number];
+  values: number[];
+}) {
+  const [width, setWidth] = useState(0);
+  const cfg = SYMPTOM_CONFIG[symptomKey];
+  const H = 28;
+  const pts = width > 0 && values.length > 1
+    ? values.map((v, i) => ({
+        x: (i / (values.length - 1)) * width,
+        y: v < 0 ? H / 2 : H - (v / 4) * (H - 4) - 2,
+      }))
+    : [];
+  const line = pts.length > 1
+    ? pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
+    : '';
+
+  const lastScore = values.filter((v) => v >= 0).at(-1) ?? -1;
+  const tone = lastScore >= 0 ? symptomScoreColor(symptomKey, lastScore) : 'neutral';
+  const lineColor = TONE_COLORS_MAP[tone];
+
+  return (
+    <View style={styles.symptomSparkRow}>
+      <Text style={styles.symptomSparkLabel}>{cfg.shortLabel}</Text>
+      <View style={{ flex: 1, height: H }} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+        {width > 0 && line ? (
+          <Svg width={width} height={H}>
+            <Path d={line} fill="none" stroke={lineColor} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+            {pts.filter((_, i) => values[i] >= 0).map((p, i) => (
+              <Circle key={i} cx={p.x} cy={p.y} r={2.5} fill={lineColor} />
+            ))}
+          </Svg>
+        ) : null}
+      </View>
+      <Text style={[styles.symptomSparkVal, { color: lineColor }]}>
+        {lastScore >= 0 ? `${lastScore}/4` : '—'}
+      </Text>
+    </View>
+  );
+}
+
+// ── Correlation insight row ───────────────────────────────────
+
+function InsightCorrelationRow({ insight }: { insight: CorrelationInsight }) {
+  const tone = insight.tone === 'warn' ? Colors.warn : Colors.signal;
+  return (
+    <View style={styles.corrRow}>
+      <View style={[styles.corrDot, { backgroundColor: tone }]} />
+      <View style={{ flex: 1 }}>
+        <Text style={styles.corrMessage}>{insight.message}</Text>
+        <Text style={styles.corrMeta}>
+          {SYMPTOM_CONFIG[insight.symptom].shortLabel} · {insight.daysAnalyzed} j analysés · confiance {insight.confidence}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// ── Wellness view ─────────────────────────────────────────────
+
+function WellnessView({
+  symptoms,
+  journal,
+  foodList,
+}: {
+  symptoms: SymptomEntry[];
+  journal: JournalEntry[];
+  foodList: Food[];
+}) {
+  const stats = computeWellnessStats(symptoms, journal, foodList);
+
+  // Build sparkline values (last 14 days)
+  const last14 = stats.recentSymptoms.slice(-14);
+
+  return (
+    <>
+      {/* KPI strip */}
+      <View style={styles.kpiStrip}>
+        {[
+          { label: 'Jours saisis',    value: `${stats.daysWithSymptoms}`,    sub: 'total' },
+          { label: 'Avec repas',      value: `${stats.daysWithBoth}`,        sub: 'corrélables' },
+          { label: 'Min. requis',     value: `${Math.max(0, 7 - stats.daysWithBoth)}`, sub: 'jours restants' },
+        ].map((item, i) => (
+          <React.Fragment key={item.label}>
+            {i > 0 && <View style={styles.kpiDivider} />}
+            <View style={styles.kpiCell}>
+              <Text style={styles.kpiLabel}>{item.label}</Text>
+              <Text style={styles.kpiValue}>{item.value}</Text>
+              <Text style={styles.kpiSub}>{item.sub}</Text>
+            </View>
+          </React.Fragment>
+        ))}
+      </View>
+
+      {/* Symptom sparklines */}
+      {last14.length >= 2 ? (
+        <View style={styles.card}>
+          <View style={styles.cardHead}>
+            <View>
+              <Text style={styles.cardTitle}>Symptômes</Text>
+              <Text style={styles.cardSub}>
+                {last14.length} derniers jours enregistrés
+              </Text>
+            </View>
+          </View>
+          <View style={styles.symptomSparkRows}>
+            {SYMPTOM_KEYS.map((k) => (
+              <SymptomSparkRow
+                key={k}
+                symptomKey={k}
+                values={last14.map((d) => d.scores[k])}
+              />
+            ))}
+          </View>
+        </View>
+      ) : (
+        <View style={styles.card}>
+          <View style={styles.emptyWellness}>
+            <Icon name="alert" size={22} color={Colors.muted2} />
+            <Text style={styles.emptyWellnessTitle}>Commence à saisir tes symptômes</Text>
+            <Text style={styles.emptyWellnessSub}>
+              Renseigne le widget "Bien-être" dans l'onglet Journal chaque jour. Les graphiques apparaîtront après 2 jours de données.
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Correlations */}
+      <View style={styles.insightsHead}>
+        <Text style={styles.insightsTitle}>Corrélations</Text>
+        {!stats.needsMoreData && (
+          <Text style={styles.insightsMeta}>{stats.daysWithBoth} j de données</Text>
+        )}
+      </View>
+
+      {stats.needsMoreData ? (
+        <View style={styles.corrProgress}>
+          <Text style={styles.corrProgressTitle}>
+            {stats.daysUntilCorrelations === 0
+              ? 'Calcul des corrélations...'
+              : `Encore ${stats.daysUntilCorrelations} jour${stats.daysUntilCorrelations > 1 ? 's' : ''} nécessaire${stats.daysUntilCorrelations > 1 ? 's' : ''}`}
+          </Text>
+          <Text style={styles.corrProgressSub}>
+            Les corrélations se calculent à partir de 7 jours avec repas ET symptômes enregistrés simultanément.
+          </Text>
+          <View style={styles.corrProgressBar}>
+            <View
+              style={[
+                styles.corrProgressFill,
+                { width: `${Math.min(100, (stats.daysWithBoth / 7) * 100)}%` },
+              ]}
+            />
+          </View>
+          <Text style={styles.corrProgressCount}>
+            {stats.daysWithBoth} / 7 jours
+          </Text>
+        </View>
+      ) : stats.insights.length === 0 ? (
+        <View style={[styles.corrProgress, { marginBottom: 8 }]}>
+          <Text style={styles.corrProgressTitle}>Aucune corrélation significative détectée</Text>
+          <Text style={styles.corrProgressSub}>
+            Continue à enregistrer tes repas et symptômes. Les patterns apparaîtront avec plus de données.
+          </Text>
+        </View>
+      ) : (
+        <View style={[styles.card, { paddingBottom: 4 }]}>
+          {stats.insights.map((ins, i) => (
+            <InsightCorrelationRow key={i} insight={ins} />
+          ))}
+          <Text style={styles.corrDisclaimer}>
+            Ces corrélations sont indicatives. Consulte un professionnel de santé pour tout trouble persistant.
+          </Text>
+        </View>
+      )}
+    </>
+  );
+}
+
 // ── Insights list ─────────────────────────────────────────────
 
 function InsightsList({ insights }: { insights: WeekStats['insights'] }) {
@@ -444,15 +890,20 @@ interface Props {
   journal: JournalEntry[];
   todayMeals: Meal[];
   profile: UserProfile;
+  symptoms: SymptomEntry[];
+  foodList: Food[];
   onOpenMenu: () => void;
 }
 
-export function StatsScreen({ journal, todayMeals, profile, onOpenMenu }: Props) {
+export function StatsScreen({ journal, todayMeals, profile, symptoms, foodList, onOpenMenu }: Props) {
   const insets = useSafeAreaInsets();
+  const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [weekOffset, setWeekOffset] = useState(0);
+  const [monthOffset, setMonthOffset] = useState(0);
   const [helpVisible, setHelpVisible] = useState(false);
 
   const stats = computeWeekStats(journal, todayMeals, profile, weekOffset);
+  const monthStats = computeMonthStats(journal, todayMeals, profile, monthOffset);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -466,111 +917,213 @@ export function StatsScreen({ journal, todayMeals, profile, onOpenMenu }: Props)
             <Icon name="menu" size={22} />
           </TouchableOpacity>
           <View style={styles.topbarLeft}>
-            <Text style={styles.eyebrow}>Semaine {stats.weekLabel}</Text>
+            <Text style={styles.eyebrow}>
+              {viewMode === 'week' ? `Semaine ${stats.weekLabel}` : viewMode === 'month' ? monthStats.monthLabel : 'Journal'}
+            </Text>
             <Text style={styles.title}>Statistiques</Text>
           </View>
           <HelpButton onPress={() => setHelpVisible(true)} />
         </View>
         <HelpModal visible={helpVisible} content={HELP.stats} onClose={() => setHelpVisible(false)} />
 
-        {/* ── Week navigation ───────────────────────────────── */}
-        <View style={styles.weekNav}>
-          <TouchableOpacity
-            style={styles.navBtn}
-            onPress={() => setWeekOffset((o) => o - 1)}
-            activeOpacity={0.7}
-          >
-            <Icon name="back" size={16} color={Colors.ink} />
-          </TouchableOpacity>
-          <Text style={styles.weekNavLabel}>{stats.weekLabel}</Text>
-          <TouchableOpacity
-            style={[styles.navBtn, weekOffset >= 0 && styles.navBtnDisabled]}
-            onPress={() => weekOffset < 0 && setWeekOffset((o) => o + 1)}
-            activeOpacity={weekOffset < 0 ? 0.7 : 1}
-          >
-            <Icon name="arrow-right" size={16} color={weekOffset < 0 ? Colors.ink : Colors.muted2} />
-          </TouchableOpacity>
-        </View>
+        {/* ── View toggle ───────────────────────────────────── */}
+        <ViewToggle mode={viewMode} onToggle={setViewMode} />
 
-        {/* ── Score + KPIs ──────────────────────────────────── */}
-        <View style={styles.scoreSection}>
-          <ScoreRing score={stats.weekScore} loggedDays={stats.loggedDays} />
-          <View style={styles.scoreDivider} />
-          <View style={styles.streakBlock}>
-            <Text style={styles.streakValue}>{stats.currentStreak}</Text>
-            <Text style={styles.streakLabel}>jours{'\n'}consécutifs</Text>
-          </View>
-        </View>
+        {/* ══ WEEK VIEW ══════════════════════════════════════ */}
+        {viewMode === 'week' && (
+          <>
+            {/* Week navigation */}
+            <View style={styles.weekNav}>
+              <TouchableOpacity
+                style={styles.navBtn}
+                onPress={() => setWeekOffset((o) => o - 1)}
+                activeOpacity={0.7}
+              >
+                <Icon name="back" size={16} color={Colors.ink} />
+              </TouchableOpacity>
+              <Text style={styles.weekNavLabel}>{stats.weekLabel}</Text>
+              <TouchableOpacity
+                style={[styles.navBtn, weekOffset >= 0 && styles.navBtnDisabled]}
+                onPress={() => weekOffset < 0 && setWeekOffset((o) => o + 1)}
+                activeOpacity={weekOffset < 0 ? 0.7 : 1}
+              >
+                <Icon name="arrow-right" size={16} color={weekOffset < 0 ? Colors.ink : Colors.muted2} />
+              </TouchableOpacity>
+            </View>
 
-        <KpiStrip stats={stats} profile={profile} />
+            {/* Score + streak + KPIs */}
+            <View style={styles.scoreSection}>
+              <ScoreRing score={stats.weekScore} loggedDays={stats.loggedDays} />
+              <View style={styles.scoreDivider} />
+              <View style={styles.streakBlock}>
+                <Text style={styles.streakValue}>{stats.currentStreak}</Text>
+                <Text style={styles.streakLabel}>jours{'\n'}consécutifs</Text>
+              </View>
+            </View>
+            <KpiStrip stats={stats} profile={profile} />
 
-        {/* ── Apport calorique ─────────────────────────────── */}
-        <ChartCard
-          title="Apport calorique"
-          sub="kcal · 7 jours"
-          legend={`Objectif : ${profile.kcalTarget} kcal`}
-        >
-          <KcalBars days={stats.days} target={profile.kcalTarget} />
-        </ChartCard>
+            {/* Apport calorique — barres macros empilées */}
+            <ChartCard
+              title="Apport calorique"
+              sub="macros · 7 jours"
+              legend={`Objectif : ${profile.kcalTarget} kcal`}
+            >
+              <StackedMacroBars days={stats.days} target={profile.kcalTarget} />
+            </ChartCard>
 
-        {/* ── Objectifs macros ──────────────────────────────── */}
-        <ChartCard
-          title="Objectifs macros"
-          sub="Moyenne semaine vs cibles"
-        >
-          <View style={styles.macroRingsRow}>
-            <MacroRing
-              label="Protéines"
-              avg={stats.avgP}
-              target={profile.macroTargets.protein}
-              unit="g"
-              color={MACRO_COLORS.p}
-            />
-            <MacroRing
-              label="Glucides"
-              avg={stats.avgC}
-              target={profile.macroTargets.carbs}
-              unit="g"
-              color={MACRO_COLORS.c}
-            />
-            <MacroRing
-              label="Lipides"
-              avg={stats.avgF}
-              target={profile.macroTargets.fat}
-              unit="g"
-              color={MACRO_COLORS.f}
-            />
-          </View>
-          <View style={styles.sparkSep} />
-          <MacroSparklines days={stats.days} />
-        </ChartCard>
+            {/* Objectifs macros */}
+            <ChartCard
+              title="Objectifs macros"
+              sub="Moyenne semaine vs cibles"
+            >
+              <View style={styles.macroRingsRow}>
+                <MacroRing
+                  label="Protéines"
+                  avg={stats.avgP}
+                  target={profile.macroTargets.protein}
+                  unit="g"
+                  color={MACRO_COLORS.p}
+                />
+                <MacroRing
+                  label="Glucides"
+                  avg={stats.avgC}
+                  target={profile.macroTargets.carbs}
+                  unit="g"
+                  color={MACRO_COLORS.c}
+                />
+                <MacroRing
+                  label="Lipides"
+                  avg={stats.avgF}
+                  target={profile.macroTargets.fat}
+                  unit="g"
+                  color={MACRO_COLORS.f}
+                />
+              </View>
+              <View style={styles.sparkSep} />
+              <MacroSparklines days={stats.days} />
+              <View style={styles.sparkSep} />
+              <MacroCalorieBar avgP={stats.avgP} avgC={stats.avgC} avgF={stats.avgF} />
+            </ChartCard>
 
-        {/* ── Adhérence repas ──────────────────────────────── */}
-        <ChartCard
-          title="Adhérence repas"
-          sub="Créneaux remplis par jour"
-        >
-          <MealGrid days={stats.days} />
-          <View style={styles.gridLegend}>
-            <View style={[styles.gridDot, styles.gridDotFilled]} />
-            <Text style={styles.gridLegendText}>Enregistré</Text>
-            <View style={[styles.gridDot, styles.gridDotNoData, { marginLeft: 12 }]} />
-            <Text style={styles.gridLegendText}>Non rempli</Text>
-            <View style={[styles.gridDot, styles.gridDotFuture, { marginLeft: 12 }]} />
-            <Text style={styles.gridLegendText}>À venir</Text>
-          </View>
-        </ChartCard>
+            {/* Adhérence repas */}
+            <ChartCard
+              title="Adhérence repas"
+              sub="Créneaux remplis par jour"
+            >
+              <MealGrid days={stats.days} />
+              <View style={styles.gridLegend}>
+                <View style={[styles.gridDot, styles.gridDotFilled]} />
+                <Text style={styles.gridLegendText}>Enregistré</Text>
+                <View style={[styles.gridDot, styles.gridDotNoData, { marginLeft: 12 }]} />
+                <Text style={styles.gridLegendText}>Non rempli</Text>
+                <View style={[styles.gridDot, styles.gridDotFuture, { marginLeft: 12 }]} />
+                <Text style={styles.gridLegendText}>À venir</Text>
+              </View>
+            </ChartCard>
 
-        {/* ── À noter ──────────────────────────────────────── */}
-        <View style={styles.insightsHead}>
-          <Text style={styles.insightsTitle}>À noter</Text>
-          {stats.prevWeekAvgKcal !== null && stats.kcalDeltaPct !== null && (
-            <Text style={styles.insightsMeta}>
-              vs semaine préc. {stats.kcalDeltaPct > 0 ? '+' : ''}{stats.kcalDeltaPct}%
-            </Text>
-          )}
-        </View>
-        <InsightsList insights={stats.insights} />
+            {/* Tendances 4 semaines */}
+            <FourWeekTrendsCard journal={journal} todayMeals={todayMeals} profile={profile} />
+
+            {/* À noter */}
+            <View style={styles.insightsHead}>
+              <Text style={styles.insightsTitle}>À noter</Text>
+              {stats.prevWeekAvgKcal !== null && stats.kcalDeltaPct !== null && (
+                <Text style={styles.insightsMeta}>
+                  vs semaine préc. {stats.kcalDeltaPct > 0 ? '+' : ''}{stats.kcalDeltaPct}%
+                </Text>
+              )}
+            </View>
+            <InsightsList insights={stats.insights} />
+          </>
+        )}
+
+        {/* ══ MONTH VIEW ═════════════════════════════════════ */}
+        {viewMode === 'month' && (
+          <>
+            {/* Month navigation */}
+            <View style={styles.weekNav}>
+              <TouchableOpacity
+                style={styles.navBtn}
+                onPress={() => setMonthOffset((o) => o - 1)}
+                activeOpacity={0.7}
+              >
+                <Icon name="back" size={16} color={Colors.ink} />
+              </TouchableOpacity>
+              <Text style={styles.weekNavLabel}>{monthStats.monthLabel}</Text>
+              <TouchableOpacity
+                style={[styles.navBtn, monthOffset >= 0 && styles.navBtnDisabled]}
+                onPress={() => monthOffset < 0 && setMonthOffset((o) => o + 1)}
+                activeOpacity={monthOffset < 0 ? 0.7 : 1}
+              >
+                <Icon name="arrow-right" size={16} color={monthOffset < 0 ? Colors.ink : Colors.muted2} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Month KPI strip */}
+            <View style={styles.kpiStrip}>
+              {[
+                { label: 'Moy. kcal', value: monthStats.loggedDays > 0 ? `${monthStats.avgKcal}` : '—', sub: `/ ${profile.kcalTarget}` },
+                { label: 'Jours log.', value: `${monthStats.loggedDays}`, sub: `/ ${monthStats.totalPastDays}` },
+                { label: 'Couvert.', value: monthStats.totalPastDays > 0 ? `${Math.round((monthStats.loggedDays / monthStats.totalPastDays) * 100)}%` : '—', sub: 'du mois' },
+              ].map((item, i) => (
+                <React.Fragment key={item.label}>
+                  {i > 0 && <View style={styles.kpiDivider} />}
+                  <View style={styles.kpiCell}>
+                    <Text style={styles.kpiLabel}>{item.label}</Text>
+                    <Text style={styles.kpiValue}>{item.value}</Text>
+                    <Text style={styles.kpiSub}>{item.sub}</Text>
+                  </View>
+                </React.Fragment>
+              ))}
+            </View>
+
+            {/* Calendrier mensuel */}
+            <ChartCard title="Calendrier" sub={monthStats.monthLabel}>
+              <MonthCalendar
+                days={monthStats.days}
+                target={profile.kcalTarget}
+                startWeekday={monthStats.startWeekday}
+              />
+            </ChartCard>
+
+            {/* Macros du mois */}
+            <ChartCard
+              title="Macros du mois"
+              sub="Moyenne mensuelle vs cibles"
+            >
+              <View style={styles.macroRingsRow}>
+                <MacroRing
+                  label="Protéines"
+                  avg={monthStats.avgP}
+                  target={profile.macroTargets.protein}
+                  unit="g"
+                  color={MACRO_COLORS.p}
+                />
+                <MacroRing
+                  label="Glucides"
+                  avg={monthStats.avgC}
+                  target={profile.macroTargets.carbs}
+                  unit="g"
+                  color={MACRO_COLORS.c}
+                />
+                <MacroRing
+                  label="Lipides"
+                  avg={monthStats.avgF}
+                  target={profile.macroTargets.fat}
+                  unit="g"
+                  color={MACRO_COLORS.f}
+                />
+              </View>
+              <View style={styles.sparkSep} />
+              <MacroCalorieBar avgP={monthStats.avgP} avgC={monthStats.avgC} avgF={monthStats.avgF} />
+            </ChartCard>
+          </>
+        )}
+
+        {/* ══ WELLNESS VIEW ══════════════════════════════════ */}
+        {viewMode === 'wellness' && (
+          <WellnessView symptoms={symptoms} journal={journal} foodList={foodList} />
+        )}
       </ScrollView>
     </View>
   );
@@ -982,6 +1535,212 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
+  // View toggle
+  viewToggleWrap: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline2,
+  },
+  viewToggle: {
+    flexDirection: 'row',
+    backgroundColor: Colors.card,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.hairline2,
+    padding: 3,
+  },
+  viewToggleBtn: {
+    flex: 1,
+    paddingVertical: 7,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  viewToggleBtnActive: {
+    backgroundColor: Colors.paper,
+    shadowColor: Colors.ink,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  viewToggleLabel: {
+    fontFamily: Fonts.mono,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: Colors.muted,
+  },
+  viewToggleLabelActive: {
+    color: Colors.ink,
+    fontFamily: Fonts.monoMedium,
+  },
+
+  // Stacked bars
+  barStacked: {
+    width: '100%',
+    maxWidth: 26,
+    borderRadius: 4,
+    overflow: 'hidden',
+    flexDirection: 'column',
+  },
+  macroBarLegend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 10,
+  },
+  macroBarLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  macroBarLegendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  macroBarLegendText: {
+    fontFamily: Fonts.mono,
+    fontSize: 8.5,
+    color: Colors.muted,
+    letterSpacing: 0.5,
+  },
+
+  // Calorie bar
+  calorieBarWrap: {
+    gap: 8,
+  },
+  calorieBarTitle: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    color: Colors.muted,
+  },
+  calorieBarTrack: {
+    flexDirection: 'row',
+    height: 12,
+    borderRadius: 4,
+    overflow: 'hidden',
+    gap: 1,
+  },
+  calorieBarSeg: {
+    height: '100%',
+  },
+  calorieBarLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  calorieBarLabel: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 0.5,
+  },
+
+  // Four-week trends
+  trendBarsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-end',
+    paddingHorizontal: 8,
+  },
+  trendBarCol: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  trendBar: {
+    width: 28,
+    borderRadius: 4,
+  },
+  trendBarCurrent: {
+    width: 32,
+  },
+  trendScoreLabel: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    letterSpacing: 0.5,
+  },
+  trendWeekLabel: {
+    fontFamily: Fonts.mono,
+    fontSize: 8.5,
+    color: Colors.muted,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  trendWeekCurrent: {
+    color: Colors.ink,
+    fontFamily: Fonts.monoMedium,
+  },
+
+  // Monthly calendar
+  monthCal: {
+    gap: 4,
+  },
+  monthCalRow: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  monthCalHeader: {
+    flex: 1,
+    textAlign: 'center',
+    fontFamily: Fonts.mono,
+    fontSize: 8.5,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: Colors.muted,
+    paddingBottom: 4,
+  },
+  monthCalCell: {
+    flex: 1,
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+  },
+  monthCalCellEmpty: {
+    backgroundColor: Colors.hairline2,
+  },
+  monthCalToday: {
+    borderWidth: 1.5,
+    borderColor: Colors.ink,
+  },
+  monthCalDay: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    letterSpacing: 0.2,
+  },
+  monthCalTodayText: {
+    fontFamily: Fonts.monoMedium,
+    color: Colors.ink,
+  },
+  monthCalLegend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 14,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.hairline2,
+  },
+  monthCalLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  monthCalLegendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  monthCalLegendText: {
+    fontFamily: Fonts.mono,
+    fontSize: 8.5,
+    color: Colors.muted2,
+    letterSpacing: 0.3,
+  },
+
   // Insights
   insightsHead: {
     flexDirection: 'row',
@@ -1035,4 +1794,135 @@ const styles = StyleSheet.create({
   toneGood: { color: Colors.ok },
   toneWarn: { color: Colors.warn },
   toneMid:  { color: Colors.signal },
+
+  // Symptom sparklines (wellness view)
+  symptomSparkRows: { gap: 8 },
+  symptomSparkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline2,
+  },
+  symptomSparkLabel: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: Colors.muted,
+    width: 60,
+  },
+  symptomSparkVal: {
+    fontFamily: Fonts.mono,
+    fontSize: 11,
+    width: 34,
+    textAlign: 'right',
+    letterSpacing: 0.3,
+  },
+
+  // Correlation insights
+  corrRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline2,
+  },
+  corrDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: 4,
+    flexShrink: 0,
+  },
+  corrMessage: {
+    fontFamily: Fonts.serif,
+    fontSize: 15,
+    color: Colors.ink,
+    letterSpacing: -0.1,
+    lineHeight: 20,
+  },
+  corrMeta: {
+    fontFamily: Fonts.mono,
+    fontSize: 8.5,
+    color: Colors.muted2,
+    letterSpacing: 0.3,
+    marginTop: 3,
+  },
+  corrDisclaimer: {
+    fontFamily: Fonts.mono,
+    fontSize: 8.5,
+    color: Colors.muted2,
+    letterSpacing: 0.3,
+    lineHeight: 13,
+    textAlign: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  corrProgress: {
+    marginHorizontal: 16,
+    marginBottom: 14,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.hairline2,
+    borderRadius: 18,
+    padding: 18,
+    gap: 8,
+  },
+  corrProgressTitle: {
+    fontFamily: Fonts.serif,
+    fontSize: 17,
+    color: Colors.ink,
+    letterSpacing: -0.2,
+  },
+  corrProgressSub: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    color: Colors.muted2,
+    letterSpacing: 0.3,
+    lineHeight: 14,
+  },
+  corrProgressBar: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.hairline2,
+    overflow: 'hidden',
+  },
+  corrProgressFill: {
+    height: '100%',
+    backgroundColor: Colors.ok,
+    borderRadius: 3,
+  },
+  corrProgressCount: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    color: Colors.muted,
+    letterSpacing: 0.5,
+    textAlign: 'right',
+  },
+
+  // Wellness empty state
+  emptyWellness: {
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 20,
+    paddingHorizontal: 12,
+  },
+  emptyWellnessTitle: {
+    fontFamily: Fonts.serif,
+    fontSize: 17,
+    color: Colors.ink,
+    letterSpacing: -0.2,
+    textAlign: 'center',
+  },
+  emptyWellnessSub: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    color: Colors.muted2,
+    letterSpacing: 0.3,
+    lineHeight: 14,
+    textAlign: 'center',
+  },
 });
