@@ -582,9 +582,10 @@ interface FodmapScreenProps {
   protocol: FodmapProtocol;
   onUpdate: (p: FodmapProtocol) => void;
   onBack: () => void;
+  onOpenMenu: () => void;
 }
 
-export function FodmapScreen({ protocol, onUpdate, onBack }: FodmapScreenProps) {
+export function FodmapScreen({ protocol, onUpdate, onBack, onOpenMenu }: FodmapScreenProps) {
   const insets = useSafeAreaInsets();
   const [showAddTest, setShowAddTest]           = useState(false);
   const [showAddReaction, setShowAddReaction]   = useState(false);
@@ -641,6 +642,9 @@ export function FodmapScreen({ protocol, onUpdate, onBack }: FodmapScreenProps) 
               {PHASE_CONFIG[protocol.phase].emoji} {PHASE_CONFIG[protocol.phase].label}
             </Text>
           </View>
+          <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+            <Icon name="menu" size={22} color={Colors.ink} />
+          </TouchableOpacity>
         </View>
 
         {/* Phase stepper */}

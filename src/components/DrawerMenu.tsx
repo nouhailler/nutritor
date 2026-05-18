@@ -3,6 +3,7 @@ import {
   Animated,
   Dimensions,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -129,72 +130,75 @@ export function DrawerMenu({
         {/* Separator */}
         <View style={styles.separator} />
 
-        {/* Navigation */}
-        <View style={styles.nav}>
-          {NAV_ITEMS.map((item) => {
-            const active = item.id === activeTab;
-            return (
-              <TouchableOpacity
-                key={item.id}
-                style={[styles.navItem, active && styles.navItemActive]}
-                onPress={() => {
-                  onNavigate(item.id);
-                  onClose();
-                }}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.navIcon, active && styles.navIconActive]}>
-                  <Icon
-                    name={item.icon}
-                    size={18}
-                    color={active ? Colors.paper2 : Colors.ink}
-                  />
-                </View>
-                <View style={styles.navText}>
-                  <Text style={[styles.navLabel, active && styles.navLabelActive]}>
-                    {item.label}
-                  </Text>
-                  <Text style={styles.navDesc}>{item.description}</Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        {/* Scrollable middle section */}
+        <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
+          {/* Navigation */}
+          <View style={styles.nav}>
+            {NAV_ITEMS.map((item) => {
+              const active = item.id === activeTab;
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.navItem, active && styles.navItemActive]}
+                  onPress={() => {
+                    onNavigate(item.id);
+                    onClose();
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.navIcon, active && styles.navIconActive]}>
+                    <Icon
+                      name={item.icon}
+                      size={18}
+                      color={active ? Colors.paper2 : Colors.ink}
+                    />
+                  </View>
+                  <View style={styles.navText}>
+                    <Text style={[styles.navLabel, active && styles.navLabelActive]}>
+                      {item.label}
+                    </Text>
+                    <Text style={styles.navDesc}>{item.description}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
-        {/* IA section */}
-        <View style={styles.iaSection}>
-          <Text style={styles.iaSectionLabel}>Intelligence artificielle</Text>
-          <TouchableOpacity
-            style={styles.iaItem}
-            onPress={() => { onOpenMealGenerator(); onClose(); }}
-            activeOpacity={0.7}
-          >
-            <View style={styles.iaIcon}>
-              <Icon name="sparkle" size={16} color={Colors.paper2} />
-            </View>
-            <View style={styles.navText}>
-              <Text style={styles.iaLabel}>Générateur de repas</Text>
-              <Text style={styles.navDesc}>Recettes personnalisées par IA</Text>
-            </View>
-            <Icon name="chevron-right" size={14} color={Colors.muted2} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.iaItem, { marginTop: 8 }]}
-            onPress={() => { onOpenKnowledge(); onClose(); }}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.iaIcon, { backgroundColor: '#2E5A8B' }]}>
-              <Icon name="book" size={16} color={Colors.paper2} />
-            </View>
-            <View style={styles.navText}>
-              <Text style={styles.iaLabel}>Encyclopédie</Text>
-              <Text style={styles.navDesc}>Vitamines, minéraux, bioactifs</Text>
-            </View>
-            <Icon name="chevron-right" size={14} color={Colors.muted2} />
-          </TouchableOpacity>
-        </View>
+          {/* IA section */}
+          <View style={styles.iaSection}>
+            <Text style={styles.iaSectionLabel}>Intelligence artificielle</Text>
+            <TouchableOpacity
+              style={styles.iaItem}
+              onPress={() => { onOpenMealGenerator(); onClose(); }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.iaIcon}>
+                <Icon name="sparkle" size={16} color={Colors.paper2} />
+              </View>
+              <View style={styles.navText}>
+                <Text style={styles.iaLabel}>Générateur de repas</Text>
+                <Text style={styles.navDesc}>Recettes personnalisées par IA</Text>
+              </View>
+              <Icon name="chevron-right" size={14} color={Colors.muted2} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.iaItem, { marginTop: 8 }]}
+              onPress={() => { onOpenKnowledge(); onClose(); }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.iaIcon, { backgroundColor: '#2E5A8B' }]}>
+                <Icon name="book" size={16} color={Colors.paper2} />
+              </View>
+              <View style={styles.navText}>
+                <Text style={styles.iaLabel}>Encyclopédie</Text>
+                <Text style={styles.navDesc}>Vitamines, minéraux, bioactifs</Text>
+              </View>
+              <Icon name="chevron-right" size={14} color={Colors.muted2} />
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
 
-        {/* Footer */}
+        {/* Footer — always visible */}
         <View style={styles.drawerFooter}>
           <View style={styles.separator} />
           <TouchableOpacity
@@ -234,6 +238,7 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 16,
     paddingHorizontal: 22,
+    flexDirection: 'column',
   },
 
   closeBtn: {
@@ -301,6 +306,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.hairline2,
     marginBottom: 16,
   },
+
+  scrollArea: { flex: 1 },
 
   // Nav items
   nav: { gap: 4 },
@@ -392,8 +399,7 @@ const styles = StyleSheet.create({
 
   // Footer
   drawerFooter: {
-    marginTop: 'auto',
-    paddingTop: 16,
+    paddingTop: 8,
   },
   settingsBtn: {
     flexDirection: 'row',

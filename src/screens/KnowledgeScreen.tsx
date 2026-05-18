@@ -76,10 +76,12 @@ function EntryView({
   entry,
   onBack,
   onOpenEntry,
+  onOpenMenu,
 }: {
   entry: KnowledgeEntry;
   onBack: () => void;
   onOpenEntry: (e: KnowledgeEntry) => void;
+  onOpenMenu: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<'simple' | 'expert'>('simple');
@@ -94,6 +96,9 @@ function EntryView({
           <Icon name="back" size={22} />
         </TouchableOpacity>
         <View style={{ flex: 1 }} />
+        <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+          <Icon name="menu" size={22} />
+        </TouchableOpacity>
         <ModeToggle mode={mode} onChange={setMode} />
       </View>
 
@@ -247,11 +252,13 @@ function ListView({
   title,
   onBack,
   onPickEntry,
+  onOpenMenu,
 }: {
   entries: KnowledgeEntry[];
   title: string;
   onBack: () => void;
   onPickEntry: (e: KnowledgeEntry) => void;
+  onOpenMenu: () => void;
 }) {
   const insets = useSafeAreaInsets();
 
@@ -262,7 +269,9 @@ function ListView({
           <Icon name="back" size={22} />
         </TouchableOpacity>
         <Text style={styles.topbarTitle}>{title}</Text>
-        <View style={styles.iconBtn} />
+        <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+          <Icon name="menu" size={22} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -307,10 +316,12 @@ function HomeView({
   onOpenCategory,
   onOpenSearch,
   onBack,
+  onOpenMenu,
 }: {
   onOpenCategory: (c: KnowledgeCategory) => void;
   onOpenSearch: (q: string) => void;
   onBack: () => void;
+  onOpenMenu: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const counts = useMemo(() => getCategoryCounts(), []);
@@ -334,7 +345,9 @@ function HomeView({
           <Text style={styles.topbarTitle}>Base de connaissances</Text>
           <Text style={styles.topbarSub}>{KNOWLEDGE_BASE.length} entrées · 100 % hors-ligne</Text>
         </View>
-        <View style={styles.iconBtn} />
+        <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+          <Icon name="menu" size={22} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -428,9 +441,10 @@ function HomeView({
 
 interface KnowledgeScreenProps {
   onBack: () => void;
+  onOpenMenu: () => void;
 }
 
-export function KnowledgeScreen({ onBack }: KnowledgeScreenProps) {
+export function KnowledgeScreen({ onBack, onOpenMenu }: KnowledgeScreenProps) {
   const [view, setView] = useState<KView>({ type: 'home' });
 
   const goBack = () => {
@@ -461,6 +475,7 @@ export function KnowledgeScreen({ onBack }: KnowledgeScreenProps) {
         onOpenCategory={openCategory}
         onOpenSearch={openSearch}
         onBack={onBack}
+        onOpenMenu={onOpenMenu}
       />
     );
   }
@@ -485,6 +500,7 @@ export function KnowledgeScreen({ onBack }: KnowledgeScreenProps) {
         title={title}
         onBack={goBack}
         onPickEntry={openEntry}
+        onOpenMenu={onOpenMenu}
       />
     );
   }
@@ -495,6 +511,7 @@ export function KnowledgeScreen({ onBack }: KnowledgeScreenProps) {
       entry={view.entry}
       onBack={goBack}
       onOpenEntry={openEntry}
+      onOpenMenu={onOpenMenu}
     />
   );
 }

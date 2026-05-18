@@ -139,10 +139,11 @@ interface Props {
   settings: AppSettings;
   onAdd: (food: Food) => void;
   onBack: () => void;
+  onOpenMenu: () => void;
   initialQuery?: string;
 }
 
-export function AddFoodScreen({ settings, onAdd, onBack, initialQuery = '' }: Props) {
+export function AddFoodScreen({ settings, onAdd, onBack, onOpenMenu, initialQuery = '' }: Props) {
   const insets = useSafeAreaInsets();
   const [phase, setPhase] = useState<Phase>('input');
   const [foodName, setFoodName] = useState(initialQuery);
@@ -193,6 +194,9 @@ export function AddFoodScreen({ settings, onAdd, onBack, initialQuery = '' }: Pr
               {settings.aiProvider === 'openrouter' ? 'OpenRouter' : 'Ollama'}
             </Text>
           </View>
+          <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+            <Icon name="menu" size={22} color={Colors.ink} />
+          </TouchableOpacity>
           <HelpButton onPress={() => setHelpVisible(true)} />
         </View>
         <HelpModal visible={helpVisible} content={HELP.addFood} onClose={() => setHelpVisible(false)} />

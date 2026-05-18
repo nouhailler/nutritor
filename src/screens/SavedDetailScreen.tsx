@@ -179,9 +179,10 @@ interface Props {
   onBack: () => void;
   onAdd: (mealId: string, plate: SavedPlate) => void;
   onDelete: () => void;
+  onOpenMenu: () => void;
 }
 
-export function SavedDetailScreen({ plate, meals, onBack, onAdd, onDelete }: Props) {
+export function SavedDetailScreen({ plate, meals, onBack, onAdd, onDelete, onOpenMenu }: Props) {
   const insets = useSafeAreaInsets();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
@@ -214,6 +215,9 @@ export function SavedDetailScreen({ plate, meals, onBack, onAdd, onDelete }: Pro
           }
         >
           <Icon name="trash" size={18} color={Colors.warn} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+          <Icon name="menu" size={22} color={Colors.ink} />
         </TouchableOpacity>
         <HelpButton onPress={() => setHelpVisible(true)} />
       </View>

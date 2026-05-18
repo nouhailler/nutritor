@@ -473,6 +473,8 @@ export function AppShell() {
 
   let screen: React.ReactNode;
 
+  const openMenu = () => setDrawerOpen(true);
+
   if (stack === 'search') {
     screen = (
       <SearchScreen
@@ -489,6 +491,7 @@ export function AppShell() {
         onOpenFoodFacts={(q) => { setPendingQuery(q); setStack('openFoodFacts'); }}
         onOpenCIQUAL={(q) => { setPendingQuery(q); setStack('ciqual'); }}
         onOpenScanner={() => setStack('scanner')}
+        onOpenMenu={openMenu}
       />
     );
   } else if (stack === 'detail') {
@@ -499,6 +502,7 @@ export function AppShell() {
         profile={profile}
         onBack={() => setStack(detailOrigin ?? null)}
         onAdd={handleAdd}
+        onOpenMenu={openMenu}
       />
     );
   } else if (stack === 'savedDetail' && selectedPlate) {
@@ -509,6 +513,7 @@ export function AppShell() {
         onBack={() => setStack(null)}
         onAdd={handleAddPlate}
         onDelete={() => handleDeletePlate(selectedPlate)}
+        onOpenMenu={openMenu}
       />
     );
   } else if (stack === 'editProfile') {
@@ -529,6 +534,7 @@ export function AppShell() {
           setTimeout(() => setToast(null), 2600);
         }}
         onBack={() => setStack('search')}
+        onOpenMenu={openMenu}
       />
     );
   } else if (stack === 'ciqual') {
@@ -542,6 +548,7 @@ export function AppShell() {
         }}
         onUpdateFood={handleUpdateFood}
         onBack={() => setStack('search')}
+        onOpenMenu={openMenu}
       />
     );
   } else if (stack === 'openFoodFacts') {
@@ -556,6 +563,7 @@ export function AppShell() {
         }}
         onUpdateFood={handleUpdateFood}
         onBack={() => setStack('search')}
+        onOpenMenu={openMenu}
       />
     );
   } else if (stack === 'addFood') {
@@ -567,6 +575,7 @@ export function AppShell() {
           setFoodList((prev) => [...prev, food]);
         }}
         onBack={() => setStack('search')}
+        onOpenMenu={openMenu}
       />
     );
   } else if (stack === 'foodPhoto') {
@@ -578,6 +587,7 @@ export function AppShell() {
           setFoodList((prev) => [...prev, food]);
         }}
         onBack={() => setStack('search')}
+        onOpenMenu={openMenu}
       />
     );
   } else if (stack === 'editSavedPlate') {
@@ -596,6 +606,7 @@ export function AppShell() {
         protocol={fodmapProtocol}
         onUpdate={setFodmapProtocol}
         onBack={() => setStack(null)}
+        onOpenMenu={openMenu}
       />
     );
   } else if (stack === 'mealGenerator') {
@@ -605,11 +616,12 @@ export function AppShell() {
         fodmapProtocol={fodmapProtocol}
         settings={settings}
         onBack={() => setStack(null)}
+        onOpenMenu={openMenu}
       />
     );
   } else if (stack === 'knowledge') {
     screen = (
-      <KnowledgeScreen onBack={() => setStack(null)} />
+      <KnowledgeScreen onBack={() => setStack(null)} onOpenMenu={openMenu} />
     );
   } else if (stack === 'settings') {
     screen = (
@@ -623,6 +635,7 @@ export function AppShell() {
           setFoodList([...foodList, ...newFoods]);
         }}
         onBack={() => setStack(null)}
+        onOpenMenu={openMenu}
         showToast={(msg) => {
           setToast(msg);
           setTimeout(() => setToast(null), 2600);

@@ -181,31 +181,27 @@ const FIELDS = 'id,code,product_name,product_name_fr,brands,categories_tags,ingr
 export async function searchOFF(query: string, page = 1): Promise<OFFSearchResult> {
   const params = new URLSearchParams({
     search_terms: query,
-    json: '1',
     page: String(page),
     page_size: '20',
     fields: FIELDS,
     lc: 'fr',
     cc: 'fr',
   });
-  const res = await fetch(`${BASE}/cgi/search.pl?${params}`);
+  const res = await fetch(`${BASE}/api/v2/search?${params}`);
   if (!res.ok) throw new Error(`Open Food Facts ${res.status}`);
   return res.json();
 }
 
 export async function searchOFFByCategory(categoryTag: string, page = 1): Promise<OFFSearchResult> {
   const params = new URLSearchParams({
-    tagtype_0: 'categories',
-    tag_contains_0: 'contains',
-    tag_0: categoryTag,
-    json: '1',
+    categories_tags: categoryTag,
     page: String(page),
     page_size: '20',
     fields: FIELDS,
     lc: 'fr',
     cc: 'fr',
   });
-  const res = await fetch(`${BASE}/cgi/search.pl?${params}`);
+  const res = await fetch(`${BASE}/api/v2/search?${params}`);
   if (!res.ok) throw new Error(`Open Food Facts ${res.status}`);
   return res.json();
 }

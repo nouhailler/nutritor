@@ -148,9 +148,10 @@ interface Props {
   onOpenFoodFacts: (query: string) => void;
   onOpenCIQUAL: (query: string) => void;
   onOpenScanner: () => void;
+  onOpenMenu: () => void;
 }
 
-export function SearchScreen({ foodList, profile, onBack, onPickItem, onDeleteFood, onAddWithAI, onOpenFoodFacts, onOpenCIQUAL, onOpenScanner }: Props) {
+export function SearchScreen({ foodList, profile, onBack, onPickItem, onDeleteFood, onAddWithAI, onOpenFoodFacts, onOpenCIQUAL, onOpenScanner, onOpenMenu }: Props) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
@@ -240,6 +241,9 @@ export function SearchScreen({ foodList, profile, onBack, onPickItem, onDeleteFo
         </View>
         <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={onOpenScanner}>
           <Icon name="scan" size={20} color={Colors.ink} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+          <Icon name="menu" size={22} color={Colors.ink} />
         </TouchableOpacity>
         <HelpButton onPress={() => setHelpVisible(true)} />
       </View>

@@ -133,6 +133,7 @@ interface Props {
   onSave: (settings: AppSettings) => void;
   onImportFoods: (foods: Food[]) => void;
   onBack: () => void;
+  onOpenMenu: () => void;
   showToast: (msg: string) => void;
 }
 
@@ -142,6 +143,7 @@ export function SettingsScreen({
   onSave,
   onImportFoods,
   onBack,
+  onOpenMenu,
   showToast,
 }: Props) {
   const insets = useSafeAreaInsets();
@@ -286,6 +288,9 @@ export function SettingsScreen({
           <Text style={styles.eyebrow}>Application</Text>
           <Text style={styles.title}>Paramètres</Text>
         </View>
+        <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+          <Icon name="menu" size={22} color={Colors.ink} />
+        </TouchableOpacity>
         <HelpButton onPress={() => setHelpVisible(true)} />
       </View>
       <HelpModal visible={helpVisible} content={HELP.settings} onClose={() => setHelpVisible(false)} />

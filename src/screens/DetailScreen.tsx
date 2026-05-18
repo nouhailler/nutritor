@@ -665,6 +665,7 @@ interface DetailScreenProps {
   meals?: Meal[];
   profile?: UserProfile;
   onBack?: () => void;
+  onOpenMenu?: () => void;
   onAdd?: (params: {
     food: Food;
     portion: number;
@@ -678,6 +679,7 @@ export function DetailScreen({
   meals = INITIAL_MEALS,
   profile,
   onBack,
+  onOpenMenu,
   onAdd,
 }: DetailScreenProps) {
   const insets = useSafeAreaInsets();
@@ -713,6 +715,11 @@ export function DetailScreen({
             <Icon name="back" size={22} />
           </TouchableOpacity>
           <View style={styles.topbarRight}>
+            {onOpenMenu && (
+              <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+                <Icon name="menu" size={22} />
+              </TouchableOpacity>
+            )}
             <HelpButton onPress={() => setHelpVisible(true)} />
           </View>
         </View>

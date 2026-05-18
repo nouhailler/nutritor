@@ -233,6 +233,7 @@ interface MealGeneratorScreenProps {
   fodmapProtocol: FodmapProtocol;
   settings: AppSettings;
   onBack: () => void;
+  onOpenMenu: () => void;
 }
 
 export function MealGeneratorScreen({
@@ -240,6 +241,7 @@ export function MealGeneratorScreen({
   fodmapProtocol,
   settings,
   onBack,
+  onOpenMenu,
 }: MealGeneratorScreenProps) {
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
@@ -278,7 +280,9 @@ export function MealGeneratorScreen({
           <Text style={styles.topbarTitle}>Générateur de repas</Text>
           <Text style={styles.topbarSub}>IA nutritionniste personnalisée</Text>
         </View>
-        <View style={styles.iconBtn} />
+        <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+          <Icon name="menu" size={22} color={Colors.ink} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView

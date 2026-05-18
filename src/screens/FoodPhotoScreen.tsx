@@ -151,11 +151,13 @@ interface Props {
   settings: AppSettings;
   onImport: (food: Food) => void;
   onBack: () => void;
+  onOpenMenu: () => void;
 }
 
-export function FoodPhotoScreen({ existingIds, settings, onImport, onBack }: Props) {
+export function FoodPhotoScreen({ existingIds, settings, onImport, onBack, onOpenMenu }: Props) {
   const insets = useSafeAreaInsets();
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoAspect, setPhotoAspect] = useState<number>(4 / 3);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<VisionAnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -174,29 +176,29 @@ export function FoodPhotoScreen({ existingIds, settings, onImport, onBack }: Pro
     incompatReason = `Le modèle « ${modelId} » ne supporte pas les images.\nModèles compatibles : claude-3.5-sonnet, gpt-4o, gemini-1.5-flash, llama-3.2-vision…`;
   }
 
+  function applyAsset(asset: ImagePicker.ImagePickerAsset) {
+    setPhotoUri(asset.uri);
+    if (asset.width && asset.height) {
+      setPhotoAspect(asset.width / asset.height);
+    }
+    setResult(null);
+    setError(null);
+  }
+
   async function pickFromGallery() {
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 0.6,
+      quality: 0.8,
     });
-    if (!res.canceled && res.assets[0]) {
-      setPhotoUri(res.assets[0].uri);
-      setResult(null);
-      setError(null);
-    }
+    if (!res.canceled && res.assets[0]) applyAsset(res.assets[0]);
   }
 
   async function pickFromCamera() {
     const res = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
-      quality: 0.6,
+      quality: 0.8,
     });
-    if (!res.canceled && res.assets[0]) {
-      setPhotoUri(res.assets[0].uri);
-      setResult(null);
-      setError(null);
-    }
+    if (!res.canceled && res.assets[0]) applyAsset(res.assets[0]);
   }
 
   async function analyze() {
@@ -230,7 +232,9 @@ export function FoodPhotoScreen({ existingIds, settings, onImport, onBack }: Pro
           <Text style={styles.eyebrow}>Reconnaissance</Text>
           <Text style={styles.title}>Photo IA</Text>
         </View>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+            <Icon name="menu" size={22} color={Colors.ink} />
+          </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
@@ -283,7 +287,11 @@ export function FoodPhotoScreen({ existingIds, settings, onImport, onBack }: Pro
         {/* Photo preview */}
         {photoUri && !isAnalyzing && (
           <View style={styles.previewSection}>
-            <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
+            <Image
+              source={{ uri: photoUri }}
+              style={[styles.preview, { aspectRatio: photoAspect }]}
+              resizeMode="contain"
+            />
             <View style={styles.previewActions}>
               <TouchableOpacity onPress={() => { setPhotoUri(null); setResult(null); setError(null); }} activeOpacity={0.7}>
                 <Text style={styles.changePhotoLink}>Changer de photo</Text>
@@ -385,6 +393,12 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.hairline2,
   },
   backBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBtn: {
     width: 40,
     height: 40,
     alignItems: 'center',
@@ -492,7 +506,6 @@ const styles = StyleSheet.create({
   },
   preview: {
     width: '100%',
-    height: 220,
     borderRadius: 16,
     backgroundColor: Colors.card,
   },

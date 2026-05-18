@@ -1,6 +1,31 @@
-import * as FileSystem from 'expo-file-system/legacy';
+import { Platform } from 'react-native';
 import { AppSettings } from '../types/settings';
 import { Food, Allergen, CompatItem } from '../types';
+
+// ── Image → base64 (cross-platform) ──────────────────────────
+
+async function readImageAsBase64(uri: string): Promise<string> {
+  // data: URI already carries base64 (expo-image-picker on web)
+  if (uri.startsWith('data:')) {
+    return uri.split(',')[1];
+  }
+
+  if (Platform.OS === 'web') {
+    // blob: URL on web
+    const res = await fetch(uri);
+    const blob = await res.blob();
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  // Native: use expo-file-system
+  const FS = await import('expo-file-system/legacy');
+  return FS.readAsStringAsync(uri, { encoding: FS.EncodingType.Base64 });
+}
 
 // ── Vision model detection ────────────────────────────────────
 
@@ -8,10 +33,14 @@ const VISION_PATTERNS = [
   'claude-3', 'claude-4',
   'gpt-4o', 'gpt-4-vision', 'gpt-4-turbo',
   'gemini',
+  'gemma-4',         // google/gemma-4-* — multimodal nativement
   'pixtral',
   'llava',
   'moondream',
   'qwen-vl', 'qwen2-vl',
+  'nemotron',        // nvidia/nemotron-* omni + vl
+  '-vl',             // suffixe vision-language (ex: nemotron-nano-12b-v2-vl)
+  'omni',            // modèles omni-modaux (texte, image, audio)
   'vision',          // catches llama-3.2-*-vision, etc.
 ];
 
@@ -45,36 +74,30 @@ export interface VisionAnalysisResult {
 
 // ── Prompt ────────────────────────────────────────────────────
 
-const VISION_PROMPT = `Tu es un nutritionniste expert en alimentation française. Analyse cette photo et identifie tous les aliments visibles.
+const VISION_PROMPT = `Identifie les aliments visibles dans cette photo. Réponds en JSON avec cette structure exacte :
 
-Consignes :
-- Estime les portions en grammes (assiette standard ≈ 26cm, verre = 200ml)
-- Valeurs nutritionnelles pour 100g depuis CIQUAL / USDA
-- Allergènes parmi : Gluten, Lactose, Œufs, Arachides, Fruits à coque, Soja, Poisson, Crustacés, Sésame, Moutarde, Céleri, Sulfites
-- FODMAP : mentionne seulement si présents (fructanes, fructose, lactose, GOS, polyols)
-- confidence "low" si l'aliment est difficile à identifier avec certitude
-
-Réponds UNIQUEMENT avec ce JSON brut, sans markdown ni texte autour :
 {
-  "scene_description": "description en 1 phrase",
+  "scene_description": "Une phrase décrivant la photo",
   "foods": [
     {
-      "name": "Nom français",
-      "category": "Catégorie",
-      "estimated_weight_g": 150,
-      "kcal_per_100g": 130,
-      "kcal_total": 195,
-      "protein_g": 8.5,
-      "carbs_g": 22.0,
-      "fat_g": 3.2,
-      "allergens_likely": [],
+      "name": "Nom de l'aliment en français",
+      "category": "Catégorie (ex: Céréales, Fruits, Viandes...)",
+      "estimated_weight_g": 100,
+      "kcal_per_100g": 250,
+      "kcal_total": 250,
+      "protein_g": 8.0,
+      "carbs_g": 50.0,
+      "fat_g": 2.0,
+      "allergens_likely": ["Gluten"],
       "fodmap_note": "",
       "confidence": "high"
     }
   ],
   "global_warnings": [],
-  "total_kcal_estimate": 350
-}`;
+  "total_kcal_estimate": 250
+}
+
+Règles : portions estimées en grammes, valeurs nutritionnelles pour 100g (CIQUAL/USDA), allergènes parmi [Gluten, Lactose, Œufs, Arachides, Fruits à coque, Soja, Poisson, Crustacés], confidence = "high"/"medium"/"low".`;
 
 // ── API call ──────────────────────────────────────────────────
 
@@ -104,13 +127,11 @@ export async function analyzeFoodPhoto(
 
   if (!isVisionCapableModel(model)) {
     throw new Error(
-      `Le modèle « ${model} » ne supporte pas l'analyse d'images.\n\nModèles compatibles : claude-3.5-sonnet, gpt-4o, gemini-1.5-flash, llama-3.2-vision…`,
+      `Le modèle « ${model} » ne supporte pas l'analyse d'images.\n\nModèles gratuits compatibles (OpenRouter) :\n• google/gemma-4-26b-a4b-it:free\n• nvidia/nemotron-nano-12b-v2-vl:free\n• llama-3.2-*-vision, gemini-1.5-flash…`,
     );
   }
 
-  const base64 = await FileSystem.readAsStringAsync(imageUri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
+  const base64 = await readImageAsBase64(imageUri);
 
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -133,23 +154,33 @@ export async function analyzeFoodPhoto(
         },
       ],
       temperature: 0.1,
+      max_tokens: 1200,
+      response_format: { type: 'json_object' },
     }),
   });
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`OpenRouter ${res.status}: ${body.slice(0, 300)}`);
+    throw new Error(`OpenRouter ${res.status}: ${body.slice(0, 400)}`);
   }
 
   const json = await res.json();
   const raw: string = json.choices?.[0]?.message?.content ?? '';
-  if (!raw) throw new Error("L'IA n'a retourné aucune réponse.");
+
+  if (!raw) {
+    const reason = json.choices?.[0]?.finish_reason ?? 'inconnu';
+    throw new Error(
+      `L'IA n'a retourné aucune réponse (finish_reason: ${reason}).\n\nLes modèles gratuits peuvent être temporairement surchargés. Réessaie dans quelques secondes.`,
+    );
+  }
 
   let parsed: VisionAnalysisResult;
   try {
     parsed = JSON.parse(extractJSON(raw));
   } catch {
-    throw new Error("La réponse de l'IA n'est pas un JSON valide. Réessaie.");
+    throw new Error(
+      `L'IA n'a pas respecté le format JSON.\n\nRéponse reçue :\n${raw.slice(0, 300)}`,
+    );
   }
 
   if (!Array.isArray(parsed.foods)) {

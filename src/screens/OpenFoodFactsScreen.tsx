@@ -282,11 +282,12 @@ interface Props {
   onImport: (food: Food) => void;
   onUpdateFood: (food: Food) => void;
   onBack: () => void;
+  onOpenMenu: () => void;
   settings?: AppSettings;
   initialQuery?: string;
 }
 
-export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFood, onBack, settings, initialQuery = '' }: Props) {
+export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFood, onBack, onOpenMenu, settings, initialQuery = '' }: Props) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
 
@@ -380,6 +381,9 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
           <Text style={styles.eyebrow}>Base de données mondiale</Text>
           <Text style={styles.title}>Open Food Facts</Text>
         </View>
+        <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+          <Icon name="menu" size={22} color={Colors.ink} />
+        </TouchableOpacity>
         <HelpButton onPress={() => setHelpVisible(true)} />
       </View>
       <HelpModal visible={helpVisible} content={HELP.openFoodFacts} onClose={() => setHelpVisible(false)} />

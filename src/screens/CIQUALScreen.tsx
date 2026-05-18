@@ -127,11 +127,12 @@ interface Props {
   onImport: (food: Food) => void;
   onUpdateFood: (food: Food) => void;
   onBack: () => void;
+  onOpenMenu: () => void;
   settings?: AppSettings;
   initialQuery?: string;
 }
 
-export function CIQUALScreen({ existingIds, onImport, onUpdateFood, onBack, settings, initialQuery = '' }: Props) {
+export function CIQUALScreen({ existingIds, onImport, onUpdateFood, onBack, onOpenMenu, settings, initialQuery = '' }: Props) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
 
@@ -185,6 +186,9 @@ export function CIQUALScreen({ existingIds, onImport, onUpdateFood, onBack, sett
           <Text style={styles.eyebrow}>Base officielle française</Text>
           <Text style={styles.title}>CIQUAL — ANSES</Text>
         </View>
+        <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+          <Icon name="menu" size={22} color={Colors.ink} />
+        </TouchableOpacity>
         <HelpButton onPress={() => setHelpVisible(true)} />
       </View>
       <HelpModal visible={helpVisible} content={HELP.ciqual} onClose={() => setHelpVisible(false)} />
