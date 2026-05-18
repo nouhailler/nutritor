@@ -168,7 +168,8 @@ export function computeCompatibilityScore(
         severity: 'medium',
       });
     } else if (food.fodmap.overall === 'low') {
-      const portion = food.fodmap.elimination?.portion;
+      const rawPortion = food.fodmap.elimination?.portion;
+      const portion = rawPortion !== undefined ? String(rawPortion) : undefined;
       const lowTypes = (food.fodmap.types ?? [])
         .filter((t) => t.level === 'low' || t.level === 'faible')
         .map((t) => t.name);
@@ -228,7 +229,8 @@ export function computeCompatibilityScore(
   }
 
   if (!activeDiets.has('low') && food.fodmap?.overall === 'low') {
-    const portion = food.fodmap.elimination?.portion;
+    const rawPortion = food.fodmap.elimination?.portion;
+    const portion = rawPortion !== undefined ? String(rawPortion) : undefined;
     const lowTypes = (food.fodmap.types ?? [])
       .filter((t) => t.level === 'low' || t.level === 'faible')
       .map((t) => t.name);
