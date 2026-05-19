@@ -84,6 +84,22 @@ function SavedCard({ plate, onPress, onEdit }: { plate: SavedPlate; onPress: () 
           </View>
         ))}
       </View>
+      {/* Macro bar P/G/L */}
+      {(plate.macros.protein > 0 || plate.macros.carbs > 0 || plate.macros.fat > 0) && (() => {
+        const total = plate.macros.protein + plate.macros.carbs + plate.macros.fat || 1;
+        return (
+          <View style={styles.cardMacros}>
+            <View style={styles.cardMacroBar}>
+              <View style={[styles.cardMacroSegP, { flex: plate.macros.protein / total }]} />
+              <View style={[styles.cardMacroSegC, { flex: plate.macros.carbs / total }]} />
+              <View style={[styles.cardMacroSegF, { flex: plate.macros.fat / total }]} />
+            </View>
+            <Text style={styles.cardMacroText}>
+              P {plate.macros.protein}g · G {plate.macros.carbs}g · L {plate.macros.fat}g
+            </Text>
+          </View>
+        );
+      })()}
       <Text style={styles.lastText}>{plate.items} aliments · {plate.last}</Text>
     </TouchableOpacity>
   );
@@ -436,6 +452,24 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
     textTransform: 'uppercase',
     color: Colors.muted,
+  },
+
+  cardMacros: { gap: 4 },
+  cardMacroBar: {
+    height: 3,
+    flexDirection: 'row',
+    borderRadius: 2,
+    overflow: 'hidden',
+    backgroundColor: Colors.hairline2,
+  },
+  cardMacroSegP: { backgroundColor: Colors.ok },
+  cardMacroSegC: { backgroundColor: Colors.signal },
+  cardMacroSegF: { backgroundColor: Colors.ink2 },
+  cardMacroText: {
+    fontFamily: Fonts.mono,
+    fontSize: 8.5,
+    letterSpacing: 0.3,
+    color: Colors.muted2,
   },
 
   lastText: {

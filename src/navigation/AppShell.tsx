@@ -686,9 +686,14 @@ export function AppShell() {
       <SavedDetailScreen
         plate={selectedPlate}
         meals={viewedMeals}
+        settings={settings}
         onBack={() => setStack(null)}
         onAdd={handleAddPlate}
         onDelete={() => handleDeletePlate(selectedPlate)}
+        onUpdatePlate={(plate) => {
+          setSavedPlates((prev) => prev.map((p) => p.id === plate.id ? plate : p));
+          setSelectedPlate(plate);
+        }}
         onOpenMenu={openMenu}
       />
     );

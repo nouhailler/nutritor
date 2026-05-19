@@ -5,6 +5,7 @@
  */
 import React, { useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   Image,
@@ -22,6 +23,8 @@ import { Meal } from '../types';
 import { Colors, Fonts } from '../theme/tokens';
 import { HelpButton, HelpModal } from '../components/HelpModal';
 import { HELP } from '../data/helpContent';
+import { AppSettings } from '../types/settings';
+import { estimatePlateMacros } from '../services/aiService';
 
 // ── Striped hero ──────────────────────────────────────────────
 
@@ -176,18 +179,50 @@ function MealSheet({
 interface Props {
   plate: SavedPlate;
   meals: Meal[];
+  settings: AppSettings;
   onBack: () => void;
   onAdd: (mealId: string, plate: SavedPlate) => void;
   onDelete: () => void;
+  onUpdatePlate: (plate: SavedPlate) => void;
   onOpenMenu: () => void;
 }
 
-export function SavedDetailScreen({ plate, meals, onBack, onAdd, onDelete, onOpenMenu }: Props) {
+export function SavedDetailScreen({ plate, meals, settings, onBack, onAdd, onDelete, onUpdatePlate, onOpenMenu }: Props) {
   const insets = useSafeAreaInsets();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
+  const [macroLoading, setMacroLoading] = useState(false);
+  const [macroError, setMacroError] = useState<string | null>(null);
 
   const totalMacro = plate.macros.protein + plate.macros.carbs + plate.macros.fat || 1;
+
+  const handleCalculateMacros = async () => {
+    if (macroLoading) return;
+    setMacroLoading(true);
+    setMacroError(null);
+    try {
+      const result = await estimatePlateMacros(
+        plate.recipe.map((r) => ({ name: r.name, qty: r.qty })),
+        settings,
+      );
+      const updatedRecipe = plate.recipe.map((item, i) => ({
+        ...item,
+        kcal: result[i]?.kcal ?? item.kcal,
+        macros: result[i]?.macros ?? item.macros,
+      }));
+      const totalKcal = Math.round(updatedRecipe.reduce((s, r) => s + (r.kcal || 0), 0));
+      const totalMacros = {
+        protein: Math.round(updatedRecipe.reduce((s, r) => s + (r.macros?.protein || 0), 0) * 10) / 10,
+        carbs:   Math.round(updatedRecipe.reduce((s, r) => s + (r.macros?.carbs || 0), 0) * 10) / 10,
+        fat:     Math.round(updatedRecipe.reduce((s, r) => s + (r.macros?.fat || 0), 0) * 10) / 10,
+      };
+      onUpdatePlate({ ...plate, recipe: updatedRecipe, kcal: totalKcal, macros: totalMacros });
+    } catch (e: unknown) {
+      setMacroError(e instanceof Error ? e.message : 'Erreur IA');
+    } finally {
+      setMacroLoading(false);
+    }
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -260,6 +295,27 @@ export function SavedDetailScreen({ plate, meals, onBack, onAdd, onDelete, onOpe
         <View style={styles.divider} />
 
         {/* Macros */}
+        <View style={styles.macrosSectionHeader}>
+          <Text style={styles.macrosSectionTitle}>Macronutriments</Text>
+          <TouchableOpacity
+            style={[styles.macroAiBtn, macroLoading && styles.macroAiBtnLoading]}
+            onPress={handleCalculateMacros}
+            activeOpacity={0.75}
+            disabled={macroLoading}
+          >
+            {macroLoading ? (
+              <ActivityIndicator size="small" color={Colors.paper2} style={{ width: 11, height: 11 }} />
+            ) : (
+              <Icon name="sparkle" size={11} color={Colors.paper2} />
+            )}
+            <Text style={styles.macroAiBtnText}>
+              {macroLoading ? 'Calcul…' : 'Calculer IA'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        {macroError && (
+          <Text style={styles.macroErrorText}>{macroError}</Text>
+        )}
         <View style={styles.macrosSection}>
           <MacroBar
             label="Protéines"
@@ -488,6 +544,46 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.hairline2,
     marginHorizontal: 20,
     marginVertical: 18,
+  },
+
+  macrosSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 14,
+  },
+  macrosSectionTitle: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    letterSpacing: 2.2,
+    textTransform: 'uppercase',
+    color: Colors.muted,
+  },
+  macroAiBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Colors.ink,
+    borderRadius: 100,
+    paddingVertical: 5,
+    paddingHorizontal: 11,
+  },
+  macroAiBtnLoading: {
+    backgroundColor: Colors.muted,
+  },
+  macroAiBtnText: {
+    fontFamily: Fonts.monoMedium,
+    fontSize: 9,
+    letterSpacing: 0.8,
+    color: Colors.paper2,
+  },
+  macroErrorText: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    color: Colors.warn,
+    paddingHorizontal: 20,
+    marginBottom: 10,
   },
 
   macrosSection: {

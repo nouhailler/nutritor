@@ -459,6 +459,41 @@ function buildMealPrompt(
   return prompt;
 }
 
+// ── Plate macro estimation ────────────────────────────────────
+
+const PLATE_MACRO_SYSTEM = `Tu es nutritionniste expert. Pour chaque ingrédient fourni avec sa quantité, estime les macronutriments (kcal, protéines g, glucides g, lipides g) en te basant sur CIQUAL et USDA.
+
+Règles :
+- Réponds UNIQUEMENT avec un tableau JSON brut, sans markdown, dans le même ordre que l'entrée
+- Arrondis les valeurs à 1 décimale
+- Si la quantité est "QS" ou non mesurable, mets 0 pour tout
+
+Schéma par élément :
+{"name":"...","qty":"...","kcal":0,"macros":{"protein":0,"carbs":0,"fat":0}}`;
+
+export async function estimatePlateMacros(
+  recipe: Array<{ name: string; qty: string }>,
+  settings: AppSettings,
+): Promise<Array<{ name: string; qty: string; kcal: number; macros: { protein: number; carbs: number; fat: number } }>> {
+  const userMsg = `Ingrédients :\n${recipe.map((r, i) => `${i + 1}. ${r.name} — ${r.qty}`).join('\n')}`;
+  const messages = [
+    { role: 'system', content: PLATE_MACRO_SYSTEM },
+    { role: 'user', content: userMsg },
+  ];
+
+  const raw =
+    settings.aiProvider === 'openrouter'
+      ? await callOpenRouter(settings.openrouter, messages)
+      : await callOllama(settings.ollama, messages);
+
+  if (!raw) throw new Error('Réponse IA vide.');
+
+  const jsonStr = extractJSONArray(raw);
+  const parsed = JSON.parse(jsonStr);
+  if (!Array.isArray(parsed)) throw new Error('Format inattendu.');
+  return parsed as Array<{ name: string; qty: string; kcal: number; macros: { protein: number; carbs: number; fat: number } }>;
+}
+
 function extractJSONArray(raw: string): string {
   let s = raw.trim();
   const fenced = s.match(/```(?:json)?\s*([\s\S]*?)```/);
