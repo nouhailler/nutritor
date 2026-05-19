@@ -19,6 +19,7 @@ import { HelpButton, HelpModal } from '../components/HelpModal';
 import { HELP } from '../data/helpContent';
 import { AllergenLevel, UserProfile, computeDietLabel } from '../data/user';
 import { Colors, Fonts } from '../theme/tokens';
+import { LabScores, LabStatus } from '../types/labScores';
 
 // ── Severity pill ────────────────────────────────────────────
 
@@ -40,17 +41,44 @@ function LevelPill({ level }: { level: AllergenLevel }) {
 
 // ── Profile Screen ───────────────────────────────────────────
 
+const LAB_METRICS: { key: keyof LabScores; emoji: string; name: string }[] = [
+  { key: 'omega',          emoji: '🐟', name: 'Ratio ω-3 / ω-6' },
+  { key: 'microDensity',   emoji: '🌿', name: 'Densité micronutrit.' },
+  { key: 'inflammatory',   emoji: '🔥', name: 'Score inflammatoire' },
+  { key: 'diversity',      emoji: '🎨', name: 'Diversité alimentaire' },
+  { key: 'ultraProcessed', emoji: '🏭', name: 'Ultra-transformé' },
+  { key: 'fodmap',         emoji: '🪣', name: 'Charge FODMAP' },
+  { key: 'aminoBalance',   emoji: '🧬', name: 'Équilibre acides aminés' },
+];
+
+const STATUS_COLOR: Record<LabStatus, string> = {
+  ok:   Colors.ok,
+  mid:  Colors.signal,
+  warn: Colors.warn,
+};
+
+const STATUS_LABEL: Record<LabStatus, string> = {
+  ok:   'Bon',
+  mid:  'Moyen',
+  warn: 'À corriger',
+};
+
 interface ProfileScreenProps {
   profile: UserProfile;
   digestiveMemory: string;
   digestiveMemoryDate: string;
   memoryLoading: boolean;
   memoryError: string | null;
+  labScores: LabScores | null;
+  labScoresDate: string;
+  labLoading: boolean;
+  labError: string | null;
   onEdit: () => void;
   onToggleDiet: (id: string) => void;
   onOpenMenu: () => void;
   onOpenFodmap: () => void;
   onUpdateMemory: () => void;
+  onGenerateLab: () => void;
 }
 
 export function ProfileScreen({
@@ -59,11 +87,16 @@ export function ProfileScreen({
   digestiveMemoryDate,
   memoryLoading,
   memoryError,
+  labScores,
+  labScoresDate,
+  labLoading,
+  labError,
   onEdit,
   onToggleDiet,
   onOpenMenu,
   onOpenFodmap,
   onUpdateMemory,
+  onGenerateLab,
 }: ProfileScreenProps) {
   const insets = useSafeAreaInsets();
   const [helpVisible, setHelpVisible] = useState(false);
@@ -234,6 +267,71 @@ export function ProfileScreen({
               {memoryLoading
                 ? 'Analyse en cours…'
                 : digestiveMemory ? 'Mettre à jour la mémoire' : 'Analyser mes données'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Section: Laboratoire nutritionnel */}
+        <View style={styles.section}>
+          <Text style={styles.sectionEyebrow}>🧪 Laboratoire nutritionnel</Text>
+          <Text style={styles.sectionDesc}>
+            Analyse IA de ta journée selon 7 indicateurs de santé nutritionnelle avancés : ratio oméga, densité micronutritionnelle, score inflammatoire, diversité, ultra-transformé, charge FODMAP et équilibre protéique.
+          </Text>
+
+          {labScores ? (
+            <View style={styles.labCard}>
+              {labScoresDate ? (
+                <Text style={styles.labDate}>Analysé le {labScoresDate}</Text>
+              ) : null}
+              {LAB_METRICS.map(({ key, emoji, name }) => {
+                const score = labScores[key];
+                if (!score) return null;
+                const color = STATUS_COLOR[score.status];
+                return (
+                  <View key={key} style={styles.labRow}>
+                    <Text style={styles.labEmoji}>{emoji}</Text>
+                    <View style={styles.labRowCenter}>
+                      <View style={styles.labRowTop}>
+                        <Text style={styles.labName}>{name}</Text>
+                        <View style={[styles.labStatusBadge, { backgroundColor: color + '20', borderColor: color + '50' }]}>
+                          <Text style={[styles.labStatusText, { color }]}>{score.label}</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.labValue}>{score.value}</Text>
+                      <Text style={styles.labComment}>{score.comment}</Text>
+                    </View>
+                    <View style={[styles.labDot, { backgroundColor: color }]} />
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            <View style={styles.labEmpty}>
+              <Text style={styles.labEmptyIcon}>🧪</Text>
+              <Text style={styles.labEmptyText}>
+                Analyse basée sur les repas d'aujourd'hui.{'\n'}Ajoute tes repas dans le Journal puis lance l'évaluation.
+              </Text>
+            </View>
+          )}
+
+          {labError ? (
+            <Text style={styles.labError}>{labError}</Text>
+          ) : null}
+
+          <TouchableOpacity
+            style={[styles.memoryBtn, labLoading && styles.memoryBtnLoading]}
+            onPress={onGenerateLab}
+            disabled={labLoading}
+            activeOpacity={0.75}
+          >
+            {labLoading
+              ? <ActivityIndicator size="small" color={Colors.paper2} />
+              : <Icon name="sparkle" size={14} color={Colors.paper2} />
+            }
+            <Text style={styles.memoryBtnText}>
+              {labLoading
+                ? 'Analyse en cours…'
+                : labScores ? 'Ré-analyser la journée' : 'Analyser ma journée'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -621,5 +719,118 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.paper2,
     letterSpacing: 0.1,
+  },
+
+  // Lab nutritionnel
+  labCard: {
+    borderWidth: 1,
+    borderColor: 'rgba(46,78,139,0.2)',
+    borderRadius: 18,
+    backgroundColor: 'rgba(46,78,139,0.03)',
+    padding: 16,
+    marginBottom: 14,
+    gap: 2,
+  },
+  labDate: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    color: Colors.muted2,
+    letterSpacing: 0.3,
+    marginBottom: 10,
+    textAlign: 'right',
+  },
+  labRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingVertical: 11,
+    borderTopWidth: 1,
+    borderTopColor: Colors.hairline2,
+  },
+  labEmoji: {
+    fontSize: 18,
+    lineHeight: 22,
+    width: 26,
+    textAlign: 'center',
+    flexShrink: 0,
+  },
+  labRowCenter: {
+    flex: 1,
+    gap: 3,
+  },
+  labRowTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  labName: {
+    fontFamily: Fonts.sansSemiBold,
+    fontSize: 13,
+    color: Colors.ink,
+    letterSpacing: -0.1,
+    flex: 1,
+  },
+  labStatusBadge: {
+    borderWidth: 1,
+    borderRadius: 100,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    flexShrink: 0,
+  },
+  labStatusText: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  labValue: {
+    fontFamily: Fonts.serif,
+    fontSize: 15,
+    color: Colors.ink,
+    letterSpacing: -0.2,
+  },
+  labComment: {
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    color: Colors.muted,
+    lineHeight: 18,
+  },
+  labDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 8,
+    flexShrink: 0,
+  },
+  labEmpty: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.hairline2,
+    borderRadius: 16,
+    borderStyle: 'dashed',
+    marginBottom: 14,
+  },
+  labEmptyIcon: {
+    fontSize: 22,
+    lineHeight: 26,
+    flexShrink: 0,
+  },
+  labEmptyText: {
+    flex: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.muted,
+    lineHeight: 20,
+  },
+  labError: {
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    color: Colors.warn,
+    marginBottom: 10,
+    paddingHorizontal: 2,
   },
 });

@@ -53,7 +53,7 @@ Et plus largement, un compagnon de **connaissance nutritionnelle** :
 | **Photo IA** | stack `foodPhoto` | Reconnaissance d'aliments par photo (vision IA) |
 | **FODMAP** | stack `fodmap` | Protocole personnel — phase, réintroductions, réactions |
 | **Générateur de repas** | stack `mealGenerator` | Recettes IA profil-aware (allergènes, FODMAP, macros) |
-| **Encyclopédie** | stack `knowledge` | 80 entrées hors-ligne, mode simple / expert, navigation par catégorie |
+| **Encyclopédie** | stack `knowledge` | 87 entrées hors-ligne, mode simple / expert, catégorie Laboratoire nutritionnel (7 indicateurs) |
 
 ---
 
@@ -261,6 +261,7 @@ Nutritor supporte deux fournisseurs d'IA pour la génération de fiches nutritio
 - [x] **Commentaire libre par journée** — zone texte max 2 000 caractères sous le widget Bien-être, sauvegardée par date
 - [x] **Avis Nutritionnel IA dans le Journal** — analyse des répartitions P/G/L (% énergétiques), commentaire en 2–3 phrases persisté par date, régénérable à volonté
 - [x] **Mémoire digestive intelligente** — section dans le Profil : l'IA croise 21 jours de repas × symptômes pour générer jusqu'à 30 observations cliniques personnalisées (patterns de tolérance/intolérance, associations alimentaires, effets de la cuisson…). Cumulative et auto-affinée à chaque analyse.
+- [x] **Laboratoire nutritionnel** — 7 entrées expertes dans l'Encyclopédie (Ratio ω-3/ω-6, Densité micronutritionnelle, Score inflammatoire, Diversité, NOVA, Charge FODMAP, Équilibre acides aminés) + évaluation IA de la journée dans le Profil (7 scores avec status ok/moyen/à corriger, valeur quantitative et observation clinique)
 - [x] **Calcul IA des macros sur les plats** — bouton « Calculer IA » estime kcal + P/G/L de chaque ingrédient depuis son nom et sa quantité
 - [x] **Commentaire IA sur les plats** — analyse de l'équilibre nutritionnel (trop glucidique ? trop lipidique ? bien équilibré ?)
 - [x] **Barre macros P/G/L sur les cartes de plats** — micro-barre colorée proportionnelle visible dès que les macros sont renseignées

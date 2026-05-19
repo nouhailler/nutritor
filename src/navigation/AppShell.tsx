@@ -44,7 +44,8 @@ import { KnowledgeScreen } from '../screens/KnowledgeScreen';
 import { AppSettings, DEFAULT_SETTINGS } from '../types/settings';
 import { FodmapProtocol, DEFAULT_FODMAP_PROTOCOL } from '../data/fodmapProtocol';
 import { refreshCiqualAllergens } from '../services/ciqual';
-import { generateMeals, updateDigestiveMemory, DigestiveDayData } from '../services/aiService';
+import { generateMeals, updateDigestiveMemory, DigestiveDayData, generateLabScores } from '../services/aiService';
+import { LabScores } from '../types/labScores';
 import { GeneratedMeal, MealGeneratorResult } from '../types/mealGenerator';
 import { JournalEntry, EMPTY_DAY_MEALS, computeDayLog } from '../data/weeklyStats';
 import { SymptomEntry, SymptomScores } from '../types/symptoms';
@@ -304,6 +305,16 @@ export function AppShell() {
   );
   const [memoryLoading, setMemoryLoading] = useState(false);
   const [memoryError, setMemoryError] = useState<string | null>(null);
+  const [labScores, setLabScores] = usePersistedState<LabScores | null>(
+    KEYS.labScores,
+    null,
+  );
+  const [labScoresDate, setLabScoresDate] = usePersistedState<string>(
+    KEYS.labScoresDate,
+    '',
+  );
+  const [labLoading, setLabLoading] = useState(false);
+  const [labError, setLabError] = useState<string | null>(null);
   const [fodmapProtocol, setFodmapProtocol] = usePersistedState<FodmapProtocol>(
     KEYS.fodmapProtocol,
     DEFAULT_FODMAP_PROTOCOL,
@@ -424,6 +435,21 @@ export function AppShell() {
       }
       return { ...prev, [date]: text };
     });
+  };
+
+  const handleGenerateLab = async () => {
+    setLabLoading(true);
+    setLabError(null);
+    try {
+      const scores = await generateLabScores(meals, profile, settings);
+      setLabScores(scores);
+      const dateLabel = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      setLabScoresDate(dateLabel);
+    } catch (e: any) {
+      setLabError(e?.message ?? 'Erreur lors de l\'analyse.');
+    } finally {
+      setLabLoading(false);
+    }
   };
 
   const handleSaveAdvice = (date: string, text: string) => {
@@ -968,11 +994,16 @@ export function AppShell() {
             digestiveMemoryDate={digestiveMemoryDate}
             memoryLoading={memoryLoading}
             memoryError={memoryError}
+            labScores={labScores}
+            labScoresDate={labScoresDate}
+            labLoading={labLoading}
+            labError={labError}
             onEdit={() => setStack('editProfile')}
             onToggleDiet={handleToggleDiet}
             onOpenMenu={() => setDrawerOpen(true)}
             onOpenFodmap={() => setStack('fodmap')}
             onUpdateMemory={handleUpdateMemory}
+            onGenerateLab={handleGenerateLab}
           />
         );
         break;

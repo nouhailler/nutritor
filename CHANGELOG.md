@@ -9,6 +9,16 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [0.10.0] — 2026-05-19
+
+### Ajouté
+- **Encyclopédie — Laboratoire nutritionnel** : nouvelle catégorie `lab` avec 7 entrées expertes (mode simple + expert) : Ratio ω-3/ω-6, Densité micronutritionnelle, Score inflammatoire, Diversité alimentaire, Score ultra-transformé (NOVA), Charge FODMAP cumulée, Équilibre acides aminés (DIAAS/PDCAAS). Chaque entrée couvre les mécanismes cliniques, les interactions, les doses de référence et les notes FODMAP.
+- **Profil — Laboratoire nutritionnel IA** : nouvelle section « 🧪 Laboratoire nutritionnel » dans le Profil — le bouton « Analyser ma journée » envoie les repas du jour à l'IA qui évalue les 7 indicateurs en un seul appel et retourne pour chacun : valeur quantitative, qualification (ok/moyen/à corriger), label court et observation clinique d'une phrase. Les scores sont persistés avec la date d'analyse.
+- **`generateLabScores`** dans `aiService.ts` : prompt expert multi-critères avec seuils de status précis par indicateur, retourne JSON structuré (`LabScores`).
+- **Types** : `src/types/labScores.ts` — interfaces `LabScore`, `LabScores`, `LabStatus`.
+
+---
+
 ## [0.9.0] — 2026-05-19
 
 ### Ajouté

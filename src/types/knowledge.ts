@@ -3,7 +3,8 @@ export type KnowledgeCategory =
   | 'mineral'
   | 'aminoacid'
   | 'bioactive'
-  | 'concept';
+  | 'concept'
+  | 'lab';
 
 export interface KnowledgeEntry {
   id: string;
@@ -37,4 +38,5 @@ export const CATEGORY_META: Record<
   aminoacid: { label: 'Acides aminés',       emoji: '🧬', color: '#3F5A3A', bg: 'rgba(63,90,58,0.08)'  },
   bioactive: { label: 'Composés bioactifs',  emoji: '🌿', color: '#6B3A8B', bg: 'rgba(107,58,139,0.08)'},
   concept:   { label: 'Concepts digestifs',  emoji: '🧠', color: '#8B3A2E', bg: 'rgba(139,58,46,0.08)' },
+  lab:       { label: 'Laboratoire nutritionnel', emoji: '🧪', color: '#2E4E8B', bg: 'rgba(46,78,139,0.08)' },
 };

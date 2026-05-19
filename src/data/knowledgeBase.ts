@@ -1332,6 +1332,131 @@ export const KNOWLEDGE_BASE: KnowledgeEntry[] = [
     relatedIds: ['resveratrol', 'egcg', 'insulinoresistance', 'chronobiologie', 'epigenetique'],
   },
 
+  // ╔══════════════════════════════════════════════════════════╗
+  // ║  LABORATOIRE NUTRITIONNEL (7)                            ║
+  // ╚══════════════════════════════════════════════════════════╝
+
+  {
+    id: 'lab-omega', category: 'lab', name: 'Ratio ω-3 / ω-6', aliases: ['Balance oméga', 'Équilibre oméga-3 oméga-6'],
+    emoji: '🐟', tagline: 'Le déséquilibre silencieux de l\'alimentation moderne',
+    simple: {
+      what: 'Les acides gras oméga-3 (ALA, EPA, DHA) et oméga-6 (LA, AA) sont deux familles d\'acides gras polyinsaturés essentiels — le corps ne peut pas les fabriquer. Ils se partagent les mêmes enzymes pour être transformés. Quand les ω-6 sont en excès, ils prennent la place des ω-3 et orientent le métabolisme vers l\'inflammation.',
+      why: 'Le ratio idéal est estimé entre 1:1 et 1:4 (ω-3 : ω-6). L\'alimentation occidentale actuelle atteint souvent 1:15 à 1:20, principalement à cause des huiles végétales raffinées (tournesol, maïs, soja) et des produits ultra-transformés. Ce déséquilibre est associé à une inflammation de bas grade, aux maladies cardiovasculaires et aux troubles cognitifs.',
+      sources: ['Poissons gras (sardine, maquereau, saumon) — EPA, DHA', 'Graines de lin, chia, chanvre — ALA', 'Huile de noix, de colza — ALA', 'Algues — DHA végétal', 'Huile d\'olive — faible en ω-6'],
+      deficiency: 'Ratio trop élevé en ω-6 : inflammation chronique, peau sèche, troubles de l\'humeur, augmentation des marqueurs cardiovasculaires (CRP, IL-6).',
+    },
+    expert: {
+      mechanism: 'ALA (18:3 ω-3) et LA (18:2 ω-6) sont convertis par les mêmes désaturases (FADS1/FADS2) et élongases. La compétition enzymatique fait qu\'un excès de LA réduit la conversion d\'ALA en EPA/DHA de 40-60 %. L\'AA (ω-6) produit via COX-2 des prostaglandines PGE2 et thromboxane TXA2 pro-inflammatoires, des leucotriènes LTB4 et LTC4. L\'EPA (ω-3) produit des résolvines et protectines qui activement résolvent l\'inflammation. Le ratio phospholipidique membranaire (mesurable dans les érythrocytes) reflète l\'exposition chronique sur 3 mois.',
+      interactions: ['Compétition enzymatique FADS1/FADS2 : l\'apport en ω-6 plafonne la conversion ω-3', 'La vitamine E protège les PUFA de la peroxydation lipidique (ratio E/PUFA)', 'Le zinc est cofacteur des désaturases', 'La cuisson à haute température des huiles riches en ω-6 produit des aldéhydes oxydatifs (acroléine, HNE)', 'L\'aspirine modifie la COX-2 pour produire des résolvines 18R-EPA à partir de l\'EPA — effet anti-inflammatoire amplifiable'],
+      dosage: { rda: '250–500', unit: 'mg EPA+DHA/j' },
+      clinicalNote: 'Les études de substitution (remplacement des ω-6 par ω-3) montrent une réduction des marqueurs d\'inflammation à 6-12 semaines. Le score hs-CRP est un proxy validé. PREDIMED (2013) : régime méditerranéen riche en ω-3 → réduction de 30 % des événements cardiovasculaires majeurs vs régime faible en graisses.',
+      fodmapNote: 'Les poissons gras sont Low FODMAP. Graines de chia (2 c. à soupe max) et graines de lin (1 c. à soupe) sont tolérées. Huile de noix et huile de colza sont sans FODMAP.',
+    },
+    relatedIds: ['epa-dha', 'lab-inflammatory', 'lab-micro-density'],
+  },
+
+  {
+    id: 'lab-micro-density', category: 'lab', name: 'Densité micronutritionnelle', aliases: ['ANDI', 'NRF', 'Nutrient density'],
+    emoji: '🌿', tagline: 'Maximiser les nutriments par calorie consommée',
+    simple: {
+      what: 'La densité micronutritionnelle mesure la richesse d\'un aliment en vitamines, minéraux, fibres et composés protecteurs rapportée à sa valeur calorique. Un aliment dense en nutriments apporte beaucoup pour peu de calories. Un aliment à calories vides (sucre blanc, huile raffinée, alcool) apporte de l\'énergie sans micronutriments utiles.',
+      why: 'La satiété et les apports caloriques ne garantissent pas des apports micronutritionnels suffisants. On peut être "suralimenté et sous-nourri" en micronutriments, notamment avec une alimentation riche en ultra-transformés. À l\'inverse, certains légumes verts apportent plus de 80 micronutriments distincts pour moins de 50 kcal/100 g.',
+      sources: ['Kale, épinards crus, bette à carde — densité max', 'Foie de bœuf — protéines + fer + B12 + rétinol', 'Lentilles — fibres + fer + B9 + protéines', 'Sardines entières — ω-3 + Ca + D + B12', 'Graines de citrouille — Mg + Zn + Fe'],
+    },
+    expert: {
+      mechanism: 'Le score ANDI (Aggregate Nutrient Density Index, Fuhrman) classe les aliments de 1 à 1 000 selon la densité en 34 micronutriments par kcal. Le NRF9.3 (Drewnowski) calcule la densité de 9 nutriments à promouvoir (vitamines, fibres, protéines, potassium) moins 3 nutriments limitants (sodium, sucres ajoutés, graisses saturées) pour 100 kcal. La charge glycémique et l\'indice insulinique complètent l\'évaluation. L\'objectif clinique est d\'atteindre les AJR de tous les micronutriments dans une fenêtre calorique réaliste (1 800–2 200 kcal/j).',
+      interactions: ['La cuisson réduit certains micronutriments (B1, C, folates) mais améliore la biodisponibilité d\'autres (lycopène, bêta-carotène)', 'L\'antinutrition (phytates, oxalates) réduit la biodisponibilité des minéraux dans les graines et légumineuses', 'L\'association lipides + vitamines liposolubles (A, D, E, K) améliore l\'absorption', 'Le NEAT (activité physique spontanée) augmente les besoins de base sans changer l\'appétit → déficit micronutritionnel insidieux chez les actifs'],
+      clinicalNote: 'Les grandes enquêtes (NHANES, Nutrinet-Santé) montrent que 40–80 % des adultes n\'atteignent pas les AJR en vitamine D, magnésium, iode, zinc et B9 malgré des apports caloriques suffisants voire excessifs. Cela reflète le remplacement progressif des aliments denses par des ultra-transformés.',
+    },
+    relatedIds: ['vit-d', 'magnesium', 'lab-omega', 'lab-ultra-processed'],
+  },
+
+  {
+    id: 'lab-inflammatory', category: 'lab', name: 'Score inflammatoire', aliases: ['DII', 'Dietary Inflammatory Index', 'Index inflammatoire alimentaire'],
+    emoji: '🔥', tagline: 'Chaque repas penche la balance inflammation',
+    simple: {
+      what: 'Le score inflammatoire alimentaire (DII) évalue si ton alimentation favorise ou réduit l\'inflammation dans le corps. Certains aliments activent les signaux d\'alarme immunitaires (inflammation pro) ; d\'autres les éteignent (inflammation anti). L\'inflammation de bas grade chronique est associée à la quasi-totalité des maladies non transmissibles (diabète, maladies cardiaques, cancer, Alzheimer).',
+      why: 'Un DII élevé (pro-inflammatoire) est associé à un risque cardiovasculaire 1,4 fois plus élevé, à une incidence 1,3 fois plus haute du cancer colorectal et à une accélération des biomarqueurs de vieillissement (longueur des télomères). Le régime méditerranéen et le régime DASH obtiennent les DII les plus bas.',
+      sources: ['Anti-inflammatoires : curcuma + poivre noir, poissons gras, baies, légumes colorés, huile d\'olive, ail, gingembre, thé vert', 'Pro-inflammatoires : sucres raffinés, graisses trans, alcool, viandes transformées, huiles de tournesol/maïs en excès'],
+    },
+    expert: {
+      mechanism: 'Le DII (Shivappa, 2014) est calculé à partir de 45 paramètres alimentaires, chacun pondéré selon son effet net sur 6 biomarqueurs inflammatoires (IL-1β, IL-4, IL-6, IL-10, TNF-α, CRP). L\'alimentation pro-inflammatoire active NF-κB (via LPS/TLR4 pour les graisses saturées et l\'endotoxémie métabolique), amplifie la voie COX-2/LOX et augmente les ROS mitochondriaux. Les polyphénols (resvératrol, quercétine, EGCG) inhibent directement IκB kinase → blocage NF-κB. Le microbiome module aussi : SCFA produits par les fibres (butyrate, propionate) inhibent HDAC dans les cellules immunitaires.',
+      interactions: ['Synergie curcumine + pipérine (biodisponibilité ×20)', 'La vitamine D (récepteur VDR) régule l\'expression de 300+ gènes immunitaires — carence → tendance pro-inflammatoire', 'Le ratio ω-3/ω-6 est le principal levier moléculaire (COX-1/2, résolvines)', 'L\'exercice d\'endurance modéré est anti-inflammatoire (IL-6 myokine → IL-10 anti-inflammatoire) ; le sédentarisme augmente TNF-α adipocytaire'],
+      clinicalNote: 'La meta-analyse Shivappa (2015) — 11 études, 100 000 participants — montre que le quartile DII le plus élevé est associé à une augmentation de 65 % des marqueurs CRP et IL-6 vs le plus bas. L\'INSERM (Nutrinet-Santé, 2022) confirme l\'association DII–mortalité toutes causes sur 170 000 personnes-années.',
+      fodmapNote: 'La majorité des aliments anti-inflammatoires (légumes colorés, herbes, épices) sont Low FODMAP. L\'ail et l\'oignon — très anti-inflammatoires — sont FODMAP élevés : les huiles d\'ail/oignon (où les fructanes restent dans le solide) sont une alternative.',
+    },
+    relatedIds: ['curcumine', 'lab-omega', 'resveratrol', 'egcg'],
+  },
+
+  {
+    id: 'lab-diversity', category: 'lab', name: 'Diversité alimentaire', aliases: ['Score de diversité', 'HDDS', 'Diversité diététique'],
+    emoji: '🎨', tagline: 'Trente espèces végétales par semaine — le chiffre qui change tout',
+    simple: {
+      what: 'La diversité alimentaire mesure le nombre de groupes et d\'espèces différents consommés. Chaque aliment a un profil micronutritionnel unique — aucun ne couvre tout. Plus tu diversifies, plus tu maximises tes chances d\'atteindre tous les apports recommandés sans même les compter. Et ton microbiote intestinal s\'en nourrit littéralement.',
+      why: 'L\'étude American Gut (2018, > 10 000 participants) a montré que les personnes consommant > 30 espèces végétales par semaine avaient un microbiome intestinal significativement plus diversifié que ceux en consommant < 10, indépendamment de leur alimentation végé/omnivore. Un microbiome diversifié est associé à une meilleure immunité, une inflammation réduite et une santé mentale améliorée.',
+      sources: ['Principe : varier les couleurs, les textures, les familles botaniques', 'Compter : herbes fraîches, épices, légumineuses, céréales, fruits, légumes, noix et graines', 'Truc pratique : chaque épice ou herbe = 1 point vers les 30 végétaux semaine'],
+    },
+    expert: {
+      mechanism: 'Le score HDDS (Household Dietary Diversity Score, FAO) compte les groupes alimentaires consommés sur 24h (score 0–12). L\'indice de diversité nutritionnelle (NDI) corrèle r=0,72 avec l\'adéquation des micronutriments. Mécanisme microbiome : chaque fibre végétale (inuline, pectine, amidon résistant, bêta-glucane, arabinoxylanes) est fermentée par des espèces bactériennes différentes (Bifidobacterium, Faecalibacterium, Akkermansia, Roseburia). La perte de diversité diététique → extinction de certains taxa bactériens → réduction de la production de SCFA → intégrité de la barrière intestinale compromise.',
+      interactions: ['La diversité des fibres prébiotiques (non la quantité seule) détermine la diversité du microbiome', 'Les polyphénols des fruits et légumes colorés ont une action prébiotique directe sur Bifidobacterium et Lactobacillus', 'L\'alcool et les ultra-transformés réduisent la diversité du microbiome même en apports modérés', 'La monotonie alimentaire (monoculture nutritionnelle) est un facteur de risque de carence micronutritionnelle sous-estimé'],
+      clinicalNote: 'L\'étude MOLI-SANI (55 000 participants italiens) a montré qu\'un score de diversité alimentaire élevé était associé à une réduction de 30 % de la mortalité toutes causes sur 8 ans de suivi, après ajustement pour les calories totales. L\'effet est indépendant de l\'adhérence à un régime spécifique.',
+      fodmapNote: 'Le défi FODMAP est qu\'il restreint certains groupes (légumineuses, céréales, certains fruits) — risque de réduction de diversité. En phase de réintroduction, tester systématiquement permet de maximiser la diversité tout en restant dans la tolérance individuelle.',
+    },
+    relatedIds: ['microbiote', 'fibres-prebiotiques', 'lab-micro-density'],
+  },
+
+  {
+    id: 'lab-ultra-processed', category: 'lab', name: 'Score ultra-transformé', aliases: ['NOVA 4', 'UPF', 'Ultra-processed foods'],
+    emoji: '🏭', tagline: 'NOVA classe ce que l\'étiquette ne dit pas',
+    simple: {
+      what: 'La classification NOVA (Monteiro, UFRJ) divise les aliments en 4 groupes selon leur niveau de transformation industrielle, pas selon leur composition. Le groupe 4 — ultra-transformés (UPF) — regroupe les aliments qui ne peuvent pas être reproduits dans une cuisine domestique : ils contiennent des substances extraites d\'aliments (protéines isolées, graisses hydrogénées) et des additifs cosmétiques (émulsifiants, édulcorants, colorants, arômes artificiels).',
+      why: 'Chaque augmentation de 10 % de la part des UPF dans l\'apport calorique est associée à une augmentation de 12 % du risque de mortalité toutes causes (Srour, BMJ 2019, 105 000 participants). Les UPF représentent 50–60 % de l\'apport calorique au Royaume-Uni et aux USA ; 35–40 % en France. Au-delà des nutriments, leurs additifs perturbent directement la barrière intestinale et le microbiome.',
+      sources: ['NOVA 1 : aliments bruts ou minimalement transformés — légumes, fruits, viandes fraîches, œufs, lait, légumineuses sèches', 'NOVA 2 : ingrédients culinaires — huile, sel, farine, sucre, beurre', 'NOVA 3 : aliments transformés — conserves, fromages, charcuteries artisanales, légumes en bocaux', 'NOVA 4 (ultra-transformés) : plats préparés industriels, céréales du petit-déj, sodas, chips, barres céréalières, pain industriel, yaourts aromatisés, sauces industrielles'],
+    },
+    expert: {
+      mechanism: 'Les mécanismes des UPF sur la santé sont multiples et distincts de leur profil nutritionnel : (1) Les émulsifiants (carraghénanes, CMC, polysorbate 80) augmentent la perméabilité intestinale et perturbent la couche de mucus — effet indépendant des calories. (2) Les édulcorants intenses (aspartame, saccharine, sucralose) perturbent le microbiome et altèrent la réponse insulinique. (3) La texture ultra-molle et l\'hyperpalatabilité (combinaisons sucre-sel-graisses optimisées via algorithmes) court-circuitent les signaux de satiété physiologiques — consommation passive 400-500 kcal/j supplémentaires (Hall, 2019, étude contrôlée randomisée NIH). (4) Les matrices alimentaires détruites (amidon gélatinisé, protéines dénaturées) augmentent la vitesse d\'absorption et l\'index glycémique.',
+      interactions: ['Les additifs émulsifiants interagissent avec le microbiome — données murines et epidémiologiques convergentes', 'Les UPF tendent à être pauvres en fibres, en eau de liaison et en micronutriments → densité micronutritionnelle faible malgré l\'enrichissement artificiel (ex. céréales enrichies)', 'La matrice alimentaire (non le nutriment isolé) détermine la satiété : fromage vs protéines de lait isolées', 'Les colorants artificiels (Allura Red, tartrazine) sont associés à l\'hyperactivité chez les enfants génétiquement sensibles (revue EFSA 2021)'],
+      clinicalNote: 'L\'essai randomisé Hall (NIH, 2019, Cell Metabolism) est la preuve causale la plus solide : régime UPF vs non-UPF ad libitum, appariés pour macronutriments — les participants sous UPF ont consommé spontanément 500 kcal/j de plus et pris 0,9 kg en 2 semaines, réversible après retour au non-UPF.',
+      fodmapNote: 'La majorité des UPF contiennent des polyols (sorbitol, mannitol) comme édulcorants, du sirop de glucose-fructose (fructose en excès) et souvent de l\'inuline ou des fructo-oligosaccharides comme "fibres prébiotiques" — tous hautement FODMAP. Les éviter améliore souvent les symptômes SII indépendamment du régime strict Low FODMAP.',
+    },
+    relatedIds: ['microbiote', 'lab-diversity', 'lab-inflammatory'],
+  },
+
+  {
+    id: 'lab-fodmap-load', category: 'lab', name: 'Charge FODMAP cumulée', aliases: ['FODMAP bucket', 'Cumul FODMAP', 'Seuil FODMAP'],
+    emoji: '🪣', tagline: 'Le seau qui déborde — pas l\'aliment isolé',
+    simple: {
+      what: 'La théorie du "seau FODMAP" (Monash University) explique pourquoi certaines personnes tolèrent un aliment seul mais pas en association, ou le matin mais pas le soir. Chaque aliment FODMAP que tu consommes dans la journée s\'ajoute dans un seau imaginaire. Quand le seau déborde, les symptômes apparaissent — ballonnements, crampes, transit perturbé. Le seuil de débordement est individuel.',
+      why: 'Les FODMAP (Fermentable Oligo-, Di-, Mono-saccharides And Polyols) sont des glucides à chaîne courte fermentés rapidement par les bactéries intestinales, générant des gaz et un appel osmotique d\'eau dans l\'intestin. L\'effet est dose-dépendant et cumulatif — pas binaire. Une courgette seule est bien tolérée ; courgette + oignon + pomme le même jour peut dépasser le seuil individuel.',
+      sources: ['Fructanes : blé, seigle, ail, oignon, artichaut', 'Excès fructose : pomme, poire, mangue, sirop d\'agave', 'Polyols : champignons, avocats, pêches, sorbitol (E420)', 'GOS : légumineuses, noix de cajou', 'Lactose : lait, yaourt nature, fromage frais'],
+      deficiency: 'Charge cumulée excessive (seau plein) : ballonnements, douleurs abdominales, crampes, alternance diarrhée-constipation chez les personnes sensibles (SII, IMB, dysbiose).',
+    },
+    expert: {
+      mechanism: 'Chaque sous-classe FODMAP a un seuil de tolérance indépendant : fructanes (≤ 0,5 g/portion Low FODMAP), GOS (≤ 0,3 g), polyols-sorbitol (≤ 0,5 g), polyols-mannitol (≤ 0,4 g), fructose en excès du glucose (≤ 0,15 g). Les seuils ne s\'additionnent pas linéairement entre sous-classes selon les données Monash, mais la charge globale reste un facteur limitant. Mécanisme : osmose intestinale (appel hydrique → diarrhée osmotique) + fermentation rapide par Ruminococcus, Bifidobacterium, Lachnospiraceae → production de H2, CO2, CH4 → distension → activation des mécanorécepteurs viscéraux sur-sensibilisés dans le SII.',
+      interactions: ['La vidange gastrique (vitesse des repas, état émotionnel via axe intestin-cerveau) module la livraison iléocolique des FODMAP et donc l\'intensité des symptômes', 'Le stress et le cortisol augmentent la perméabilité intestinale et la sensibilité viscérale — seuil de débordement abaissé', 'L\'antibiotique perturbant le microbiome peut modifier temporairement la fermentation FODMAP et la tolérance individuelle', 'La cuisson prolongée des légumineuses hydrolyse partiellement les GOS — réduction de 30-50 % de la charge FODMAP'],
+      clinicalNote: 'La phase d\'élimination FODMAP (2-6 semaines) présente 70-75 % de réponse clinique dans le SII selon les essais randomisés. La réintroduction systématique est impérative — ne garder que les restrictions individuellement validées pour éviter la dénutrition micronutritionnelle et la dysbiose par déficit en prébiotiques FODMAP. L\'objectif à long terme est la "dose FODMAP maximale tolérée", non zéro.',
+      fodmapNote: 'Cette entrée décrit directement le concept FODMAP et sa charge cumulative — voir les entrées spécifiques de la base CIQUAL et la section Protocole FODMAP du profil pour les données par aliment.',
+    },
+    relatedIds: ['microbiote', 'permeabilite-intestinale', 'lab-diversity'],
+  },
+
+  {
+    id: 'lab-amino-balance', category: 'lab', name: 'Équilibre acides aminés', aliases: ['DIAAS', 'PDCAAS', 'Acides aminés essentiels', 'Complémentarité protéique'],
+    emoji: '🧬', tagline: 'La qualité des protéines, pas seulement leur quantité',
+    simple: {
+      what: 'Les protéines alimentaires sont composées de 20 acides aminés. Neuf sont dits "essentiels" car le corps ne peut pas les synthétiser : histidine, isoleucine, leucine, lysine, méthionine, phénylalanine, thréonine, tryptophane, valine. Si l\'un d\'entre eux manque, la synthèse protéique est limitée — c\'est le concept d\'"acide aminé limitant". Les protéines animales (viande, œufs, lait) contiennent les 9 en proportions équilibrées. Les protéines végétales sont souvent déficientes en un ou deux acides aminés spécifiques.',
+      why: 'Au-delà de la quantité totale de protéines, la disponibilité de chaque acide aminé essentiel détermine si les protéines peuvent être utilisées. Pour les végétariens et vegans, combiner les sources végétales sur la journée (légumineuses + céréales) permet d\'obtenir le profil complet sans nécessairement mixer dans le même repas.',
+      sources: ['Profil complet : œufs entiers, lait, bœuf, poulet, poisson, quinoa, soja', 'Pauvres en lysine : blé, riz, maïs, seigle', 'Pauvres en méthionine : haricots, lentilles, pois chiches', 'Combinaison classique : riz + lentilles = profil quasi complet', 'Source végétale complète : spiruline, graines de chanvre, edamame'],
+    },
+    expert: {
+      mechanism: 'Le score DIAAS (Digestible Indispensable Amino Acid Score, FAO 2013) remplace le PDCAAS en tenant compte de la digestibilité iléale de chaque acide aminé indispensable (DIAA), pas seulement de la digestibilité fécale totale. DIAAS = (mg AA digestible dans 1 g de protéine alimentaire / mg AA dans 1 g de protéine de référence) × 100, pour chaque AA, on retient la valeur minimale. L\'AA limitant dans une protéine végétale réduit linéairement l\'utilisation anabolique de toutes les autres protéines (loi du minimum de Liebig). La leucine joue un rôle spécifique : elle déclenche la voie mTORC1 pour la synthèse protéique musculaire (seuil ≈ 2-3 g/repas). La synchronisation temporelle matière (pic d\'acides aminés postprandial) et l\'entraînement physique amplifient la réponse anabolique.',
+      interactions: ['L\'acide phytique des céréales et légumineuses réduit la digestibilité des protéines de 10-15 % (inhibition des protéases intestinales) — la germination et le trempage améliorent le DIAAS', 'Le tryptophane est précurseur de la sérotonine (5-HTP) et de la mélatonine — son statut influence le sommeil et l\'humeur', 'La méthionine est le donneur de méthyle primaire (cycles de méthylation, synthèse du glutathion) — son excès (viandes rouges) sans folates associés peut augmenter l\'homocystéine', 'Les acides aminés branchés (BCAA : leucine, isoleucine, valine) sont directement oxydés dans le muscle — leur supplémentation est le levier le mieux étudié pour réduire le catabolisme musculaire'],
+      dosage: { rda: '0,8', upper: '2,2', unit: 'g/kg/j (adulte)' },
+      clinicalNote: 'La complémentarité protéique n\'exige pas obligatoirement une combinaison au sein du même repas (Young & Pellett, 1994) — la synthèse protéique utilise un pool d\'acides aminés libres renouvelé sur 24h. Cependant, la synchronisation prandiale de la leucine (≥ 2,5 g/repas) et la répartition équilibrée des protéines sur 3-4 repas optimisent la synthèse musculaire (MPS) selon les données récentes de Phillips (McMaster, 2021).',
+    },
+    relatedIds: ['leucine', 'tryptophane', 'lab-micro-density'],
+  },
+
 ];
 
 // ── Utilitaires ───────────────────────────────────────────────
@@ -1363,7 +1488,7 @@ export function getRelated(entry: KnowledgeEntry): KnowledgeEntry[] {
 
 export function getCategoryCounts(): Record<KnowledgeEntry['category'], number> {
   const counts: Record<KnowledgeEntry['category'], number> = {
-    vitamin: 0, mineral: 0, aminoacid: 0, bioactive: 0, concept: 0,
+    vitamin: 0, mineral: 0, aminoacid: 0, bioactive: 0, concept: 0, lab: 0,
   };
   for (const e of KNOWLEDGE_BASE) counts[e.category]++;
   return counts;

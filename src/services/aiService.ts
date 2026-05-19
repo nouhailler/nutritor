@@ -4,6 +4,7 @@ import { UserProfile } from '../data/user';
 import { FodmapPhase } from '../data/fodmapProtocol';
 import { GeneratedMeal, MealGeneratorResult } from '../types/mealGenerator';
 import { SymptomEntry, SYMPTOM_CONFIG } from '../types/symptoms';
+import { LabScores } from '../types/labScores';
 
 const FOOD_SCHEMA = `{
   "id": "slug-unique-001",
@@ -553,6 +554,76 @@ Ingrédients : ${plate.recipe.map((r) => `${r.name} ${r.qty}`).join(', ')}`;
 
   if (!raw) throw new Error('Réponse IA vide.');
   return raw.trim();
+}
+
+// ── Laboratoire nutritionnel ─────────────────────────────────
+
+const LAB_SCORES_SCHEMA = `{
+  "omega":         {"status":"ok|mid|warn","value":"1:X","label":"...","comment":"..."},
+  "microDensity":  {"status":"ok|mid|warn","value":"XX/100","label":"...","comment":"..."},
+  "inflammatory":  {"status":"ok|mid|warn","value":"-X.X","label":"...","comment":"..."},
+  "diversity":     {"status":"ok|mid|warn","value":"X groupes","label":"...","comment":"..."},
+  "ultraProcessed":{"status":"ok|mid|warn","value":"XX %","label":"...","comment":"..."},
+  "fodmap":        {"status":"ok|mid|warn","value":"Faible|Modérée|Élevée","label":"...","comment":"..."},
+  "aminoBalance":  {"status":"ok|mid|warn","value":"XX/100","label":"...","comment":"..."}
+}`;
+
+const LAB_SCORES_SYSTEM = `Tu es un expert en nutrition clinique et biologie nutritionnelle. Tu analyses une journée alimentaire et tu évalues 7 indicateurs de santé nutritionnelle avancés.
+
+Pour chaque indicateur, tu fournis :
+- status : "ok" (favorable), "mid" (moyen / vigilance), "warn" (défavorable / à corriger)
+- value : valeur quantitative ou qualitative concise
+- label : qualification courte (max 4 mots)
+- comment : observation clinique d'une phrase, personnalisée aux aliments listés
+
+Critères de status pour chaque indicateur :
+1. omega (ratio ω-3/ω-6) — ok: ratio ≤1:5, mid: 1:5–1:10, warn: >1:10. Évalue la présence de poissons gras, huiles de lin/colza vs huiles de tournesol/maïs.
+2. microDensity (densité micronutritionnelle, 0–100) — ok: ≥65, mid: 40–65, warn: <40. Évalue la richesse en vitamines/minéraux par kcal, la présence de légumes verts, légumineuses, poissons.
+3. inflammatory (score inflammatoire, −5 à +5, négatif=anti-inflammatoire) — ok: ≤−1, mid: −1 à +2, warn: >+2. Évalue épices, ω-3, légumes colorés vs sucres raffinés, charcuteries, graisses trans.
+4. diversity (diversité alimentaire, groupes distincts 0–12) — ok: ≥7 groupes, mid: 4–6, warn: <4. Compte : céréales, légumineuses, légumes, fruits, laitiers, viandes/poissons/œufs, noix/graines, herbes/épices.
+5. ultraProcessed (% calorique NOVA 4, 0–100) — ok: <20%, mid: 20–40%, warn: >40%. Évalue la présence de plats préparés, pains industriels, sodas, céréales sucrées du commerce, charcuteries industrielles.
+6. fodmap (charge cumulée) — ok: Faible (repas peu fermentescibles), mid: Modérée (quelques aliments FODMAP modérés), warn: Élevée (blé, légumineuses, oignon/ail non filtrés, lactose, excès fructose). Donne la charge journalière globale.
+7. aminoBalance (équilibre acides aminés essentiels, 0–100) — ok: ≥75, mid: 50–75, warn: <50. Évalue la complémentarité des sources protéiques (animal = bon profil, végétal seul sans complémentarité = risque acide aminé limitant).
+
+Réponds UNIQUEMENT avec le JSON valide ci-dessous, sans aucun texte ni markdown autour :
+${LAB_SCORES_SCHEMA}`;
+
+export async function generateLabScores(
+  meals: Meal[],
+  profile: UserProfile,
+  settings: AppSettings,
+): Promise<LabScores> {
+  const activeDiets = profile.diets.filter((d) => d.on).map((d) => d.label).join(', ') || 'Aucun';
+  const foodLines = meals
+    .filter((m) => m.items.length > 0)
+    .map((m) => `${m.name}: ${m.items.map((i) => `${i.name}${i.qty ? ' ('+i.qty+')' : ''}`).join(', ')}`)
+    .join('\n');
+
+  if (!foodLines.trim()) throw new Error('Aucun aliment enregistré pour cette journée.');
+
+  const userMsg = `Régimes actifs : ${activeDiets}
+Calories totales : ${Math.round(meals.flatMap((m) => m.items).reduce((s, i) => s + i.kcal, 0))} kcal
+
+Repas de la journée :
+${foodLines}`;
+
+  const messages = [
+    { role: 'system', content: LAB_SCORES_SYSTEM },
+    { role: 'user', content: userMsg },
+  ];
+
+  const raw =
+    settings.aiProvider === 'openrouter'
+      ? await callOpenRouter(settings.openrouter, messages)
+      : await callOllama(settings.ollama, messages);
+
+  if (!raw) throw new Error('Réponse IA vide.');
+
+  const jsonStr = extractJSON(raw);
+  const parsed = JSON.parse(jsonStr) as LabScores;
+  // Minimal validation
+  if (!parsed.omega || !parsed.microDensity) throw new Error('Format de réponse invalide.');
+  return parsed;
 }
 
 // ── Digestive memory ─────────────────────────────────────────
