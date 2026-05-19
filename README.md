@@ -35,11 +35,11 @@ Et plus largement, un compagnon de **connaissance nutritionnelle** :
 
 | Écran | Accès | Description |
 |-------|-------|-------------|
-| **Journal** | tab `home` | Bilan du jour — anneau kcal SVG, 5 repas, macros, vitamines, avis nutritionnel IA, widget symptômes, commentaire libre quotidien |
+| **Journal** | tab `home` | Bilan du jour — anneau kcal SVG, 5 repas, macros, timeline physiologique 📊, vitamines, avis nutritionnel IA, widget symptômes, commentaire libre quotidien |
 | **Aliments** | tab `foods` | Bibliothèque personnelle + accès CIQUAL / OFF / scanner / IA / photo |
 | **Plats** | tab `saved` | Grille 2 colonnes de repas sauvegardés — filtres, tri, création |
 | **Statistiques** | tab `stats` | Bar chart 7 jours, sparklines macros, heatmap conformité régime, corrélations symptômes |
-| **Profil** | tab `profile` | 14 allergènes avec sévérité, 6 régimes actifs, objectif calorique, mémoire digestive IA |
+| **Profil** | tab `profile` | 14 allergènes avec sévérité, 6 régimes actifs, objectif calorique, mémoire digestive IA, laboratoire nutritionnel IA (7 indicateurs) |
 | **Recherche** | stack `search` | Filtres régime, compatibilité allergènes temps réel, récents |
 | **Détail aliment** | stack `detail` | 12 sections — acides aminés, FODMAP, bioactifs, sensoriel, ajout journal |
 | **Détail plat** | stack `savedDetail` | Recette par ingrédient, macros, calcul IA des macros, commentaire IA, photo, ajout au journal |

@@ -28,6 +28,9 @@ import { OnboardingTip } from '../components/OnboardingTip';
 import { TIPS } from '../data/onboarding';
 import { AppSettings } from '../types/settings';
 import { generateDayAdvice } from '../services/aiService';
+import { PhysioTimeline } from '../components/PhysioTimeline';
+import { AutoTimelineEvent, UserTimelineEvent } from '../types/timeline';
+import { computeAutoEvents } from '../services/timelineService';
 
 // ── Date helpers ──────────────────────────────────────────────
 
@@ -344,11 +347,14 @@ interface HomeScreenProps {
   symptomEntry: SymptomEntry | null;
   comment: string;
   aiAdvice: string;
+  userTimelineEvents: UserTimelineEvent[];
   onDateChange: (date: string | null) => void;
   onRemoveItem: (mealId: string, itemIdx: number) => void;
   onSaveSymptom: (date: string, scores: SymptomScores) => void;
   onSaveComment: (date: string, text: string) => void;
   onSaveAdvice: (date: string, text: string) => void;
+  onAddTimelineEvent: (event: Omit<UserTimelineEvent, 'id' | 'kind'>) => void;
+  onDeleteTimelineEvent: (id: string) => void;
   onOpenMenu: () => void;
   onOpenSearch: () => void;
 }
@@ -362,11 +368,14 @@ export function HomeScreen({
   symptomEntry,
   comment,
   aiAdvice,
+  userTimelineEvents,
   onDateChange,
   onRemoveItem,
   onSaveSymptom,
   onSaveComment,
   onSaveAdvice,
+  onAddTimelineEvent,
+  onDeleteTimelineEvent,
   onOpenMenu,
   onOpenSearch,
 }: HomeScreenProps) {
@@ -398,6 +407,11 @@ export function HomeScreen({
   const remaining  = Math.max(0, Math.round(profile.kcalTarget - totals.kcal));
   const emptyMeals = meals.filter((m) => m.items.length === 0).length;
   const totalItems = meals.reduce((n, m) => n + m.items.length, 0);
+
+  const autoEvents = useMemo(
+    () => computeAutoEvents(meals, profile),
+    [meals, profile],
+  );
 
   const goToPrev = () => onDateChange(addDays(effectiveDate, -1) === todayStr ? null : addDays(effectiveDate, -1));
   const goToNext = () => {
@@ -532,6 +546,24 @@ export function HomeScreen({
             />
           ))}
         </View>
+
+        {/* Timeline physiologique */}
+        {!isFuture && (autoEvents.length > 0 || isToday) && (
+          <>
+            <View style={styles.sectionHead}>
+              <Text style={styles.sectionTitle}>Timeline 📊</Text>
+              <Text style={styles.sectionMeta}>physiologique</Text>
+            </View>
+            <PhysioTimeline
+              autoEvents={autoEvents}
+              userEvents={userTimelineEvents}
+              date={effectiveDate}
+              isToday={isToday}
+              onAddEvent={onAddTimelineEvent}
+              onDeleteEvent={onDeleteTimelineEvent}
+            />
+          </>
+        )}
 
         {/* Micronutriments — today only */}
         {isToday && (

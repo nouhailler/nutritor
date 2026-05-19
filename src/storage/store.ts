@@ -18,6 +18,7 @@ export const KEYS = {
   digestiveMemoryDate:    'nutritor:digestive_memory_date',
   labScores:              'nutritor:lab_scores',
   labScoresDate:          'nutritor:lab_scores_date',
+  timelineEvents:         'nutritor:timeline_events',
 };
 
 export async function load<T>(key: string): Promise<T | null> {

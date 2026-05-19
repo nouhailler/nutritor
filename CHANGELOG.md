@@ -9,6 +9,18 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [0.11.0] — 2026-05-19
+
+### Ajouté
+- **Journal — Timeline physiologique 📊** : nouvelle section entre Repas et Micronutriments affichant une timeline verticale en deux parties : (1) partie automatique générée par Nutritor à partir des repas du jour (heure repas, pic caféine +35 min, pic glycémique +45 min, creux post-prandial +110 min, fenêtre anabolique +90 min, fermentation FODMAP +150 min, digestion ralentie +180 min) ; (2) partie utilisateur — bouton « Ajouter un ressenti » ouvre une bottom-sheet avec 9 chips de symptômes (💨🤢🤕😴💪😊💧🔥🚽), heure pré-remplie, intensité 1-5 et note courte optionnelle. Les événements utilisateur sont persistés par date et supprimables.
+- **Marqueur « Maintenant »** : ligne horizontale colorée positionnée à l'heure courante sur la timeline du jour — visualisation immédiate de l'état physiologique en cours.
+- **`src/types/timeline.ts`** : interfaces `AutoTimelineEvent`, `UserTimelineEvent`, `TimelineEvent`, constante `QUICK_SYMPTOMS` (9 types).
+- **`src/services/timelineService.ts`** : `computeAutoEvents(meals, profile)` — détection par mots-clés des aliments caféinés, glucidiques, lipidiques et FODMAP (fructanes, GOS, lactose, fructose, polyols) ; calcul des événements physiologiques dérivés.
+- **`src/components/PhysioTimeline.tsx`** : composant timeline verticale avec dot–line pattern, lignes connectrices, badge utilisateur avec dots de sévérité colorés, modal d'ajout bottom-sheet.
+- **Clé store** `nutritor:timeline_events` : `Record<string, UserTimelineEvent[]>` indexé par date.
+
+---
+
 ## [0.10.0] — 2026-05-19
 
 ### Ajouté

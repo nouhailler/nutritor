@@ -46,6 +46,7 @@ import { FodmapProtocol, DEFAULT_FODMAP_PROTOCOL } from '../data/fodmapProtocol'
 import { refreshCiqualAllergens } from '../services/ciqual';
 import { generateMeals, updateDigestiveMemory, DigestiveDayData, generateLabScores } from '../services/aiService';
 import { LabScores } from '../types/labScores';
+import { UserTimelineEvent } from '../types/timeline';
 import { GeneratedMeal, MealGeneratorResult } from '../types/mealGenerator';
 import { JournalEntry, EMPTY_DAY_MEALS, computeDayLog } from '../data/weeklyStats';
 import { SymptomEntry, SymptomScores } from '../types/symptoms';
@@ -323,6 +324,10 @@ export function AppShell() {
     KEYS.onboardingDone,
     false,
   );
+  const [timelineEvents, setTimelineEvents] = usePersistedState<Record<string, UserTimelineEvent[]>>(
+    KEYS.timelineEvents,
+    {},
+  );
   const [viewingDate, setViewingDate] = useState<string | null>(null); // null = today
   const [showDuplicateBanner, setShowDuplicateBanner] = useState(false);
 
@@ -459,6 +464,31 @@ export function AppShell() {
         return rest;
       }
       return { ...prev, [date]: text };
+    });
+  };
+
+  const handleAddTimelineEvent = (event: Omit<UserTimelineEvent, 'id' | 'kind'>) => {
+    const newEvent: UserTimelineEvent = {
+      kind: 'user',
+      id: `ute-${Date.now()}`,
+      ...event,
+    };
+    setTimelineEvents((prev) => ({
+      ...prev,
+      [event.date]: [...(prev[event.date] ?? []), newEvent],
+    }));
+  };
+
+  const handleDeleteTimelineEvent = (id: string) => {
+    const dateKey = effectiveDate;
+    setTimelineEvents((prev) => {
+      const existing = prev[dateKey] ?? [];
+      const updated = existing.filter((e) => e.id !== id);
+      if (updated.length === 0) {
+        const { [dateKey]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [dateKey]: updated };
     });
   };
 
@@ -929,6 +959,7 @@ export function AppShell() {
             symptomEntry={symptomEntry}
             comment={comments[effectiveDate] ?? ''}
             aiAdvice={aiAdvice[effectiveDate] ?? ''}
+            userTimelineEvents={timelineEvents[effectiveDate] ?? []}
             onDateChange={setViewingDate}
             onRemoveItem={handleRemoveItem}
             onOpenMenu={() => setDrawerOpen(true)}
@@ -936,6 +967,8 @@ export function AppShell() {
             onSaveSymptom={handleSaveSymptom}
             onSaveComment={handleSaveComment}
             onSaveAdvice={handleSaveAdvice}
+            onAddTimelineEvent={handleAddTimelineEvent}
+            onDeleteTimelineEvent={handleDeleteTimelineEvent}
           />
         );
         break;
