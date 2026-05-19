@@ -273,12 +273,13 @@ export function FoodListScreen({
   const debouncedQuery = useDebounce(query, 300);
   const [platePickerFood, setPlatePickerFood] = useState<Food | null>(null);
 
+  const reversedList = [...foodList].reverse();
   const filtered = debouncedQuery
-    ? foodList.filter((f) =>
+    ? reversedList.filter((f) =>
         f.name.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
         f.brand.toLowerCase().includes(debouncedQuery.toLowerCase())
       )
-    : foodList;
+    : reversedList;
 
   const confirmDelete = (food: Food) => {
     const doDelete = () => onDeleteFood(food.id);
