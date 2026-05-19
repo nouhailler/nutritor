@@ -35,7 +35,7 @@ Et plus largement, un compagnon de **connaissance nutritionnelle** :
 
 | Écran | Accès | Description |
 |-------|-------|-------------|
-| **Journal** | tab `home` | Bilan du jour — anneau kcal SVG, 5 repas, macros, vitamines, widget symptômes |
+| **Journal** | tab `home` | Bilan du jour — anneau kcal SVG, 5 repas, macros, vitamines, widget symptômes, commentaire libre quotidien |
 | **Aliments** | tab `foods` | Bibliothèque personnelle + accès CIQUAL / OFF / scanner / IA / photo |
 | **Plats** | tab `saved` | Grille 2 colonnes de repas sauvegardés — filtres, tri, création |
 | **Statistiques** | tab `stats` | Bar chart 7 jours, sparklines macros, heatmap conformité régime, corrélations symptômes |
@@ -47,7 +47,7 @@ Et plus largement, un compagnon de **connaissance nutritionnelle** :
 | **Éditer profil** | stack `editProfile` | Nom, kcal, macros cibles, allergènes, régimes |
 | **Paramètres** | stack `settings` | Config IA (OpenRouter / Ollama), import/export JSON |
 | **Ajouter via IA** | stack `addFood` | Génération d'une fiche aliment par nom libre |
-| **Open Food Facts** | stack `openFoodFacts` | Recherche +3 M produits, chips catégories, enrichissement IA |
+| **Open Food Facts** | stack `openFoodFacts` | Recherche +3 M produits, scoring de pertinence, chips catégories, enrichissement IA |
 | **CIQUAL** | stack `ciqual` | 3 167 aliments français embarqués, enrichissement IA |
 | **Scanner** | stack `scanner` | Scan EAN-13/8/UPC → Open Food Facts |
 | **Photo IA** | stack `foodPhoto` | Reconnaissance d'aliments par photo (vision IA) |
@@ -155,7 +155,7 @@ nutritor/
     ├── components/
     │   ├── Icon.tsx                  # Wrapper Feather avec mapping design
     │   ├── DrawerMenu.tsx            # Menu hamburger animé (slide 300ms)
-    │   ├── AIQueueBanner.tsx         # Bandeau IA fixe, snooze 10 s sur tap
+    │   ├── AIQueueBanner.tsx         # Bandeau IA fixe, snooze 10 s, bouton "Voir" résultat
     │   ├── CalendarModal.tsx         # Sélecteur de date (navigation journal)
     │   ├── CompatibilityBadge.tsx    # Badge / carte compatibilité allergènes
     │   ├── HelpModal.tsx             # Modales d'aide contextuelles
@@ -257,19 +257,23 @@ Nutritor supporte deux fournisseurs d'IA pour la génération de fiches nutritio
 ## Fonctionnalités implémentées
 
 - [x] Journal nutritionnel avec 5 repas et reset quotidien automatique
-- [x] Persistance locale (AsyncStorage) — profil, aliments, repas, plats, journal, symptômes
+- [x] **Duplication automatique de la journée précédente** au démarrage si des repas existaient, avec bandeau de confirmation 4 s
+- [x] **Commentaire libre par journée** — zone texte max 10 lignes sous le widget Bien-être, sauvegardée par date
+- [x] Persistance locale (AsyncStorage) — profil, aliments, repas, plats, journal, symptômes, commentaires
 - [x] Recherche avec debounce 300ms et filtres de compatibilité
 - [x] Base CIQUAL 2020 embarquée (3 167 aliments français)
-- [x] Open Food Facts — recherche et import
+- [x] Open Food Facts — recherche avec **scoring de pertinence** (exact > marque > préfixe > inclusion) et import
 - [x] Scanner code-barres (EAN-13, EAN-8, UPC)
-- [x] Génération IA de fiches nutritionnelles (OpenRouter + Ollama)
+- [x] Génération IA de fiches nutritionnelles (OpenRouter + Ollama) avec **robustesse aux données mal formées**
+- [x] **Bannière IA** avec destination du résultat et bouton "Voir" pour navigation directe
+- [x] Enrichissement IA des fiches CIQUAL / Open Food Facts (champs manquants uniquement)
 - [x] Générateur de repas IA profil-aware (allergènes, FODMAP, macros)
 - [x] Reconnaissance photo d'aliments via IA vision
 - [x] Encyclopédie nutritionnelle statique hors-ligne (80 entrées, mode simple/expert)
 - [x] Protocole FODMAP personnel (phases, réintroductions, réactions)
 - [x] Journal historique (365 jours) avec calendrier de navigation
 - [x] Widget symptômes quotidiens + corrélations alimentation
-- [x] Statistiques hebdomadaires (bar chart, sparklines, heatmap)
+- [x] Statistiques hebdomadaires (bar chart, sparklines, heatmap) avec documentation contextuelle complète
 - [x] Paramètres — config IA, import/export JSON
 - [x] Création et édition de plats sauvegardés (photo, autocomplete, pairing)
 - [x] Menu drawer animé avec accès IA et encyclopédie
