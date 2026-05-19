@@ -30,7 +30,7 @@ import { AppSettings } from '../types/settings';
 import { generateDayAdvice } from '../services/aiService';
 import { PhysioTimeline } from '../components/PhysioTimeline';
 import { AutoTimelineEvent, UserTimelineEvent } from '../types/timeline';
-import { computeAutoEvents } from '../services/timelineService';
+import { computeAutoEvents, computeMiniMetrics, computeDaySummary } from '../services/timelineService';
 
 // ── Date helpers ──────────────────────────────────────────────
 
@@ -408,10 +408,9 @@ export function HomeScreen({
   const emptyMeals = meals.filter((m) => m.items.length === 0).length;
   const totalItems = meals.reduce((n, m) => n + m.items.length, 0);
 
-  const autoEvents = useMemo(
-    () => computeAutoEvents(meals, profile),
-    [meals, profile],
-  );
+  const autoEvents  = useMemo(() => computeAutoEvents(meals, profile),    [meals, profile]);
+  const miniMetrics = useMemo(() => computeMiniMetrics(autoEvents),        [autoEvents]);
+  const daySummary  = useMemo(() => computeDaySummary(autoEvents),         [autoEvents]);
 
   const goToPrev = () => onDateChange(addDays(effectiveDate, -1) === todayStr ? null : addDays(effectiveDate, -1));
   const goToNext = () => {
@@ -557,6 +556,8 @@ export function HomeScreen({
             <PhysioTimeline
               autoEvents={autoEvents}
               userEvents={userTimelineEvents}
+              miniMetrics={miniMetrics}
+              daySummary={daySummary}
               date={effectiveDate}
               isToday={isToday}
               onAddEvent={onAddTimelineEvent}
