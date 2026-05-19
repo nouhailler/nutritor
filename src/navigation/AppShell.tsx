@@ -290,6 +290,10 @@ export function AppShell() {
     KEYS.comments,
     {},
   );
+  const [aiAdvice, setAiAdvice] = usePersistedState<Record<string, string>>(
+    KEYS.aiAdvice,
+    {},
+  );
   const [fodmapProtocol, setFodmapProtocol] = usePersistedState<FodmapProtocol>(
     KEYS.fodmapProtocol,
     DEFAULT_FODMAP_PROTOCOL,
@@ -404,6 +408,16 @@ export function AppShell() {
 
   const handleSaveComment = (date: string, text: string) => {
     setComments((prev) => {
+      if (!text.trim()) {
+        const { [date]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [date]: text };
+    });
+  };
+
+  const handleSaveAdvice = (date: string, text: string) => {
+    setAiAdvice((prev) => {
       if (!text.trim()) {
         const { [date]: _, ...rest } = prev;
         return rest;
@@ -845,16 +859,19 @@ export function AppShell() {
           <HomeScreen
             meals={viewedMeals}
             profile={profile}
+            settings={settings}
             viewingDate={viewingDate}
             journalDates={journalDates}
             symptomEntry={symptomEntry}
             comment={comments[effectiveDate] ?? ''}
+            aiAdvice={aiAdvice[effectiveDate] ?? ''}
             onDateChange={setViewingDate}
             onRemoveItem={handleRemoveItem}
             onOpenMenu={() => setDrawerOpen(true)}
             onOpenSearch={openSearch}
             onSaveSymptom={handleSaveSymptom}
             onSaveComment={handleSaveComment}
+            onSaveAdvice={handleSaveAdvice}
           />
         );
         break;

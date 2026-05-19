@@ -5,6 +5,7 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -25,6 +26,8 @@ import { Meal } from '../types';
 import { SymptomEntry, SymptomScores } from '../types/symptoms';
 import { OnboardingTip } from '../components/OnboardingTip';
 import { TIPS } from '../data/onboarding';
+import { AppSettings } from '../types/settings';
+import { generateDayAdvice } from '../services/aiService';
 
 // ── Date helpers ──────────────────────────────────────────────
 
@@ -335,14 +338,17 @@ function DayComment({
 interface HomeScreenProps {
   meals: Meal[];
   profile: UserProfile;
+  settings: AppSettings;
   viewingDate: string | null;
   journalDates: string[];
   symptomEntry: SymptomEntry | null;
   comment: string;
+  aiAdvice: string;
   onDateChange: (date: string | null) => void;
   onRemoveItem: (mealId: string, itemIdx: number) => void;
   onSaveSymptom: (date: string, scores: SymptomScores) => void;
   onSaveComment: (date: string, text: string) => void;
+  onSaveAdvice: (date: string, text: string) => void;
   onOpenMenu: () => void;
   onOpenSearch: () => void;
 }
@@ -350,20 +356,25 @@ interface HomeScreenProps {
 export function HomeScreen({
   meals,
   profile,
+  settings,
   viewingDate,
   journalDates,
   symptomEntry,
   comment,
+  aiAdvice,
   onDateChange,
   onRemoveItem,
   onSaveSymptom,
   onSaveComment,
+  onSaveAdvice,
   onOpenMenu,
   onOpenSearch,
 }: HomeScreenProps) {
   const insets = useSafeAreaInsets();
   const [helpVisible, setHelpVisible] = useState(false);
   const [calendarVisible, setCalendarVisible] = useState(false);
+  const [adviceLoading, setAdviceLoading] = useState(false);
+  const [adviceError, setAdviceError] = useState<string | null>(null);
 
   const todayStr = todayDateStr();
   const effectiveDate = viewingDate ?? todayStr;
@@ -392,6 +403,19 @@ export function HomeScreen({
   const goToNext = () => {
     const next = addDays(effectiveDate, 1);
     onDateChange(next === todayStr ? null : next);
+  };
+
+  const handleGenerateAdvice = async () => {
+    setAdviceLoading(true);
+    setAdviceError(null);
+    try {
+      const text = await generateDayAdvice(totals, profile, settings);
+      onSaveAdvice(effectiveDate, text);
+    } catch (e: any) {
+      setAdviceError(e?.message ?? 'Erreur lors de la génération');
+    } finally {
+      setAdviceLoading(false);
+    }
   };
 
   return (
@@ -518,6 +542,41 @@ export function HomeScreen({
             </View>
             <View style={styles.vitsWrap}>
               <VitaminPanel vitamins={profile.vitamins} />
+            </View>
+          </>
+        )}
+
+        {/* Avis Nutritionnel */}
+        {!isFuture && totals.kcal > 0 && (
+          <>
+            <View style={styles.sectionHead}>
+              <Text style={styles.sectionTitle}>Avis Nutritionnel</Text>
+              <Text style={styles.sectionMeta}>analyse IA</Text>
+            </View>
+            <View style={styles.adviceWrap}>
+              {aiAdvice ? (
+                <View style={styles.adviceCard}>
+                  <Icon name="sparkle" size={12} color={Colors.muted} />
+                  <Text style={styles.adviceText}>{aiAdvice}</Text>
+                </View>
+              ) : null}
+              {adviceError ? (
+                <Text style={styles.adviceError}>{adviceError}</Text>
+              ) : null}
+              <TouchableOpacity
+                style={[styles.adviceBtn, adviceLoading && styles.adviceBtnDisabled]}
+                onPress={handleGenerateAdvice}
+                disabled={adviceLoading}
+                activeOpacity={0.7}
+              >
+                {adviceLoading
+                  ? <ActivityIndicator size="small" color={Colors.paper2} style={{ marginRight: 6 }} />
+                  : <Icon name="sparkle" size={13} color={Colors.paper2} />
+                }
+                <Text style={styles.adviceBtnText}>
+                  {adviceLoading ? 'Analyse…' : aiAdvice ? 'Régénérer' : "Générer l'avis IA"}
+                </Text>
+              </TouchableOpacity>
             </View>
           </>
         )}
@@ -1041,6 +1100,55 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textAlign: 'right',
     marginTop: 8,
+  },
+
+  // AI Advice
+  adviceWrap: {
+    paddingHorizontal: 20,
+    marginBottom: 4,
+    gap: 10,
+  },
+  adviceCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.hairline2,
+    borderRadius: 16,
+    padding: 14,
+  },
+  adviceText: {
+    flex: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    color: Colors.ink2,
+    lineHeight: 21,
+  },
+  adviceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.ink,
+    borderRadius: 100,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+  },
+  adviceBtnDisabled: {
+    opacity: 0.55,
+  },
+  adviceBtnText: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.paper2,
+    letterSpacing: 0.1,
+  },
+  adviceError: {
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    color: Colors.warn,
+    paddingHorizontal: 4,
   },
 
   // FAB

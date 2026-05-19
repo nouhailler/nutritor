@@ -13,6 +13,7 @@ export const KEYS = {
   migrationV1:     'nutritor:migration_v1',
   onboardingDone:  'nutritor:onboarding_done',
   comments:        'nutritor:comments',
+  aiAdvice:        'nutritor:ai_advice',
 };
 
 export async function load<T>(key: string): Promise<T | null> {

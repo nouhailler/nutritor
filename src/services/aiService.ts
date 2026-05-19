@@ -459,6 +459,48 @@ function buildMealPrompt(
   return prompt;
 }
 
+// ── Day nutritional advice ────────────────────────────────────
+
+const DAY_ADVICE_SYSTEM = `Tu es nutritionniste. Analyse l'équilibre nutritionnel d'une journée alimentaire et donne un commentaire concis en 2-3 phrases en français.
+
+Évalue :
+- L'équilibre P/G/L selon les recommandations (15-20 % protéines, 45-55 % glucides, 30-35 % lipides)
+- L'atteinte de l'objectif calorique
+- Si la journée est équilibrée, trop glucidique, trop lipidique, pauvre en protéines, etc.
+- Un conseil pratique si pertinent
+
+Réponds UNIQUEMENT avec le commentaire en texte brut, sans titre, sans liste, sans markdown.`;
+
+export async function generateDayAdvice(
+  totals: { kcal: number; protein: number; carbs: number; fat: number },
+  profile: UserProfile,
+  settings: AppSettings,
+): Promise<string> {
+  const energyTotal = totals.protein * 4 + totals.carbs * 4 + totals.fat * 9 || 1;
+  const pctP = Math.round((totals.protein * 4 / energyTotal) * 100);
+  const pctC = Math.round((totals.carbs   * 4 / energyTotal) * 100);
+  const pctF = Math.round((totals.fat     * 9 / energyTotal) * 100);
+
+  const userMsg = `Journée alimentaire :
+Énergie : ${Math.round(totals.kcal)} kcal / objectif ${profile.kcalTarget} kcal (${Math.round(totals.kcal / profile.kcalTarget * 100)} %)
+Protéines : ${Math.round(totals.protein)} g (${pctP} % de l'énergie) / objectif ${profile.macroTargets.protein} g
+Glucides : ${Math.round(totals.carbs)} g (${pctC} %) / objectif ${profile.macroTargets.carbs} g
+Lipides : ${Math.round(totals.fat)} g (${pctF} %) / objectif ${profile.macroTargets.fat} g`;
+
+  const messages = [
+    { role: 'system', content: DAY_ADVICE_SYSTEM },
+    { role: 'user', content: userMsg },
+  ];
+
+  const raw =
+    settings.aiProvider === 'openrouter'
+      ? await callOpenRouter(settings.openrouter, messages)
+      : await callOllama(settings.ollama, messages);
+
+  if (!raw) throw new Error('Réponse IA vide.');
+  return raw.trim();
+}
+
 // ── Plate macro estimation ────────────────────────────────────
 
 const PLATE_MACRO_SYSTEM = `Tu es nutritionniste expert. Pour chaque ingrédient fourni avec sa quantité, estime les macronutriments (kcal, protéines g, glucides g, lipides g) en te basant sur CIQUAL et USDA.
