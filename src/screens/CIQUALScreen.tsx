@@ -23,6 +23,8 @@ import { AppSettings } from '../types/settings';
 import { CIQUALEntry, CIQUAL_DATA, ciqualToFood, searchCIQUAL } from '../services/ciqual';
 import { enrichFoodWithAI, isAIReady } from '../services/aiService';
 import { aiQueue } from '../services/aiQueue';
+import { OnboardingTip } from '../components/OnboardingTip';
+import { TIPS } from '../data/onboarding';
 
 // ── Result row ─────────────────────────────────────────────────
 
@@ -191,6 +193,14 @@ export function CIQUALScreen({ existingIds, onImport, onUpdateFood, onBack, onOp
         <HelpButton onPress={() => setHelpVisible(true)} />
       </View>
       <HelpModal visible={helpVisible} content={HELP.ciqual} onClose={() => setHelpVisible(false)} />
+      {settings && isAIReady(settings) && (
+        <OnboardingTip
+          tipKey={TIPS.aiEnrich.key}
+          title={TIPS.aiEnrich.title}
+          message={TIPS.aiEnrich.message}
+          delay={1000}
+        />
+      )}
 
       {/* Search input */}
       <View style={styles.searchWrap}>

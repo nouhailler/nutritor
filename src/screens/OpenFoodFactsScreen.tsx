@@ -23,6 +23,8 @@ import { AppSettings } from '../types/settings';
 import { UserProfile } from '../data/user';
 import { OFFProduct, offProductToFood, searchOFF, searchOFFByCategory, getOFFRecentSearches, saveOFFRecentSearch } from '../services/openFoodFacts';
 import { enrichFoodWithAI, isAIReady } from '../services/aiService';
+import { OnboardingTip } from '../components/OnboardingTip';
+import { TIPS } from '../data/onboarding';
 import { aiQueue } from '../services/aiQueue';
 import { LabelAnalysis, TextSegment, analyzeLabel } from '../data/labelAnalysis';
 
@@ -409,6 +411,14 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
         <HelpButton onPress={() => setHelpVisible(true)} />
       </View>
       <HelpModal visible={helpVisible} content={HELP.openFoodFacts} onClose={() => setHelpVisible(false)} />
+      {settings && isAIReady(settings) && (
+        <OnboardingTip
+          tipKey={TIPS.aiEnrich.key}
+          title={TIPS.aiEnrich.title}
+          message={TIPS.aiEnrich.message}
+          delay={1000}
+        />
+      )}
 
       {/* Search input + dropdown */}
       <View style={[styles.searchWrap, { zIndex: 10 }]}>

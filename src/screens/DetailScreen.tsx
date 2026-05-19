@@ -23,6 +23,8 @@ import { INITIAL_MEALS } from '../data/food';
 import { UserProfile } from '../data/user';
 import { computeCompatibilityScore } from '../data/compatibilityScore';
 import { CompatCard } from '../components/CompatibilityBadge';
+import { OnboardingTip } from '../components/OnboardingTip';
+import { TIPS } from '../data/onboarding';
 import { Colors, FA_COLORS, Fonts } from '../theme/tokens';
 import {
   Allergen,
@@ -740,6 +742,14 @@ export function DetailScreen({
           </View>
         </View>
         <HelpModal visible={helpVisible} content={HELP.detail} onClose={() => setHelpVisible(false)} />
+        {onEdit && (
+          <OnboardingTip
+            tipKey={TIPS.editFood.key}
+            title={TIPS.editFood.title}
+            message={TIPS.editFood.message}
+            delay={1200}
+          />
+        )}
 
         {/* Hero */}
         <View style={styles.hero}>

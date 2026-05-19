@@ -120,9 +120,9 @@ function StepWelcome({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
 
         <View style={styles.featureList}>
           {[
-            { icon: 'leaf' as const,      text: 'Compatibilité allergènes en temps réel' },
-            { icon: 'search' as const,    text: '3 millions de produits référencés' },
-            { icon: 'activity' as const,  text: 'Journal nutritionnel complet' },
+            { icon: 'leaf' as const,      text: 'Compatibilité allergènes & régimes en temps réel' },
+            { icon: 'activity' as const,  text: 'Timeline physiologique — digestion, glycémie, énergie' },
+            { icon: 'sparkle' as const,   text: 'IA pour générer, enrichir et modifier tes aliments' },
           ].map(({ icon, text }) => (
             <View key={text} style={styles.featureRow}>
               <View style={styles.featureIcon}>
