@@ -25,6 +25,7 @@ import { HELP } from '../data/helpContent';
 import { Colors, Fonts } from '../theme/tokens';
 import { Food } from '../types';
 import { AIProvider, AppSettings, OpenRouterModel } from '../types/settings';
+import { KEYS, save } from '../storage/store';
 
 // ── Section header ─────────────────────────────────────────────
 
@@ -450,6 +451,23 @@ export function SettingsScreen({
             borderBottom={false}
             onPress={onResetOnboarding}
             right={<Icon name="arrow-right" size={18} color={Colors.muted} />}
+          />
+        </Card>
+
+        {/* ── Dev / Test ───────────────────────────────────────── */}
+        <SectionHeader icon="alert" label="Développement" />
+        <Card>
+          <Row
+            label="Simuler passage au lendemain"
+            description="Réinitialise la date du journal à hier — redémarre l'app pour déclencher la duplication"
+            borderBottom={false}
+            onPress={() => {
+              const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+              save(KEYS.mealsDate, yesterday).then(() => {
+                showToast('Date réinitialisée à hier — ferme et rouvre l\'app');
+              });
+            }}
+            right={<Icon name="layers" size={18} color={Colors.muted} />}
           />
         </Card>
 
