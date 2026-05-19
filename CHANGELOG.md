@@ -9,6 +9,15 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [0.8.0] — 2026-05-19
+
+### Ajouté
+- **Journal — Avis Nutritionnel** : nouvelle zone entre Micronutriments et Bien-être — bouton « Générer l'avis IA » appelle `generateDayAdvice`, qui calcule les pourcentages énergétiques P/G/L et envoie les totaux du jour à l'IA pour un commentaire en 2–3 phrases (équilibré ? trop glucidique ? trop lipidique ?). L'avis est persisté par date et régénérable à tout moment.
+- **Plats — Commentaire IA** : bouton « Commentaire IA » dans la fiche détail d'un plat — l'IA analyse la composition et génère un avis sur l'équilibre nutritionnel ; le commentaire est sauvegardé avec le plat.
+- **Documentation contextuelle** : mise à jour des blocs d'aide de tous les écrans (Journal, Plats, Fiche plat) pour refléter les nouvelles fonctionnalités IA.
+
+---
+
 ## [0.7.0] — 2026-05-19
 
 ### Ajouté

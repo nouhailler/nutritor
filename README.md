@@ -35,14 +35,14 @@ Et plus largement, un compagnon de **connaissance nutritionnelle** :
 
 | Écran | Accès | Description |
 |-------|-------|-------------|
-| **Journal** | tab `home` | Bilan du jour — anneau kcal SVG, 5 repas, macros, vitamines, widget symptômes, commentaire libre quotidien |
+| **Journal** | tab `home` | Bilan du jour — anneau kcal SVG, 5 repas, macros, vitamines, avis nutritionnel IA, widget symptômes, commentaire libre quotidien |
 | **Aliments** | tab `foods` | Bibliothèque personnelle + accès CIQUAL / OFF / scanner / IA / photo |
 | **Plats** | tab `saved` | Grille 2 colonnes de repas sauvegardés — filtres, tri, création |
 | **Statistiques** | tab `stats` | Bar chart 7 jours, sparklines macros, heatmap conformité régime, corrélations symptômes |
 | **Profil** | tab `profile` | 14 allergènes avec sévérité, 6 régimes actifs, objectif calorique |
 | **Recherche** | stack `search` | Filtres régime, compatibilité allergènes temps réel, récents |
 | **Détail aliment** | stack `detail` | 12 sections — acides aminés, FODMAP, bioactifs, sensoriel, ajout journal |
-| **Détail plat** | stack `savedDetail` | Recette par ingrédient, macros, photo, ajout au journal |
+| **Détail plat** | stack `savedDetail` | Recette par ingrédient, macros, calcul IA des macros, commentaire IA, photo, ajout au journal |
 | **Créer / éditer plat** | stack `editSavedPlate` | Autocomplete ingrédients, photo galerie/caméra, pairing de plats |
 | **Éditer profil** | stack `editProfile` | Nom, kcal, macros cibles, allergènes, régimes |
 | **Paramètres** | stack `settings` | Config IA (OpenRouter / Ollama), import/export JSON |
@@ -258,7 +258,11 @@ Nutritor supporte deux fournisseurs d'IA pour la génération de fiches nutritio
 
 - [x] Journal nutritionnel avec 5 repas et reset quotidien automatique
 - [x] **Duplication automatique de la journée précédente** au démarrage si des repas existaient, avec bandeau de confirmation 4 s
-- [x] **Commentaire libre par journée** — zone texte max 10 lignes sous le widget Bien-être, sauvegardée par date
+- [x] **Commentaire libre par journée** — zone texte max 2 000 caractères sous le widget Bien-être, sauvegardée par date
+- [x] **Avis Nutritionnel IA dans le Journal** — analyse des répartitions P/G/L (% énergétiques), commentaire en 2–3 phrases persisté par date, régénérable à volonté
+- [x] **Calcul IA des macros sur les plats** — bouton « Calculer IA » estime kcal + P/G/L de chaque ingrédient depuis son nom et sa quantité
+- [x] **Commentaire IA sur les plats** — analyse de l'équilibre nutritionnel (trop glucidique ? trop lipidique ? bien équilibré ?)
+- [x] **Barre macros P/G/L sur les cartes de plats** — micro-barre colorée proportionnelle visible dès que les macros sont renseignées
 - [x] Persistance locale (AsyncStorage) — profil, aliments, repas, plats, journal, symptômes, commentaires
 - [x] Recherche avec debounce 300ms et filtres de compatibilité
 - [x] Base CIQUAL 2020 embarquée (3 167 aliments français)

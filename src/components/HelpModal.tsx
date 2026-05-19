@@ -17,7 +17,8 @@ export type HelpIconName =
   | 'search' | 'plus' | 'check' | 'database' | 'sparkle' | 'leaf'
   | 'alert' | 'sliders' | 'bookmark' | 'chart' | 'user' | 'settings'
   | 'scan' | 'zap' | 'shield' | 'target' | 'clock' | 'globe' | 'info'
-  | 'key' | 'cpu' | 'upload' | 'download' | 'trash' | 'edit' | 'book';
+  | 'key' | 'cpu' | 'upload' | 'download' | 'trash' | 'edit' | 'book'
+  | 'calendar' | 'back' | 'layers';
 
 export type HelpBlock =
   | { type: 'heading'; text: string }
