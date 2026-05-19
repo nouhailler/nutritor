@@ -648,6 +648,35 @@ export function AppShell() {
     setFoodList((prev) => prev.map((f) => (f.id === food.id ? food : f)));
   };
 
+  const handleAddFoodToJournal = (food: Food, portion: number, mealId: string) => {
+    const kcal = Math.round((food.per100.kcal * portion) / 100);
+    updateViewedMeals((ms) =>
+      ms.map((m) =>
+        m.id === mealId
+          ? {
+              ...m,
+              items: [
+                ...m.items,
+                {
+                  name: food.name,
+                  qty: `${portion} ${food.unit}`,
+                  kcal,
+                  macros: {
+                    protein: Math.round((food.per100.protein * portion) / 100 * 10) / 10,
+                    carbs:   Math.round((food.per100.carbs   * portion) / 100 * 10) / 10,
+                    fat:     Math.round((food.per100.fat     * portion) / 100 * 10) / 10,
+                  },
+                },
+              ],
+            }
+          : m
+      )
+    );
+    const mealName = viewedMeals.find((m) => m.id === mealId)?.name ?? 'un repas';
+    setToast(`${food.name} ajouté à ${mealName}`);
+    setTimeout(() => setToast(null), 2600);
+  };
+
   const handleAddFoodToPlate = (food: Food, plateId: string) => {
     const plate = savedPlates.find((p) => p.id === plateId);
     if (!plate) return;
@@ -977,9 +1006,11 @@ export function AppShell() {
           <FoodListScreen
             foodList={foodList}
             savedPlates={savedPlates}
+            meals={viewedMeals}
             profile={profile}
             onPickFood={(food) => openDetail(food, null)}
             onAddToPlate={handleAddFoodToPlate}
+            onAddToJournal={handleAddFoodToJournal}
             onDeleteFood={(foodId) => setFoodList((prev) => prev.filter((f) => f.id !== foodId))}
             onOpenMenu={() => setDrawerOpen(true)}
             onAddWithAI={(q) => { setPendingQuery(q); setStack('addFood'); }}

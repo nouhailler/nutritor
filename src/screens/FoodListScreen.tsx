@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Meal } from '../types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { Colors, Fonts } from '../theme/tokens';
@@ -180,18 +181,159 @@ const sheet = StyleSheet.create({
   },
 });
 
+// ── Journal picker bottom sheet ───────────────────────────────
+
+function JournalPickerSheet({
+  food,
+  meals,
+  onSelect,
+  onClose,
+}: {
+  food: Food;
+  meals: Meal[];
+  onSelect: (mealId: string, portion: number) => void;
+  onClose: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const defaultPortion = String(food.defaultPortion);
+  const [portion, setPortion] = useState(defaultPortion);
+
+  const parsedPortion = Math.max(1, Number(portion.replace(',', '.')) || food.defaultPortion);
+  const kcal = Math.round((food.per100.kcal * parsedPortion) / 100);
+
+  return (
+    <View style={sheet.overlay}>
+      <TouchableOpacity style={sheet.backdrop} onPress={onClose} activeOpacity={1} />
+      <View style={[sheet.panel, { paddingBottom: insets.bottom + 16 }]}>
+        <View style={sheet.handle} />
+        <Text style={sheet.title}>Ajouter au journal</Text>
+        <Text style={sheet.sub} numberOfLines={1}>{food.name}</Text>
+
+        {/* Portion input */}
+        <View style={jsheet.portionRow}>
+          <Text style={jsheet.portionLabel}>Portion</Text>
+          <View style={jsheet.portionInput}>
+            <TextInput
+              style={jsheet.portionField}
+              value={portion}
+              onChangeText={setPortion}
+              keyboardType="decimal-pad"
+              selectTextOnFocus
+              maxLength={6}
+            />
+            <Text style={jsheet.portionUnit}>{food.unit}</Text>
+          </View>
+          <Text style={jsheet.portionKcal}>{kcal} kcal</Text>
+        </View>
+
+        {/* Meal list */}
+        <ScrollView
+          style={sheet.list}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {meals.map((meal) => {
+            const mealKcal = meal.items.reduce((s, i) => s + i.kcal, 0);
+            return (
+              <TouchableOpacity
+                key={meal.id}
+                style={sheet.row}
+                onPress={() => onSelect(meal.id, parsedPortion)}
+                activeOpacity={0.7}
+              >
+                <View style={sheet.rowLeft}>
+                  <Text style={sheet.rowName}>{meal.name}</Text>
+                  <Text style={sheet.rowMeta}>
+                    {meal.time} · {meal.items.length} aliment{meal.items.length !== 1 ? 's' : ''}{mealKcal > 0 ? ` · ${mealKcal} kcal` : ''}
+                  </Text>
+                </View>
+                <View style={[sheet.rowAction, jsheet.rowActionJournal]}>
+                  <Icon name="plus" size={14} color={Colors.signal} />
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        <TouchableOpacity style={sheet.cancelBtn} onPress={onClose} activeOpacity={0.7}>
+          <Text style={sheet.cancelText}>Annuler</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const jsheet = StyleSheet.create({
+  portionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline2,
+    marginBottom: 4,
+  },
+  portionLabel: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    color: Colors.muted,
+    width: 52,
+  },
+  portionInput: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  portionField: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 16,
+    color: Colors.ink,
+    minWidth: 40,
+    paddingVertical: 0,
+  },
+  portionUnit: {
+    fontFamily: Fonts.mono,
+    fontSize: 11,
+    color: Colors.muted,
+    letterSpacing: 0.5,
+  },
+  portionKcal: {
+    fontFamily: Fonts.serif,
+    fontSize: 16,
+    color: Colors.ink,
+    letterSpacing: -0.2,
+    minWidth: 64,
+    textAlign: 'right',
+  },
+  rowActionJournal: {
+    borderColor: 'rgba(107,90,46,0.3)',
+    backgroundColor: 'rgba(107,90,46,0.07)',
+  },
+});
+
 // ── Food row ──────────────────────────────────────────────────
 
 function FoodRow({
   food,
   profile,
   onPress,
+  onAddToJournal,
   onAddToPlate,
   onDelete,
 }: {
   food: Food;
   profile: UserProfile;
   onPress: () => void;
+  onAddToJournal: () => void;
   onAddToPlate: () => void;
   onDelete: () => void;
 }) {
@@ -216,8 +358,11 @@ function FoodRow({
         </Text>
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.journalBtn} onPress={onAddToJournal} activeOpacity={0.7}>
+        <Icon name="home" size={14} color={Colors.signal} />
+      </TouchableOpacity>
       <TouchableOpacity style={styles.plateBtn} onPress={onAddToPlate} activeOpacity={0.7}>
-        <Icon name="book" size={15} color={Colors.ok} />
+        <Icon name="book" size={14} color={Colors.ok} />
       </TouchableOpacity>
       <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} activeOpacity={0.7}>
         <Icon name="trash" size={14} color={Colors.warn} />
@@ -242,9 +387,11 @@ function SectionLabel({ left, right }: { left: string; right?: string }) {
 interface Props {
   foodList: Food[];
   savedPlates: SavedPlate[];
+  meals: Meal[];
   profile: UserProfile;
   onPickFood: (food: Food) => void;
   onAddToPlate: (food: Food, plateId: string) => void;
+  onAddToJournal: (food: Food, portion: number, mealId: string) => void;
   onDeleteFood: (foodId: string) => void;
   onOpenMenu: () => void;
   onAddWithAI: (query: string) => void;
@@ -257,9 +404,11 @@ interface Props {
 export function FoodListScreen({
   foodList,
   savedPlates,
+  meals,
   profile,
   onPickFood,
   onAddToPlate,
+  onAddToJournal,
   onDeleteFood,
   onOpenMenu,
   onAddWithAI,
@@ -272,6 +421,7 @@ export function FoodListScreen({
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query, 300);
   const [platePickerFood, setPlatePickerFood] = useState<Food | null>(null);
+  const [journalPickerFood, setJournalPickerFood] = useState<Food | null>(null);
 
   const reversedList = [...foodList].reverse();
   const filtered = debouncedQuery
@@ -391,6 +541,7 @@ export function FoodListScreen({
             food={food}
             profile={profile}
             onPress={() => onPickFood(food)}
+            onAddToJournal={() => setJournalPickerFood(food)}
             onAddToPlate={() => setPlatePickerFood(food)}
             onDelete={() => confirmDelete(food)}
           />
@@ -401,12 +552,25 @@ export function FoodListScreen({
           <View style={styles.hintRow}>
             <Icon name="info" size={13} color={Colors.muted2} />
             <Text style={styles.hintText}>
-              Touchez un aliment pour l'ajouter au journal.{'\n'}
-              Touchez <Icon name="book" size={11} color={Colors.muted2} /> pour l'ajouter à un plat.
+              Touchez un aliment pour voir sa fiche détail.{'\n'}
+              <Icon name="home" size={11} color={Colors.muted2} /> Ajouter au journal  ·  <Icon name="book" size={11} color={Colors.muted2} /> Ajouter à un plat.
             </Text>
           </View>
         )}
       </ScrollView>
+
+      {/* Journal picker bottom sheet */}
+      {journalPickerFood && (
+        <JournalPickerSheet
+          food={journalPickerFood}
+          meals={meals}
+          onSelect={(mealId, portion) => {
+            onAddToJournal(journalPickerFood, portion, mealId);
+            setJournalPickerFood(null);
+          }}
+          onClose={() => setJournalPickerFood(null)}
+        />
+      )}
 
       {/* Plate picker bottom sheet */}
       {platePickerFood && (
@@ -607,6 +771,17 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: Colors.muted,
   },
+  journalBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(107,90,46,0.3)',
+    backgroundColor: 'rgba(107,90,46,0.07)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
+  },
   plateBtn: {
     width: 34,
     height: 34,
@@ -616,6 +791,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(63,90,58,0.07)',
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 6,
   },
   deleteBtn: {
     width: 34,
