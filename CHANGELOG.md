@@ -9,6 +9,18 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [0.7.0] — 2026-05-19
+
+### Ajouté
+- **Plats — calcul IA des macros** : bouton « Calculer IA » dans le détail d'un plat — envoie la liste des ingrédients et quantités à l'IA (base CIQUAL/USDA), met à jour kcal + P/G/L par ingrédient et recalcule les totaux du plat en temps réel
+- **Plats — aperçu macros** : chaque carte de la bibliothèque affiche désormais une micro-barre colorée P/G/L + valeurs en grammes (visible uniquement si les macros sont renseignées)
+- **Paramètres / Dev** : bouton « Simuler passage au lendemain » pour forcer la date du journal à hier et tester la duplication sans attendre minuit
+
+### Corrigé
+- **Détail aliment** : gardes défensives complètes sur tous les champs optionnels issus de la génération IA (`allergens`, `fodmap`, `lipidDetail.fa`, `proteinDetail.amino`, `sensory`, `metabolic`, `ingredients`) — plus aucun crash à l'ouverture d'une fiche mal formée
+
+---
+
 ## [0.6.0] — 2026-05-19
 
 ### Ajouté
