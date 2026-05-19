@@ -328,6 +328,14 @@ export function AppShell() {
     KEYS.timelineEvents,
     {},
   );
+  const [recentFoodUseIds, setRecentFoodUseIds] = usePersistedState<string[]>(
+    KEYS.recentFoodUses,
+    [],
+  );
+  const [recentFoodViewIds, setRecentFoodViewIds] = usePersistedState<string[]>(
+    KEYS.recentFoodViews,
+    [],
+  );
   const [viewingDate, setViewingDate] = useState<string | null>(null); // null = today
   const [showDuplicateBanner, setShowDuplicateBanner] = useState(false);
 
@@ -559,6 +567,11 @@ export function AppShell() {
     }
   };
 
+  const pushRecentUse  = (id: string) =>
+    setRecentFoodUseIds((p) => [id, ...p.filter((x) => x !== id)].slice(0, 15));
+  const pushRecentView = (id: string) =>
+    setRecentFoodViewIds((p) => [id, ...p.filter((x) => x !== id)].slice(0, 10));
+
   const showTab = (t: Tab) => {
     console.log(`[AppShell] showTab → ${t}`);
     setStack(null);
@@ -571,6 +584,7 @@ export function AppShell() {
     setSelectedFood(food);
     setDetailOrigin(from);
     setStack('detail');
+    pushRecentView(food.id);
   };
 
   const openSavedDetail = (plate: SavedPlate) => {
@@ -638,6 +652,7 @@ export function AppShell() {
           : m
       )
     );
+    pushRecentUse(food.id);
     setStack(null);
     setTab('home');
     setToast(`Ajouté à ${mealName ?? 'un repas'}`);
@@ -649,6 +664,7 @@ export function AppShell() {
   };
 
   const handleAddFoodToJournal = (food: Food, portion: number, mealId: string) => {
+    pushRecentUse(food.id);
     const kcal = Math.round((food.per100.kcal * portion) / 100);
     updateViewedMeals((ms) =>
       ms.map((m) =>
@@ -678,6 +694,7 @@ export function AppShell() {
   };
 
   const handleAddFoodToPlate = (food: Food, plateId: string) => {
+    pushRecentUse(food.id);
     const plate = savedPlates.find((p) => p.id === plateId);
     if (!plate) return;
     const portion = food.defaultPortion;
@@ -1008,6 +1025,8 @@ export function AppShell() {
             savedPlates={savedPlates}
             meals={viewedMeals}
             profile={profile}
+            recentFoodUseIds={recentFoodUseIds}
+            recentFoodViewIds={recentFoodViewIds}
             onPickFood={(food) => openDetail(food, null)}
             onAddToPlate={handleAddFoodToPlate}
             onAddToJournal={handleAddFoodToJournal}

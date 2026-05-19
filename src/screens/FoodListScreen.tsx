@@ -4,7 +4,7 @@
  * Accès aux sources (CIQUAL, Open Food Facts, scanner, IA, photo).
  * Ajout rapide d'un aliment à un plat sauvegardé via bottom sheet.
  */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -389,6 +389,8 @@ interface Props {
   savedPlates: SavedPlate[];
   meals: Meal[];
   profile: UserProfile;
+  recentFoodUseIds: string[];
+  recentFoodViewIds: string[];
   onPickFood: (food: Food) => void;
   onAddToPlate: (food: Food, plateId: string) => void;
   onAddToJournal: (food: Food, portion: number, mealId: string) => void;
@@ -406,6 +408,8 @@ export function FoodListScreen({
   savedPlates,
   meals,
   profile,
+  recentFoodUseIds,
+  recentFoodViewIds,
   onPickFood,
   onAddToPlate,
   onAddToJournal,
@@ -423,13 +427,49 @@ export function FoodListScreen({
   const [platePickerFood, setPlatePickerFood] = useState<Food | null>(null);
   const [journalPickerFood, setJournalPickerFood] = useState<Food | null>(null);
 
-  const reversedList = [...foodList].reverse();
-  const filtered = debouncedQuery
-    ? reversedList.filter((f) =>
-        f.name.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
-        f.brand.toLowerCase().includes(debouncedQuery.toLowerCase())
-      )
-    : reversedList;
+  const reversedList = useMemo(() => [...foodList].reverse(), [foodList]);
+
+  // ── Section logic (no search query) ────────────────────────
+  const sections = useMemo(() => {
+    if (debouncedQuery) return null;
+
+    const byId = new Map(foodList.map((f) => [f.id, f]));
+
+    // 1. Récemment ajoutés — last 4 in the library
+    const recentlyAdded = reversedList.slice(0, 4);
+    const addedIds = new Set(recentlyAdded.map((f) => f.id));
+
+    // 2. Récemment utilisés (journal / plats) — up to 10, not in section 1
+    const recentlyUsed = recentFoodUseIds
+      .map((id) => byId.get(id))
+      .filter((f): f is Food => !!f && !addedIds.has(f.id))
+      .slice(0, 10);
+    const usedIds = new Set(recentlyUsed.map((f) => f.id));
+
+    // 3. Récemment consultés — up to 5, not in sections 1 or 2
+    const recentlyViewed = recentFoodViewIds
+      .map((id) => byId.get(id))
+      .filter((f): f is Food => !!f && !addedIds.has(f.id) && !usedIds.has(f.id))
+      .slice(0, 5);
+    const viewedIds = new Set(recentlyViewed.map((f) => f.id));
+
+    // 4. Tous les aliments — everything else
+    const topIds = new Set([...addedIds, ...usedIds, ...viewedIds]);
+    const rest = reversedList.filter((f) => !topIds.has(f.id));
+
+    return { recentlyAdded, recentlyUsed, recentlyViewed, rest };
+  }, [foodList, reversedList, recentFoodUseIds, recentFoodViewIds, debouncedQuery]);
+
+  // Flat list used only during search
+  const filtered = useMemo(() =>
+    debouncedQuery
+      ? reversedList.filter((f) =>
+          f.name.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+          f.brand.toLowerCase().includes(debouncedQuery.toLowerCase())
+        )
+      : reversedList,
+    [reversedList, debouncedQuery],
+  );
 
   const confirmDelete = (food: Food) => {
     const doDelete = () => onDeleteFood(food.id);
@@ -521,31 +561,105 @@ export function FoodListScreen({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
       >
-        <SectionLabel
-          left={debouncedQuery ? 'Résultats' : 'Tous les aliments'}
-          right={`${filtered.length} aliment${filtered.length !== 1 ? 's' : ''}`}
-        />
+        {/* ── Search mode ── */}
+        {debouncedQuery ? (
+          <>
+            <SectionLabel
+              left="Résultats"
+              right={`${filtered.length} aliment${filtered.length !== 1 ? 's' : ''}`}
+            />
+            {filtered.length === 0 ? (
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyTitle}>Aucun résultat</Text>
+                <Text style={styles.emptyDesc}>
+                  Essaie un autre terme ou ajoute un aliment via CIQUAL, Open Food Facts ou l'IA.
+                </Text>
+              </View>
+            ) : (
+              filtered.map((food) => (
+                <FoodRow
+                  key={food.id}
+                  food={food}
+                  profile={profile}
+                  onPress={() => onPickFood(food)}
+                  onAddToJournal={() => setJournalPickerFood(food)}
+                  onAddToPlate={() => setPlatePickerFood(food)}
+                  onDelete={() => confirmDelete(food)}
+                />
+              ))
+            )}
+          </>
+        ) : sections ? (
+          <>
+            {/* Récemment ajoutés */}
+            {sections.recentlyAdded.length > 0 && (
+              <>
+                <SectionLabel left="Récemment ajoutés" right={`${sections.recentlyAdded.length}`} />
+                {sections.recentlyAdded.map((food) => (
+                  <FoodRow key={food.id} food={food} profile={profile}
+                    onPress={() => onPickFood(food)}
+                    onAddToJournal={() => setJournalPickerFood(food)}
+                    onAddToPlate={() => setPlatePickerFood(food)}
+                    onDelete={() => confirmDelete(food)} />
+                ))}
+              </>
+            )}
 
-        {filtered.length === 0 && (
-          <View style={styles.emptyBox}>
-            <Text style={styles.emptyTitle}>Aucun résultat</Text>
-            <Text style={styles.emptyDesc}>
-              Essaie un autre terme ou ajoute un aliment via CIQUAL, Open Food Facts ou l'IA.
-            </Text>
-          </View>
-        )}
+            {/* Récemment utilisés */}
+            {sections.recentlyUsed.length > 0 && (
+              <>
+                <SectionLabel left="Récemment utilisés" right={`${sections.recentlyUsed.length}`} />
+                {sections.recentlyUsed.map((food) => (
+                  <FoodRow key={food.id} food={food} profile={profile}
+                    onPress={() => onPickFood(food)}
+                    onAddToJournal={() => setJournalPickerFood(food)}
+                    onAddToPlate={() => setPlatePickerFood(food)}
+                    onDelete={() => confirmDelete(food)} />
+                ))}
+              </>
+            )}
 
-        {filtered.map((food) => (
-          <FoodRow
-            key={food.id}
-            food={food}
-            profile={profile}
-            onPress={() => onPickFood(food)}
-            onAddToJournal={() => setJournalPickerFood(food)}
-            onAddToPlate={() => setPlatePickerFood(food)}
-            onDelete={() => confirmDelete(food)}
-          />
-        ))}
+            {/* Récemment consultés */}
+            {sections.recentlyViewed.length > 0 && (
+              <>
+                <SectionLabel left="Récemment consultés" right={`${sections.recentlyViewed.length}`} />
+                {sections.recentlyViewed.map((food) => (
+                  <FoodRow key={food.id} food={food} profile={profile}
+                    onPress={() => onPickFood(food)}
+                    onAddToJournal={() => setJournalPickerFood(food)}
+                    onAddToPlate={() => setPlatePickerFood(food)}
+                    onDelete={() => confirmDelete(food)} />
+                ))}
+              </>
+            )}
+
+            {/* Tous les aliments */}
+            {sections.rest.length > 0 && (
+              <>
+                <SectionLabel
+                  left="Tous les aliments"
+                  right={`${foodList.length}`}
+                />
+                {sections.rest.map((food) => (
+                  <FoodRow key={food.id} food={food} profile={profile}
+                    onPress={() => onPickFood(food)}
+                    onAddToJournal={() => setJournalPickerFood(food)}
+                    onAddToPlate={() => setPlatePickerFood(food)}
+                    onDelete={() => confirmDelete(food)} />
+                ))}
+              </>
+            )}
+
+            {foodList.length === 0 && (
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyTitle}>Bibliothèque vide</Text>
+                <Text style={styles.emptyDesc}>
+                  Ajoute ton premier aliment via CIQUAL, Open Food Facts, le scanner ou l'IA.
+                </Text>
+              </View>
+            )}
+          </>
+        ) : null}
 
         {/* Hint row at the bottom */}
         {filtered.length > 0 && !debouncedQuery && (

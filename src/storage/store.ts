@@ -19,6 +19,8 @@ export const KEYS = {
   labScores:              'nutritor:lab_scores',
   labScoresDate:          'nutritor:lab_scores_date',
   timelineEvents:         'nutritor:timeline_events',
+  recentFoodUses:         'nutritor:recent_food_uses',
+  recentFoodViews:        'nutritor:recent_food_views',
 };
 
 export async function load<T>(key: string): Promise<T | null> {
