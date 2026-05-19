@@ -471,6 +471,47 @@ Règles :
 Schéma par élément :
 {"name":"...","qty":"...","kcal":0,"macros":{"protein":0,"carbs":0,"fat":0}}`;
 
+// ── Plate nutritional comment ─────────────────────────────────
+
+const PLATE_COMMENT_SYSTEM = `Tu es nutritionniste. Analyse l'équilibre nutritionnel d'un plat et donne un commentaire concis en 2-3 phrases en français.
+
+Évalue :
+- L'équilibre P/G/L selon les recommandations (15-20% protéines, 45-55% glucides, 30-35% lipides)
+- Si le plat est équilibré, trop glucidique, trop lipidique, pauvre en protéines, etc.
+- La densité calorique et un conseil pratique si pertinent
+
+Réponds UNIQUEMENT avec le commentaire en texte brut, sans titre, sans liste, sans markdown.`;
+
+export async function generatePlateComment(
+  plate: { name: string; kcal: number; macros: { protein: number; carbs: number; fat: number }; recipe: Array<{ name: string; qty: string }> },
+  settings: AppSettings,
+): Promise<string> {
+  const total = plate.macros.protein * 4 + plate.macros.carbs * 4 + plate.macros.fat * 9 || 1;
+  const pctP = Math.round((plate.macros.protein * 4 / total) * 100);
+  const pctC = Math.round((plate.macros.carbs   * 4 / total) * 100);
+  const pctF = Math.round((plate.macros.fat      * 9 / total) * 100);
+
+  const userMsg = `Plat : ${plate.name}
+Énergie : ${plate.kcal} kcal
+Protéines : ${plate.macros.protein} g (${pctP} % de l'énergie)
+Glucides : ${plate.macros.carbs} g (${pctC} %)
+Lipides : ${plate.macros.fat} g (${pctF} %)
+Ingrédients : ${plate.recipe.map((r) => `${r.name} ${r.qty}`).join(', ')}`;
+
+  const messages = [
+    { role: 'system', content: PLATE_COMMENT_SYSTEM },
+    { role: 'user', content: userMsg },
+  ];
+
+  const raw =
+    settings.aiProvider === 'openrouter'
+      ? await callOpenRouter(settings.openrouter, messages)
+      : await callOllama(settings.ollama, messages);
+
+  if (!raw) throw new Error('Réponse IA vide.');
+  return raw.trim();
+}
+
 export async function estimatePlateMacros(
   recipe: Array<{ name: string; qty: string }>,
   settings: AppSettings,

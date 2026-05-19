@@ -35,6 +35,7 @@ export interface SavedPlate {
   photo?: string;
   pairedWith?: string[];
   nutrition?: PlateNutrition;
+  aiComment?: string;
 }
 
 export const SAVED_PLATES: SavedPlate[] = [

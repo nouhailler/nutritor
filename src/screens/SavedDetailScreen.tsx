@@ -24,7 +24,7 @@ import { Colors, Fonts } from '../theme/tokens';
 import { HelpButton, HelpModal } from '../components/HelpModal';
 import { HELP } from '../data/helpContent';
 import { AppSettings } from '../types/settings';
-import { estimatePlateMacros } from '../services/aiService';
+import { estimatePlateMacros, generatePlateComment } from '../services/aiService';
 
 // ── Striped hero ──────────────────────────────────────────────
 
@@ -193,8 +193,24 @@ export function SavedDetailScreen({ plate, meals, settings, onBack, onAdd, onDel
   const [helpVisible, setHelpVisible] = useState(false);
   const [macroLoading, setMacroLoading] = useState(false);
   const [macroError, setMacroError] = useState<string | null>(null);
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
 
   const totalMacro = plate.macros.protein + plate.macros.carbs + plate.macros.fat || 1;
+
+  const handleGenerateComment = async () => {
+    if (commentLoading) return;
+    setCommentLoading(true);
+    setCommentError(null);
+    try {
+      const comment = await generatePlateComment(plate, settings);
+      onUpdatePlate({ ...plate, aiComment: comment });
+    } catch (e: unknown) {
+      setCommentError(e instanceof Error ? e.message : 'Erreur IA');
+    } finally {
+      setCommentLoading(false);
+    }
+  };
 
   const handleCalculateMacros = async () => {
     if (macroLoading) return;
@@ -338,6 +354,34 @@ export function SavedDetailScreen({ plate, meals, settings, onBack, onAdd, onDel
             color={Colors.ink}
             pct={(plate.macros.fat / totalMacro) * 100}
           />
+        </View>
+
+        {/* AI Comment */}
+        <View style={styles.commentSection}>
+          {plate.aiComment ? (
+            <View style={styles.commentCard}>
+              <Icon name="sparkle" size={12} color={Colors.muted} />
+              <Text style={styles.commentText}>{plate.aiComment}</Text>
+            </View>
+          ) : null}
+          {commentError ? (
+            <Text style={styles.macroErrorText}>{commentError}</Text>
+          ) : null}
+          <TouchableOpacity
+            style={[styles.commentBtn, commentLoading && styles.macroAiBtnLoading]}
+            onPress={handleGenerateComment}
+            activeOpacity={0.75}
+            disabled={commentLoading}
+          >
+            {commentLoading ? (
+              <ActivityIndicator size="small" color={Colors.paper2} style={{ width: 11, height: 11 }} />
+            ) : (
+              <Icon name="sparkle" size={11} color={Colors.paper2} />
+            )}
+            <Text style={styles.macroAiBtnText}>
+              {commentLoading ? 'Analyse…' : plate.aiComment ? 'Régénérer' : 'Commentaire IA'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.divider} />
@@ -584,6 +628,39 @@ const styles = StyleSheet.create({
     color: Colors.warn,
     paddingHorizontal: 20,
     marginBottom: 10,
+  },
+
+  commentSection: {
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    gap: 12,
+  },
+  commentCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: Colors.paper2,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    borderRadius: 14,
+    padding: 14,
+  },
+  commentText: {
+    flex: 1,
+    fontFamily: Fonts.serifItalic,
+    fontSize: 14,
+    lineHeight: 21,
+    color: Colors.ink2,
+  },
+  commentBtn: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Colors.ink,
+    borderRadius: 100,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
   },
 
   macrosSection: {
