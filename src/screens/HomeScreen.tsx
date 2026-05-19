@@ -6,6 +6,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -202,16 +203,82 @@ function VitaminPanel({ vitamins }: { vitamins: Vitamin[] }) {
   );
 }
 
+// ── Edit portion modal ───────────────────────────────────────
+
+function EditPortionModal({
+  visible,
+  name,
+  portionNum,
+  unit,
+  kcalPer100,
+  onSave,
+  onCancel,
+}: {
+  visible: boolean;
+  name: string;
+  portionNum: number;
+  unit: string;
+  kcalPer100: number;
+  onSave: (newPortion: number) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(portionNum);
+  useEffect(() => { if (visible) setValue(portionNum); }, [visible, portionNum]);
+
+  const estimatedKcal = Math.round((kcalPer100 * value) / 100);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <View style={editStyles.overlay}>
+        <View style={editStyles.card}>
+          <Text style={editStyles.title} numberOfLines={2}>{name}</Text>
+          <View style={editStyles.picker}>
+            <TouchableOpacity
+              style={editStyles.pickerBtn}
+              onPress={() => setValue((v) => Math.max(5, v - 10))}
+              activeOpacity={0.7}
+            >
+              <Icon name="minus" size={18} />
+            </TouchableOpacity>
+            <View style={editStyles.pickerValue}>
+              <Text style={editStyles.pickerNum}>{value}</Text>
+              <Text style={editStyles.pickerUnit}>{unit}</Text>
+            </View>
+            <TouchableOpacity
+              style={editStyles.pickerBtn}
+              onPress={() => setValue((v) => v + 10)}
+              activeOpacity={0.7}
+            >
+              <Icon name="plus" size={18} />
+            </TouchableOpacity>
+          </View>
+          <Text style={editStyles.kcalPreview}>≈ {estimatedKcal} kcal</Text>
+          <View style={editStyles.btnRow}>
+            <TouchableOpacity style={editStyles.cancelBtn} onPress={onCancel} activeOpacity={0.7}>
+              <Text style={editStyles.cancelText}>Annuler</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={editStyles.saveBtn} onPress={() => onSave(value)} activeOpacity={0.85}>
+              <Text style={editStyles.saveText}>Enregistrer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 // ── Meal card ────────────────────────────────────────────────
 
 function MealCard({
   meal,
   onAdd,
   onRemoveItem,
+  onEditPress,
 }: {
   meal: Meal;
   onAdd: (mealId: string) => void;
   onRemoveItem: (mealId: string, itemIdx: number) => void;
+  onEditPress: (mealId: string, itemIdx: number) => void;
 }) {
   const total = meal.items.reduce((s, i) => s + i.kcal, 0);
   return (
@@ -235,6 +302,15 @@ function MealCard({
             <Text style={styles.foodQty}>{item.qty}</Text>
           </View>
           <Text style={styles.foodKcal}>{item.kcal} kcal</Text>
+          {item.foodId && (
+            <TouchableOpacity
+              style={styles.editItemBtn}
+              onPress={() => onEditPress(meal.id, i)}
+              activeOpacity={0.7}
+            >
+              <Icon name="edit" size={11} color={Colors.muted2} />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={styles.removeItemBtn}
             onPress={() => onRemoveItem(meal.id, i)}
@@ -350,6 +426,7 @@ interface HomeScreenProps {
   userTimelineEvents: UserTimelineEvent[];
   onDateChange: (date: string | null) => void;
   onRemoveItem: (mealId: string, itemIdx: number) => void;
+  onEditItem: (mealId: string, itemIdx: number, newPortion: number) => void;
   onSaveSymptom: (date: string, scores: SymptomScores) => void;
   onSaveComment: (date: string, text: string) => void;
   onSaveAdvice: (date: string, text: string) => void;
@@ -371,6 +448,7 @@ export function HomeScreen({
   userTimelineEvents,
   onDateChange,
   onRemoveItem,
+  onEditItem,
   onSaveSymptom,
   onSaveComment,
   onSaveAdvice,
@@ -384,6 +462,14 @@ export function HomeScreen({
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [adviceLoading, setAdviceLoading] = useState(false);
   const [adviceError, setAdviceError] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<{
+    mealId: string;
+    itemIdx: number;
+    name: string;
+    portionNum: number;
+    unit: string;
+    kcalPer100: number;
+  } | null>(null);
 
   const todayStr = todayDateStr();
   const effectiveDate = viewingDate ?? todayStr;
@@ -421,11 +507,23 @@ export function HomeScreen({
   const handleGenerateAdvice = async () => {
     setAdviceLoading(true);
     setAdviceError(null);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25000);
     try {
-      const text = await generateDayAdvice(totals, profile, settings);
+      const text = await generateDayAdvice(totals, profile, settings, controller.signal);
+      clearTimeout(timeout);
       onSaveAdvice(effectiveDate, text);
     } catch (e: any) {
-      setAdviceError(e?.message ?? 'Erreur lors de la génération');
+      clearTimeout(timeout);
+      const msg: string = e?.message ?? '';
+      const isConfigError =
+        msg.includes('API') || msg.includes('clé') || msg.includes('modèle') ||
+        msg.includes('Paramètre') || msg.includes('Ollama') || msg.includes('OpenRouter');
+      setAdviceError(
+        isConfigError
+          ? msg
+          : "Pour l'instant, je ne peux pas fournir d'avis nutritionnel. Réessaie dans quelques instants.",
+      );
     } finally {
       setAdviceLoading(false);
     }
@@ -542,6 +640,18 @@ export function HomeScreen({
               meal={m}
               onAdd={onOpenSearch}
               onRemoveItem={onRemoveItem}
+              onEditPress={(mealId, itemIdx) => {
+                const item = m.items[itemIdx];
+                if (!item.foodId || !item.portionNum) return;
+                setEditTarget({
+                  mealId,
+                  itemIdx,
+                  name: item.name,
+                  portionNum: item.portionNum,
+                  unit: item.unit ?? 'g',
+                  kcalPer100: Math.round((item.kcal * 100) / item.portionNum),
+                });
+              }}
             />
           ))}
         </View>
@@ -654,6 +764,21 @@ export function HomeScreen({
         <Icon name="plus" size={20} color={Colors.paper2} />
         <Text style={styles.fabText}>{isFuture ? 'Planifier un repas' : 'Ajouter un aliment'}</Text>
       </TouchableOpacity>
+
+      <EditPortionModal
+        visible={editTarget !== null}
+        name={editTarget?.name ?? ''}
+        portionNum={editTarget?.portionNum ?? 100}
+        unit={editTarget?.unit ?? 'g'}
+        kcalPer100={editTarget?.kcalPer100 ?? 0}
+        onSave={(newPortion) => {
+          if (editTarget) {
+            onEditItem(editTarget.mealId, editTarget.itemIdx, newPortion);
+            setEditTarget(null);
+          }
+        }}
+        onCancel={() => setEditTarget(null)}
+      />
     </View>
   );
 }
@@ -1058,6 +1183,16 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   foodKcal: { fontFamily: Fonts.mono, fontSize: 12, color: Colors.ink, marginLeft: 8 },
+  editItemBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: Colors.hairline2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
+  },
   removeItemBtn: {
     width: 22,
     height: 22,
@@ -1207,5 +1342,95 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.paper2,
     letterSpacing: 0.1,
+  },
+});
+
+const editStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  card: {
+    backgroundColor: Colors.paper2,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    alignItems: 'center',
+    gap: 16,
+  },
+  title: {
+    fontFamily: Fonts.sans,
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.ink,
+    textAlign: 'center',
+  },
+  picker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+  },
+  pickerBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerValue: {
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  pickerNum: {
+    fontFamily: Fonts.mono,
+    fontSize: 30,
+    color: Colors.ink,
+  },
+  pickerUnit: {
+    fontFamily: Fonts.mono,
+    fontSize: 12,
+    color: Colors.muted,
+    marginTop: 2,
+  },
+  kcalPreview: {
+    fontFamily: Fonts.mono,
+    fontSize: 13,
+    color: Colors.muted2,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    alignItems: 'center',
+  },
+  cancelText: {
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    color: Colors.muted,
+  },
+  saveBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 10,
+    backgroundColor: Colors.ink,
+    alignItems: 'center',
+  },
+  saveText: {
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    color: Colors.paper2,
+    fontWeight: '600',
   },
 });

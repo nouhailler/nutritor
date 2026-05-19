@@ -11,6 +11,7 @@ import { Icon } from './Icon';
 import { Colors, Fonts } from '../theme/tokens';
 import {
   AutoTimelineEvent,
+  AutoEventKind,
   UserTimelineEvent,
   MiniMetric,
   DaySummaryLine,
@@ -55,16 +56,124 @@ function intensityToOpacity(intensity: EventIntensity): number {
 
 // ── Mini metrics strip ─────────────────────────────────────────
 
-function MetricChip({ metric }: { metric: MiniMetric }) {
+function MetricChip({ metric, onPress }: { metric: MiniMetric; onPress: () => void }) {
   const col = LEVEL_COLOR[metric.level];
   return (
-    <View style={[s.metricChip, { borderColor: col + '40' }]}>
+    <TouchableOpacity
+      style={[s.metricChip, { borderColor: col + '40' }]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
       <Text style={s.metricEmoji}>{metric.emoji}</Text>
-      <View>
+      <View style={{ flex: 1 }}>
         <Text style={s.metricLabel}>{metric.label}</Text>
         <Text style={[s.metricValue, { color: col }]}>{metric.value}</Text>
       </View>
-    </View>
+      <Icon name="info" size={11} color={col + '99'} />
+    </TouchableOpacity>
+  );
+}
+
+// ── Metric detail modal ────────────────────────────────────────
+
+const METRIC_EXPL: Record<string, string> = {
+  'Énergie':   'Calculé à partir des pics de caféine, de la taille des repas et des creux post-prandiaux détectés sur la journée.',
+  'Digestion': 'Évalue la charge fermentative (FODMAP) et la vitesse de digestion des lipides au fil de la journée.',
+  'FODMAP':    'Les FODMAP sont des sucres peu absorbés qui fermentent dans le côlon. En cas de syndrome de l\'intestin irritable (SII), ils peuvent provoquer ballonnements, crampes et diarrhée.',
+  'Glycémie':  'Un pic glycémique survient après un repas riche en glucides. Il déclenche l\'insuline et peut provoquer un creux d\'énergie 1–2 h plus tard.',
+};
+
+const METRIC_ADVICE: Record<string, Partial<Record<'ok' | 'mid' | 'warn', string>>> = {
+  'Énergie': {
+    mid:  'Énergie variable — la caféine ou un repas copieux peut provoquer un creux en milieu d\'après-midi.',
+    warn: 'Plusieurs creux post-prandiaux — privilégier des repas plus légers ou une sieste courte de 10–20 min.',
+  },
+  'Digestion': {
+    mid:  'Digestion modérée — une marche après le repas aide à accélérer le transit.',
+    warn: 'Digestion chargée — éviter l\'effort physique intense dans les 2 h suivant le repas.',
+  },
+  'FODMAP': {
+    mid:  'Charge modérée — généralement bien toléré sauf en cas de SII actif.',
+    warn: 'Charge élevée — si tu souffres du SII, des symptômes digestifs sont probables cet après-midi.',
+  },
+  'Glycémie': {
+    mid:  'Élévation modérée — normale pour un repas mixte. L\'activité physique post-repas aide à utiliser le glucose.',
+    warn: 'Charge glycémique élevée — associer fibres, protéines et lipides aux glucides pour amortir les pics.',
+  },
+};
+
+function MetricDetailModal({
+  visible,
+  metric,
+  events,
+  onClose,
+}: {
+  visible: boolean;
+  metric: MiniMetric | null;
+  events: AutoTimelineEvent[];
+  onClose: () => void;
+}) {
+  if (!metric) return null;
+  const col  = LEVEL_COLOR[metric.level];
+  const expl = METRIC_EXPL[metric.label] ?? '';
+  const tip  = METRIC_ADVICE[metric.label]?.[metric.level] ?? null;
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={s.modalOverlay}>
+        <View style={s.modalCard}>
+          <View style={s.modalHeader}>
+            <View style={s.detailHeaderLeft}>
+              <Text style={s.detailEmoji}>{metric.emoji}</Text>
+              <Text style={s.modalTitle}>{metric.label}</Text>
+              <View style={[s.levelBadge, { backgroundColor: col + '22', borderColor: col + '55' }]}>
+                <Text style={[s.levelBadgeText, { color: col }]}>{metric.value}</Text>
+              </View>
+            </View>
+            <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
+              <Icon name="close" size={18} color={Colors.muted} />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={s.detailExpl}>{expl}</Text>
+
+          {events.length > 0 ? (
+            <>
+              <Text style={s.detailSectionLabel}>Événements détectés</Text>
+              {events.map((ev, i) => {
+                const dotColor = CATEGORY_COLOR[ev.category];
+                const endTime  = ev.durationMin ? addMinutes(ev.time, ev.durationMin) : null;
+                return (
+                  <View key={i} style={s.detailEvent}>
+                    <Text style={s.detailEventEmoji}>{ev.emoji}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.detailEventLabel}>{ev.label}</Text>
+                      {ev.sublabel && <Text style={s.detailEventSub}>{ev.sublabel}</Text>}
+                      <Text style={s.detailEventTime}>
+                        {ev.time}{endTime ? ` → ${endTime}` : ''}
+                      </Text>
+                    </View>
+                    <View style={[s.intensityPill, { backgroundColor: dotColor + '22', borderColor: dotColor + '44' }]}>
+                      <Text style={[s.intensityPillText, { color: dotColor }]}>
+                        {ev.intensity === 'high' ? 'fort' : ev.intensity === 'mid' ? 'modéré' : 'faible'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </>
+          ) : (
+            <Text style={s.detailNoEvent}>Aucun événement significatif détecté pour cette métrique aujourd'hui.</Text>
+          )}
+
+          {tip && (
+            <View style={[s.detailTip, { borderLeftColor: col }]}>
+              <Text style={s.detailTipText}>{tip}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -363,6 +472,13 @@ interface PhysioTimelineProps {
   onDeleteEvent: (id: string) => void;
 }
 
+const METRIC_EVENT_TYPES: Record<string, AutoEventKind[]> = {
+  'Énergie':   ['caffeine', 'vigilance', 'postprandial', 'satiety'],
+  'Digestion': ['fermentation', 'digestion'],
+  'FODMAP':    ['fermentation'],
+  'Glycémie':  ['glycemic', 'postprandial'],
+};
+
 export function PhysioTimeline({
   autoEvents,
   userEvents,
@@ -374,6 +490,10 @@ export function PhysioTimeline({
   onDeleteEvent,
 }: PhysioTimelineProps) {
   const [modalVisible, setModalVisible] = useState(false);
+  const [detailMetric, setDetailMetric] = useState<{
+    metric: MiniMetric;
+    events: AutoTimelineEvent[];
+  } | null>(null);
 
   const currentHHMM = useMemo(() => nowHHMM(), []);
 
@@ -399,7 +519,14 @@ export function PhysioTimeline({
       {miniMetrics.length > 0 && (
         <View style={s.metricsStrip}>
           {miniMetrics.map((m) => (
-            <MetricChip key={m.label} metric={m} />
+            <MetricChip
+              key={m.label}
+              metric={m}
+              onPress={() => setDetailMetric({
+                metric: m,
+                events: autoEvents.filter((e) => METRIC_EVENT_TYPES[m.label]?.includes(e.type) ?? false),
+              })}
+            />
           ))}
         </View>
       )}
@@ -463,6 +590,13 @@ export function PhysioTimeline({
         <DaySummaryCard lines={daySummary} />
       )}
 
+      <MetricDetailModal
+        visible={detailMetric !== null}
+        metric={detailMetric?.metric ?? null}
+        events={detailMetric?.events ?? []}
+        onClose={() => setDetailMetric(null)}
+      />
+
       <QuickAddModal
         visible={modalVisible}
         date={date}
@@ -514,6 +648,99 @@ const s = StyleSheet.create({
     color: Colors.ink,
     letterSpacing: -0.1,
     marginTop: 1,
+  },
+
+  // Metric detail modal
+  detailHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  detailEmoji: { fontSize: 20 },
+  levelBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  levelBadgeText: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    letterSpacing: 0.5,
+  },
+  detailExpl: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.muted,
+    lineHeight: 19,
+  },
+  detailSectionLabel: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 2,
+    textTransform: 'uppercase' as const,
+    color: Colors.muted,
+    marginTop: 4,
+  },
+  detailEvent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.hairline2,
+  },
+  detailEventEmoji: { fontSize: 15 },
+  detailEventLabel: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 13,
+    color: Colors.ink,
+  },
+  detailEventSub: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    color: Colors.muted,
+    marginTop: 2,
+    letterSpacing: 0.2,
+  },
+  detailEventTime: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    color: Colors.muted2,
+    marginTop: 2,
+    letterSpacing: 0.3,
+  },
+  intensityPill: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    alignSelf: 'center' as const,
+  },
+  intensityPillText: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 0.5,
+  },
+  detailNoEvent: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.muted2,
+    textAlign: 'center' as const,
+    paddingVertical: 12,
+  },
+  detailTip: {
+    borderLeftWidth: 2,
+    paddingLeft: 12,
+    paddingVertical: 6,
+    marginTop: 4,
+  },
+  detailTipText: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.ink,
+    lineHeight: 18,
   },
 
   // Row layout

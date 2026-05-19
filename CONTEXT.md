@@ -4,11 +4,13 @@
 
 ---
 
-## État actuel (2026-05-18)
+## État actuel (2026-05-19)
 
 ### Derniers commits
-- `a1fd554` — feat: journal symptômes ↔ alimentation + reconnaissance photo IA
-- Session courante (non committé) — fix: chips filtre ScrollView, cache OFF, crash Pain, suppression aliments, génération repas arrière-plan, sauvegarde repas générés
+- `0a89638` — feat: mise à jour menus d'aide — nouvelles fonctionnalités
+- `31adb6e` — feat: mise à jour onboarding — nouvelles fonctionnalités
+- `ad53a18` — feat: annulation IA, modifier aliment, fix recherches OFF + crash brand
+- `de92609` — feat: liste aliments organisée en 4 sections contextuelles
 
 ### Dernier build APK
 - **Build ID** : `8fc6725c-7e2b-484a-9e06-1ddb494e4840`
@@ -59,7 +61,7 @@
 type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile';
 type StackScreen =
   | 'search' | 'detail' | 'savedDetail' | 'editProfile'
-  | 'settings' | 'addFood' | 'openFoodFacts' | 'ciqual'
+  | 'settings' | 'addFood' | 'editFood' | 'openFoodFacts' | 'ciqual'
   | 'scanner' | 'editSavedPlate' | 'foodPhoto'
   | 'fodmap' | 'mealGenerator' | 'knowledge' | null;
 ```
@@ -150,6 +152,7 @@ Au premier démarrage après mise à jour, recompute les allergènes CIQUAL pour
 - `generateFoodWithAI(name, brand, context, settings): Promise<Food>`
 - `enrichFoodWithAI(food, settings): Promise<Food>`
 - `generateMeals(query, profile, fodmapPhase, settings): Promise<MealGeneratorResult>`
+- `generateDayAdvice(totals, profile, settings, signal?): Promise<string>` — accepte `AbortSignal`, valide le contenu (filtre les réponses techniques erronées < 20 chars ou contenant "text is empty")
 - `analyzeFoodPhoto(imageBase64, settings): Promise<VisionItem[]>`
 - `isAIReady(settings): boolean` — vérifie si un provider est configuré
 - Valide les réponses JSON, strips markdown fences avant `JSON.parse`
@@ -182,6 +185,14 @@ interface Food {
   per100: { kcal: number; protein: number; carbs: number; fat: number; ... };
   allergens: Allergen[]; compat: CompatTag[];
   minerals?: Mineral[]; vitamins?: Vitamin[];
+}
+
+interface MealItem {
+  name: string; qty: string; kcal: number;
+  macros: { protein: number; carbs: number; fat: number };
+  foodId?: string;      // id dans foodList — permet recalcul macros
+  portionNum?: number;  // portion numérique (ex: 150)
+  unit?: string;        // unité (ex: 'g', 'ml')
 }
 
 interface SavedPlate {
@@ -251,6 +262,7 @@ interface KnowledgeEntry {
 | Éditer profil | `EditProfileScreen.tsx` | stack `'editProfile'` |
 | Paramètres | `SettingsScreen.tsx` | stack `'settings'` |
 | Ajouter via IA | `AddFoodScreen.tsx` | stack `'addFood'` |
+| Éditer aliment | `EditFoodScreen.tsx` | stack `'editFood'` |
 | Open Food Facts | `OpenFoodFactsScreen.tsx` | stack `'openFoodFacts'` |
 | CIQUAL | `CIQUALScreen.tsx` | stack `'ciqual'` |
 | Scanner | `BarcodeScannerScreen.tsx` | stack `'scanner'` |
@@ -352,6 +364,8 @@ type KView =
 - **KnowledgeScreen** : la navigation interne (`KView`) est locale à l'écran — pas de StackScreen supplémentaire dans `AppShell`.
 - **Chips dans ScrollView horizontal (web)** : les enfants s'étirent pour remplir la hauteur du conteneur sur web. Correction : `alignSelf: 'flex-start'` sur chaque chip. Ne pas mettre `alignItems: 'center'` sur `contentContainerStyle` (provoque la disparition des chips quand les résultats apparaissent).
 - **Types IA en AsyncStorage** : l'IA peut retourner des `number` là où on attend des `string` (ex: `pct: 27` au lieu de `"27%"`). Toujours faire `String(val ?? '')` avant `.match()`, `.toUpperCase()`, etc. sur des champs enrichis par l'IA.
+- **MealItem.foodId / portionNum** : présents uniquement sur les items ajoutés depuis la version 0.12+. Les items historiques n'ont pas ces champs — toujours vérifier `item.foodId` avant d'afficher l'icône crayon ou de tenter une recalculation.
+- **AbortController avis IA** : `handleGenerateAdvice` dans `HomeScreen` crée un nouveau contrôleur à chaque appel (timeout 25 s). Le `finally` garantit `adviceLoading = false` même en cas d'abort — plus de spinner bloqué.
 
 ---
 

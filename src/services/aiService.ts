@@ -489,6 +489,7 @@ export async function generateDayAdvice(
   totals: { kcal: number; protein: number; carbs: number; fat: number },
   profile: UserProfile,
   settings: AppSettings,
+  signal?: AbortSignal,
 ): Promise<string> {
   const energyTotal = totals.protein * 4 + totals.carbs * 4 + totals.fat * 9 || 1;
   const pctP = Math.round((totals.protein * 4 / energyTotal) * 100);
@@ -508,11 +509,16 @@ Lipides : ${Math.round(totals.fat)} g (${pctF} %) / objectif ${profile.macroTarg
 
   const raw =
     settings.aiProvider === 'openrouter'
-      ? await callOpenRouter(settings.openrouter, messages)
-      : await callOllama(settings.ollama, messages);
+      ? await callOpenRouter(settings.openrouter, messages, signal)
+      : await callOllama(settings.ollama, messages, signal);
 
-  if (!raw) throw new Error('Réponse IA vide.');
-  return raw.trim();
+  const text = raw?.trim() ?? '';
+  // Certains modèles renvoient un message d'erreur technique comme contenu texte (ex: "The provided text is empty")
+  const lc = text.toLowerCase();
+  if (!text || text.length < 20 || lc.includes('text is empty') || lc.includes('provided text')) {
+    throw new Error('EMPTY_ADVICE');
+  }
+  return text;
 }
 
 // ── Plate macro estimation ────────────────────────────────────

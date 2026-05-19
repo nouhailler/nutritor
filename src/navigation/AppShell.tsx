@@ -648,6 +648,9 @@ export function AppShell() {
                     carbs:   Math.round((food.per100.carbs   * portion) / 100 * 10) / 10,
                     fat:     Math.round((food.per100.fat     * portion) / 100 * 10) / 10,
                   },
+                  foodId: food.id,
+                  portionNum: portion,
+                  unit: food.unit,
                 },
               ],
             }
@@ -684,6 +687,9 @@ export function AppShell() {
                     carbs:   Math.round((food.per100.carbs   * portion) / 100 * 10) / 10,
                     fat:     Math.round((food.per100.fat     * portion) / 100 * 10) / 10,
                   },
+                  foodId: food.id,
+                  portionNum: portion,
+                  unit: food.unit,
                 },
               ],
             }
@@ -734,6 +740,33 @@ export function AppShell() {
           ? { ...m, items: m.items.filter((_, i) => i !== itemIdx) }
           : m
       )
+    );
+  };
+
+  const handleEditItem = (mealId: string, itemIdx: number, newPortion: number) => {
+    updateViewedMeals((ms) =>
+      ms.map((m) => {
+        if (m.id !== mealId) return m;
+        return {
+          ...m,
+          items: m.items.map((item, i) => {
+            if (i !== itemIdx) return item;
+            const food = foodList.find((f) => f.id === item.foodId);
+            if (!food) return item;
+            return {
+              ...item,
+              qty: `${newPortion} ${food.unit}`,
+              kcal: Math.round((food.per100.kcal * newPortion) / 100),
+              portionNum: newPortion,
+              macros: {
+                protein: Math.round((food.per100.protein * newPortion) / 100 * 10) / 10,
+                carbs:   Math.round((food.per100.carbs   * newPortion) / 100 * 10) / 10,
+                fat:     Math.round((food.per100.fat     * newPortion) / 100 * 10) / 10,
+              },
+            };
+          }),
+        };
+      })
     );
   };
 
@@ -1023,6 +1056,7 @@ export function AppShell() {
             userTimelineEvents={timelineEvents[effectiveDate] ?? []}
             onDateChange={setViewingDate}
             onRemoveItem={handleRemoveItem}
+            onEditItem={handleEditItem}
             onOpenMenu={() => setDrawerOpen(true)}
             onOpenSearch={openSearch}
             onSaveSymptom={handleSaveSymptom}

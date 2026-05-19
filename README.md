@@ -47,6 +47,7 @@ Et plus largement, un compagnon de **connaissance nutritionnelle** :
 | **Éditer profil** | stack `editProfile` | Nom, kcal, macros cibles, allergènes, régimes |
 | **Paramètres** | stack `settings` | Config IA (OpenRouter / Ollama), import/export JSON |
 | **Ajouter via IA** | stack `addFood` | Génération d'une fiche aliment par nom libre |
+| **Éditer aliment** | stack `editFood` | Correction nom, marque, catégorie, portion, macros de base |
 | **Open Food Facts** | stack `openFoodFacts` | Recherche +3 M produits, scoring de pertinence, chips catégories, enrichissement IA |
 | **CIQUAL** | stack `ciqual` | 3 167 aliments français embarqués, enrichissement IA |
 | **Scanner** | stack `scanner` | Scan EAN-13/8/UPC → Open Food Facts |
@@ -176,6 +177,7 @@ nutritor/
         ├── EditProfileScreen.tsx     # stack 'editProfile'
         ├── SettingsScreen.tsx        # stack 'settings'
         ├── AddFoodScreen.tsx         # stack 'addFood'
+        ├── EditFoodScreen.tsx        # stack 'editFood'
         ├── OpenFoodFactsScreen.tsx   # stack 'openFoodFacts'
         ├── CIQUALScreen.tsx          # stack 'ciqual'
         ├── BarcodeScannerScreen.tsx  # stack 'scanner'
@@ -271,7 +273,10 @@ Nutritor supporte deux fournisseurs d'IA pour la génération de fiches nutritio
 - [x] Open Food Facts — recherche avec **scoring de pertinence** (exact > marque > préfixe > inclusion) et import
 - [x] Scanner code-barres (EAN-13, EAN-8, UPC)
 - [x] Génération IA de fiches nutritionnelles (OpenRouter + Ollama) avec **robustesse aux données mal formées**
-- [x] **Bannière IA** avec destination du résultat et bouton "Voir" pour navigation directe
+- [x] **Bannière IA** avec destination du résultat et bouton "Voir" pour navigation directe, bouton "Annuler" pour interrompre l'enrichissement en cours
+- [x] **Journal — Modifier les proportions** : icône crayon sur chaque ligne d'aliment (aliments ajoutés depuis la version 0.12) — modal +/− par 10 g avec estimation kcal temps réel et recalcul complet des macros
+- [x] **Journal — Timeline mini-métriques cliquables** : Énergie / Digestion / FODMAP / Glycémie ouvrent un modal de détail avec événements, intensités et conseils contextuels
+- [x] **Fiche aliment — Éditer** : icône crayon en haut à droite ouvre `EditFoodScreen` pour corriger nom, marque, catégorie, portion et valeurs nutritionnelles de base
 - [x] Enrichissement IA des fiches CIQUAL / Open Food Facts (champs manquants uniquement)
 - [x] Générateur de repas IA profil-aware (allergènes, FODMAP, macros)
 - [x] Reconnaissance photo d'aliments via IA vision

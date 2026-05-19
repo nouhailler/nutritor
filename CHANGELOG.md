@@ -9,6 +9,28 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [0.12.0] — 2026-05-19
+
+### Ajouté
+- **Journal — Modifier les proportions** : icône crayon sur chaque ligne d'aliment dans un repas (uniquement pour les aliments ajoutés depuis cette version). Un modal centré présente un sélecteur +/− par 10 g avec estimation kcal en temps réel. La sauvegarde recalcule kcal, protéines, glucides et lipides depuis les données `per100` de l'aliment.
+- **Journal — Timeline mini-métriques cliquables** : les 4 chips Énergie / Digestion / FODMAP / Glycémie ouvrent un modal de détail avec explication de la métrique, liste des événements détectés (emoji, label, heure → heure de fin, intensité) et conseil contextuel si le niveau est mid ou warn.
+- **Fiche aliment — Éditer** : icône crayon en haut à droite de la fiche détail (`DetailScreen`). Ouvre `EditFoodScreen` (nouveau stack `editFood`) pour corriger nom, marque, catégorie, portion par défaut, unité et valeurs nutritionnelles de base (kcal, protéines, glucides, lipides, fibres, sel). Un tip onboarding contextuel guide les nouveaux utilisateurs.
+- **Bandeau IA — Annuler** : bouton "Annuler" sur le bandeau de progression IA pour interrompre l'enrichissement en cours via `AbortController` et laisser la file traiter le job suivant.
+
+### Corrigé
+- **Avis Nutritionnel — Régénérer** : timeout de 25 s via `AbortController` — le spinner ne reste plus bloqué indéfiniment si OpenRouter est lent. Les réponses techniques erronées (ex : "The provided text is empty") sont détectées et remplacées par un message utilisateur clair.
+- **Open Food Facts — Recherches récentes** : le tap sur un élément de la liste relançait la recherche mais ne repeuplait pas le champ de texte — corrigé via `dropdownPressRef`.
+- **Open Food Facts — Filtre énergie** : les produits avec énergie en kJ (`energy_100g`) étaient exclus du filtre — pris en compte désormais.
+- **Liste aliments — crash brand** : `f.brand.toLowerCase()` plantait si `brand` était `null` après une génération IA — remplacé par `(f.brand ?? '').toLowerCase()`.
+
+### Modifié
+- **`MealItem`** (types) : ajout de `foodId?`, `portionNum?`, `unit?` — backward-compatible, les items historiques sans ces champs fonctionnent normalement.
+- **`generateDayAdvice`** : accepte un `AbortSignal` optionnel et valide le contenu de la réponse avant de la retourner.
+- **Menus d'aide** : mis à jour sur tous les écrans pour refléter les nouvelles fonctionnalités (timeline, sections aliments, modifier aliment, annuler IA, honnêteté OFF, correction post-création IA).
+- **Onboarding** : flow de bienvenue et tips contextuels mis à jour (timeline, sections, IA cancel, modifier aliment).
+
+---
+
 ## [0.11.0] — 2026-05-19
 
 ### Ajouté

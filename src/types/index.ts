@@ -140,6 +140,9 @@ export interface MealItem {
   qty: string;
   kcal: number;
   macros: { protein: number; carbs: number; fat: number };
+  foodId?: string;
+  portionNum?: number;
+  unit?: string;
 }
 
 export interface Meal {
