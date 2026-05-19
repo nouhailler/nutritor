@@ -5,6 +5,7 @@
  */
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Switch,
@@ -41,13 +42,29 @@ function LevelPill({ level }: { level: AllergenLevel }) {
 
 interface ProfileScreenProps {
   profile: UserProfile;
+  digestiveMemory: string;
+  digestiveMemoryDate: string;
+  memoryLoading: boolean;
+  memoryError: string | null;
   onEdit: () => void;
   onToggleDiet: (id: string) => void;
   onOpenMenu: () => void;
   onOpenFodmap: () => void;
+  onUpdateMemory: () => void;
 }
 
-export function ProfileScreen({ profile, onEdit, onToggleDiet, onOpenMenu, onOpenFodmap }: ProfileScreenProps) {
+export function ProfileScreen({
+  profile,
+  digestiveMemory,
+  digestiveMemoryDate,
+  memoryLoading,
+  memoryError,
+  onEdit,
+  onToggleDiet,
+  onOpenMenu,
+  onOpenFodmap,
+  onUpdateMemory,
+}: ProfileScreenProps) {
   const insets = useSafeAreaInsets();
   const [helpVisible, setHelpVisible] = useState(false);
   const dietLabel = computeDietLabel(profile.diets);
@@ -160,6 +177,65 @@ export function ProfileScreen({ profile, onEdit, onToggleDiet, onOpenMenu, onOpe
               </View>
             ))}
           </View>
+        </View>
+
+        {/* Section: Mémoire digestive */}
+        <View style={styles.section}>
+          <Text style={styles.sectionEyebrow}>Mémoire digestive</Text>
+          <Text style={styles.sectionDesc}>
+            L'IA analyse tes repas des 21 derniers jours croisés avec tes symptômes quotidiens pour construire une mémoire personnalisée de ta tolérance digestive.
+          </Text>
+
+          {/* Existing memory */}
+          {digestiveMemory ? (
+            <View style={styles.memoryCard}>
+              <View style={styles.memoryHeader}>
+                <Icon name="sparkle" size={12} color={Colors.ok} />
+                <Text style={styles.memoryHeaderText}>Observations personnalisées</Text>
+                {digestiveMemoryDate ? (
+                  <Text style={styles.memoryDate}>mis à jour le {digestiveMemoryDate}</Text>
+                ) : null}
+              </View>
+              <View style={styles.memoryLines}>
+                {digestiveMemory.split('\n').filter((l) => l.trim()).map((line, i) => (
+                  <View key={i} style={styles.memoryLine}>
+                    <View style={styles.memoryDot} />
+                    <Text style={styles.memoryLineText}>
+                      {line.replace(/^\d+\.\s*/, '')}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.memoryEmpty}>
+              <Icon name="leaf" size={18} color={Colors.muted2} />
+              <Text style={styles.memoryEmptyText}>
+                Aucune observation enregistrée.{'\n'}Note tes repas et ton bien-être quotidien pendant quelques jours, puis lance l'analyse.
+              </Text>
+            </View>
+          )}
+
+          {memoryError ? (
+            <Text style={styles.memoryError}>{memoryError}</Text>
+          ) : null}
+
+          <TouchableOpacity
+            style={[styles.memoryBtn, memoryLoading && styles.memoryBtnLoading]}
+            onPress={onUpdateMemory}
+            disabled={memoryLoading}
+            activeOpacity={0.75}
+          >
+            {memoryLoading
+              ? <ActivityIndicator size="small" color={Colors.paper2} />
+              : <Icon name="sparkle" size={14} color={Colors.paper2} />
+            }
+            <Text style={styles.memoryBtnText}>
+              {memoryLoading
+                ? 'Analyse en cours…'
+                : digestiveMemory ? 'Mettre à jour la mémoire' : 'Analyser mes données'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Section: Objectifs */}
@@ -448,5 +524,102 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.serif,
     fontSize: 20,
     color: Colors.ink,
+  },
+
+  // Digestive memory
+  memoryCard: {
+    borderWidth: 1,
+    borderColor: 'rgba(63,90,58,0.25)',
+    borderRadius: 18,
+    backgroundColor: 'rgba(63,90,58,0.04)',
+    padding: 16,
+    marginBottom: 14,
+  },
+  memoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginBottom: 14,
+    flexWrap: 'wrap',
+  },
+  memoryHeaderText: {
+    fontFamily: Fonts.sansSemiBold,
+    fontSize: 12,
+    color: Colors.ok,
+    letterSpacing: 0.1,
+    flex: 1,
+  },
+  memoryDate: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    color: Colors.muted2,
+    letterSpacing: 0.3,
+  },
+  memoryLines: {
+    gap: 10,
+  },
+  memoryLine: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 9,
+  },
+  memoryDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: Colors.ok,
+    marginTop: 7,
+    flexShrink: 0,
+  },
+  memoryLineText: {
+    flex: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    color: Colors.ink2,
+    lineHeight: 21,
+  },
+  memoryEmpty: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.hairline2,
+    borderRadius: 16,
+    borderStyle: 'dashed',
+    marginBottom: 14,
+  },
+  memoryEmptyText: {
+    flex: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.muted,
+    lineHeight: 20,
+  },
+  memoryError: {
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    color: Colors.warn,
+    marginBottom: 10,
+    paddingHorizontal: 2,
+  },
+  memoryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.ink,
+    borderRadius: 100,
+    paddingVertical: 13,
+    paddingHorizontal: 20,
+  },
+  memoryBtnLoading: {
+    opacity: 0.6,
+  },
+  memoryBtnText: {
+    fontFamily: Fonts.sansSemiBold,
+    fontSize: 14,
+    color: Colors.paper2,
+    letterSpacing: 0.1,
   },
 });

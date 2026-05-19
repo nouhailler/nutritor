@@ -1,8 +1,9 @@
 import { AppSettings } from '../types/settings';
-import { Allergen, CompatItem, Food } from '../types';
+import { Allergen, CompatItem, Food, Meal } from '../types';
 import { UserProfile } from '../data/user';
 import { FodmapPhase } from '../data/fodmapProtocol';
 import { GeneratedMeal, MealGeneratorResult } from '../types/mealGenerator';
+import { SymptomEntry, SYMPTOM_CONFIG } from '../types/symptoms';
 
 const FOOD_SCHEMA = `{
   "id": "slug-unique-001",
@@ -542,6 +543,91 @@ Ingrédients : ${plate.recipe.map((r) => `${r.name} ${r.qty}`).join(', ')}`;
 
   const messages = [
     { role: 'system', content: PLATE_COMMENT_SYSTEM },
+    { role: 'user', content: userMsg },
+  ];
+
+  const raw =
+    settings.aiProvider === 'openrouter'
+      ? await callOpenRouter(settings.openrouter, messages)
+      : await callOllama(settings.ollama, messages);
+
+  if (!raw) throw new Error('Réponse IA vide.');
+  return raw.trim();
+}
+
+// ── Digestive memory ─────────────────────────────────────────
+
+const DIGESTIVE_MEMORY_SYSTEM = `Tu es un assistant de santé digestive fonctionnelle spécialisé en nutrition clinique. Tu analyses les données alimentaires et les symptômes d'un utilisateur pour construire une mémoire digestive personnalisée.
+
+Objectif : identifier des patterns individuels entre les aliments consommés et les symptômes digestifs rapportés, et les formuler sous forme d'observations cliniques concises et personnalisées.
+
+Règles strictes :
+- Réponds UNIQUEMENT avec une liste numérotée (1. 2. 3. …), une observation par ligne
+- Maximum 30 lignes au total
+- Chaque observation est une phrase courte et précise (< 20 mots)
+- Ne déduis JAMAIS une conclusion à partir d'un seul jour — il faut au moins 2 occurrences concordantes
+- Préserve et affine les observations existantes si les nouvelles données les confirment ou les contredisent
+- Ajoute uniquement les nouvelles observations que les données récentes permettent de confirmer
+- Supprime les observations obsolètes ou contredites par les nouvelles données
+- Utilise un style clinique sobre en français : "Les [aliment] semblent…", "Tolérance meilleure…", "Association [A]+[B] corrélée à…"
+- Ne mentionne PAS les scores exacts ni les dates — parle de patterns
+- Scores symptômes : 0 = absence, 4 = maximum. Pour douleurs/ballonnements/inflammation : score élevé = mauvais. Pour énergie/sommeil : score élevé = bon. Pour transit : 2 = idéal, 0/4 = extrêmes.`;
+
+export interface DigestiveDayData {
+  date: string;
+  meals: Meal[];
+  symptom: SymptomEntry | null;
+}
+
+export async function updateDigestiveMemory(
+  recentDays: DigestiveDayData[],
+  profile: UserProfile,
+  existingMemory: string,
+  settings: AppSettings,
+): Promise<string> {
+  // Build compact data representation
+  const daysText = recentDays
+    .filter((d) => d.meals.some((m) => m.items.length > 0))
+    .map((d) => {
+      const mealsText = d.meals
+        .filter((m) => m.items.length > 0)
+        .map((m) => `  ${m.name}: ${m.items.map((i) => i.name).join(', ')}`)
+        .join('\n');
+      const s = d.symptom?.scores;
+      const symptomsText = s
+        ? Object.entries(SYMPTOM_CONFIG)
+            .filter(([k]) => (s as any)[k] >= 0)
+            .map(([k, cfg]) => `${cfg.shortLabel}:${(s as any)[k]}`)
+            .join(' · ')
+        : 'non renseignés';
+      return `${d.date}:\n${mealsText}\n  Symptômes: ${symptomsText}`;
+    })
+    .join('\n\n');
+
+  if (!daysText.trim()) {
+    throw new Error('Pas assez de données alimentaires pour générer une analyse.');
+  }
+
+  const activeAllergens = profile.allergens
+    .filter((a) => a.level !== 'aucun')
+    .map((a) => `${a.name} (${a.level})`)
+    .join(', ') || 'Aucun';
+  const activeDiets = profile.diets.filter((d) => d.on).map((d) => d.label).join(', ') || 'Aucun';
+
+  const userMsg = `Profil utilisateur :
+Allergènes actifs : ${activeAllergens}
+Régimes : ${activeDiets}
+
+Données alimentaires (${recentDays.filter((d) => d.meals.some((m) => m.items.length > 0)).length} jours enregistrés) :
+${daysText}
+
+Mémoire digestive existante (à préserver, affiner ou compléter) :
+${existingMemory.trim() || '(aucune mémoire existante — première analyse)'}
+
+Génère la mémoire digestive mise à jour (max 30 lignes numérotées) :`;
+
+  const messages = [
+    { role: 'system', content: DIGESTIVE_MEMORY_SYSTEM },
     { role: 'user', content: userMsg },
   ];
 

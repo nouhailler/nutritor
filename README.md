@@ -39,7 +39,7 @@ Et plus largement, un compagnon de **connaissance nutritionnelle** :
 | **Aliments** | tab `foods` | Bibliothèque personnelle + accès CIQUAL / OFF / scanner / IA / photo |
 | **Plats** | tab `saved` | Grille 2 colonnes de repas sauvegardés — filtres, tri, création |
 | **Statistiques** | tab `stats` | Bar chart 7 jours, sparklines macros, heatmap conformité régime, corrélations symptômes |
-| **Profil** | tab `profile` | 14 allergènes avec sévérité, 6 régimes actifs, objectif calorique |
+| **Profil** | tab `profile` | 14 allergènes avec sévérité, 6 régimes actifs, objectif calorique, mémoire digestive IA |
 | **Recherche** | stack `search` | Filtres régime, compatibilité allergènes temps réel, récents |
 | **Détail aliment** | stack `detail` | 12 sections — acides aminés, FODMAP, bioactifs, sensoriel, ajout journal |
 | **Détail plat** | stack `savedDetail` | Recette par ingrédient, macros, calcul IA des macros, commentaire IA, photo, ajout au journal |
@@ -260,6 +260,7 @@ Nutritor supporte deux fournisseurs d'IA pour la génération de fiches nutritio
 - [x] **Duplication automatique de la journée précédente** au démarrage si des repas existaient, avec bandeau de confirmation 4 s
 - [x] **Commentaire libre par journée** — zone texte max 2 000 caractères sous le widget Bien-être, sauvegardée par date
 - [x] **Avis Nutritionnel IA dans le Journal** — analyse des répartitions P/G/L (% énergétiques), commentaire en 2–3 phrases persisté par date, régénérable à volonté
+- [x] **Mémoire digestive intelligente** — section dans le Profil : l'IA croise 21 jours de repas × symptômes pour générer jusqu'à 30 observations cliniques personnalisées (patterns de tolérance/intolérance, associations alimentaires, effets de la cuisson…). Cumulative et auto-affinée à chaque analyse.
 - [x] **Calcul IA des macros sur les plats** — bouton « Calculer IA » estime kcal + P/G/L de chaque ingrédient depuis son nom et sa quantité
 - [x] **Commentaire IA sur les plats** — analyse de l'équilibre nutritionnel (trop glucidique ? trop lipidique ? bien équilibré ?)
 - [x] **Barre macros P/G/L sur les cartes de plats** — micro-barre colorée proportionnelle visible dès que les macros sont renseignées

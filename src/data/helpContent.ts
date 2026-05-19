@@ -164,16 +164,23 @@ export const HELP: Record<string, HelpContent> = {
 
   profile: {
     title: 'Mon profil',
-    subtitle: 'Paramètres nutritionnels personnels',
+    subtitle: 'Paramètres nutritionnels et mémoire digestive',
     blocks: [
       { type: 'heading', text: 'Profil de base' },
       { type: 'item', icon: 'user', label: 'Données personnelles', text: 'Âge, taille, poids et niveau d\'activité permettent de calculer ton métabolisme de base (MB) et tes besoins caloriques.' },
       { type: 'item', icon: 'target', label: 'Objectif', text: 'Perte de poids, maintien ou prise de masse — l\'objectif ajuste automatiquement les recommandations caloriques affichées dans ton journal.' },
       { type: 'divider' },
-      { type: 'heading', text: 'Régimes alimentaires' },
+      { type: 'heading', text: 'Régimes & allergènes' },
       { type: 'item', icon: 'leaf', label: 'Régimes actifs', text: 'Active tes régimes (végétarien, vegan, sans gluten…) pour que Nutritor les prenne en compte dans les suggestions et les filtres.' },
-      { type: 'item', icon: 'shield', label: 'Allergènes', text: 'Les régimes actifs sont croisés avec les données allergènes des aliments pour t\'avertir des incompatibilités.' },
-      { type: 'tip', text: 'Astuce — Maintiens ton poids à jour pour que les calculs caloriques restent précis au fil du temps.' },
+      { type: 'item', icon: 'shield', label: 'Allergènes', text: 'Quatre niveaux : sévère, modéré, trace, aucun. Les aliments concernés sont filtrés dans la recherche et le score de compatibilité.' },
+      { type: 'divider' },
+      { type: 'heading', text: 'Mémoire digestive IA' },
+      { type: 'item', icon: 'sparkle', label: 'Qu\'est-ce que c\'est ?', text: 'Une liste d\'observations cliniques personnalisées générées par l\'IA à partir de tes repas et de tes symptômes quotidiens (Bien-être du Journal). Elle se cumule et s\'affine à chaque analyse.' },
+      { type: 'item', icon: 'chart', label: 'Comment ça marche', text: 'L\'IA croise 21 jours de données (aliments par repas + scores de digestion, ballonnements, énergie, transit…) pour détecter des patterns individuels.' },
+      { type: 'item', icon: 'zap', label: 'Exemples d\'observations', text: 'Ex : "Les tomates semblent bien tolérées le midi mais associées à l\'ail provoquent davantage de symptômes." — "Tolérance meilleure des courgettes après cuisson."' },
+      { type: 'item', icon: 'clock', label: 'Quand mettre à jour ?', text: 'Lance l\'analyse après avoir noté repas et bien-être pendant plusieurs jours. Une mise à jour par semaine suffit.' },
+      { type: 'item', icon: 'layers', label: 'Accumulation', text: 'La mémoire s\'enrichit à chaque analyse : les nouvelles observations s\'ajoutent, les existantes sont affinées ou corrigées si les données récentes les contredisent.' },
+      { type: 'tip', text: 'Astuce — Pour des observations fiables, remplis le widget Bien-être dans le Journal chaque jour pendant au moins une semaine avant de lancer l\'analyse.' },
     ],
   },
 

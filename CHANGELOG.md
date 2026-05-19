@@ -9,6 +9,15 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [0.9.0] — 2026-05-19
+
+### Ajouté
+- **Mémoire digestive intelligente** (Profil) : nouvelle section "Mémoire digestive" — bouton « Analyser mes données » envoie à l'IA les 21 derniers jours de repas croisés avec les scores de symptômes (douleurs, ballonnements, énergie, transit, sommeil, inflammation) pour générer jusqu'à 30 observations cliniques personnalisées. La mémoire est **cumulative** : à chaque analyse, les nouvelles observations s'ajoutent, les existantes sont affinées ou corrigées selon les données récentes.
+- **`updateDigestiveMemory`** dans `aiService.ts` : prompt système dédié à la nutrition clinique fonctionnelle ; format liste numérotée ; fusionne mémoire existante + nouvelles données ; exige au moins 2 occurrences pour déduire un pattern.
+- **Documentation aide** : section "Mémoire digestive IA" dans l'aide contextuelle du Profil.
+
+---
+
 ## [0.8.0] — 2026-05-19
 
 ### Ajouté

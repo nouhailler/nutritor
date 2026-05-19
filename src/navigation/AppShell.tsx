@@ -44,7 +44,7 @@ import { KnowledgeScreen } from '../screens/KnowledgeScreen';
 import { AppSettings, DEFAULT_SETTINGS } from '../types/settings';
 import { FodmapProtocol, DEFAULT_FODMAP_PROTOCOL } from '../data/fodmapProtocol';
 import { refreshCiqualAllergens } from '../services/ciqual';
-import { generateMeals } from '../services/aiService';
+import { generateMeals, updateDigestiveMemory, DigestiveDayData } from '../services/aiService';
 import { GeneratedMeal, MealGeneratorResult } from '../types/mealGenerator';
 import { JournalEntry, EMPTY_DAY_MEALS, computeDayLog } from '../data/weeklyStats';
 import { SymptomEntry, SymptomScores } from '../types/symptoms';
@@ -294,6 +294,16 @@ export function AppShell() {
     KEYS.aiAdvice,
     {},
   );
+  const [digestiveMemory, setDigestiveMemory] = usePersistedState<string>(
+    KEYS.digestiveMemory,
+    '',
+  );
+  const [digestiveMemoryDate, setDigestiveMemoryDate] = usePersistedState<string>(
+    KEYS.digestiveMemoryDate,
+    '',
+  );
+  const [memoryLoading, setMemoryLoading] = useState(false);
+  const [memoryError, setMemoryError] = useState<string | null>(null);
   const [fodmapProtocol, setFodmapProtocol] = usePersistedState<FodmapProtocol>(
     KEYS.fodmapProtocol,
     DEFAULT_FODMAP_PROTOCOL,
@@ -424,6 +434,34 @@ export function AppShell() {
       }
       return { ...prev, [date]: text };
     });
+  };
+
+  const handleUpdateMemory = async () => {
+    setMemoryLoading(true);
+    setMemoryError(null);
+    try {
+      // Build last 21 days of data
+      const todayDate = todayStr();
+      const recentDays: DigestiveDayData[] = [];
+      for (let i = 0; i < 21; i++) {
+        const d = new Date(todayDate + 'T12:00:00');
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().slice(0, 10);
+        const dayMeals = dateStr === todayDate
+          ? meals
+          : (journal.find((e) => e.date === dateStr)?.meals ?? []);
+        const symptom = symptoms.find((e) => e.date === dateStr) ?? null;
+        recentDays.push({ date: dateStr, meals: dayMeals, symptom });
+      }
+      const updated = await updateDigestiveMemory(recentDays, profile, digestiveMemory, settings);
+      setDigestiveMemory(updated);
+      const dateLabel = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      setDigestiveMemoryDate(dateLabel);
+    } catch (e: any) {
+      setMemoryError(e?.message ?? 'Erreur lors de l\'analyse.');
+    } finally {
+      setMemoryLoading(false);
+    }
   };
 
   // ── Viewed date helpers ──────────────────────────────────────
@@ -926,10 +964,15 @@ export function AppShell() {
         screen = (
           <ProfileScreen
             profile={profile}
+            digestiveMemory={digestiveMemory}
+            digestiveMemoryDate={digestiveMemoryDate}
+            memoryLoading={memoryLoading}
+            memoryError={memoryError}
             onEdit={() => setStack('editProfile')}
             onToggleDiet={handleToggleDiet}
             onOpenMenu={() => setDrawerOpen(true)}
             onOpenFodmap={() => setStack('fodmap')}
+            onUpdateMemory={handleUpdateMemory}
           />
         );
         break;
