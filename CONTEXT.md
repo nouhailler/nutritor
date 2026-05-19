@@ -8,7 +8,7 @@
 
 ### Derniers commits
 - `a1fd554` — feat: journal symptômes ↔ alimentation + reconnaissance photo IA
-- Ce commit (à venir) — feat: encyclopédie nutritionnelle + générateur de repas IA + docs
+- Session courante (non committé) — fix: chips filtre ScrollView, cache OFF, crash Pain, suppression aliments, génération repas arrière-plan, sauvegarde repas générés
 
 ### Dernier build APK
 - **Build ID** : `8fc6725c-7e2b-484a-9e06-1ddb494e4840`
@@ -141,6 +141,9 @@ Au premier démarrage après mise à jour, recompute les allergènes CIQUAL pour
 - `getOFFByBarcode(barcode)`
 - `offProductToFood(product): Food` — 14 allergènes depuis `allergens_tags`
 - Catégories avec emoji + tag OFF : chips de filtre sur `OpenFoodFactsScreen`
+- **Résilience réseau** : `fetchOFF()` helper — 3 tentatives, timeout 12 s (AbortController), backoff exponentiel 800 ms × tentative
+- **Cache AsyncStorage** : TTL 12 h — préfixe `nutritor:off_cache:`, clé = requête normalisée. En cas d'erreur réseau, fallback automatique sur le cache existant (badge « hors-ligne »)
+- **Historique de recherche** : `getOFFRecentSearches()` / `saveOFFRecentSearch(query)` — jusqu'à 12 entrées, clé `nutritor:off_recent`. Affiché en dropdown sous le champ de recherche
 
 ### IA (`src/services/aiService.ts`)
 - Providers : `'openrouter'` | `'ollama'`
@@ -150,12 +153,15 @@ Au premier démarrage après mise à jour, recompute les allergènes CIQUAL pour
 - `analyzeFoodPhoto(imageBase64, settings): Promise<VisionItem[]>`
 - `isAIReady(settings): boolean` — vérifie si un provider est configuré
 - Valide les réponses JSON, strips markdown fences avant `JSON.parse`
+- **⚠️ Typage runtime** : les champs enrichis par l'IA peuvent être `number` au lieu de `string` (ex: `pct`, `overall`). Toujours faire `String(val ?? '')` avant d'appeler des méthodes string sur des données IA persistées en AsyncStorage.
 
 ### File d'attente IA (`src/services/aiQueue.ts`)
 - Singleton `aiQueue` (module-level) avec pattern subscriber
+- `aiQueue.add(label, fn)` → retourne un `jobId` (string)
 - `aiQueue.subscribe(callback)` → retourne un `unsubscribe`
+- `aiQueue.dismissCompleted()` → retire les jobs `done`/`error` de la liste
+- `AIJobSnapshot` : `{ id, label, status: 'pending'|'running'|'done'|'error', error? }`
 - `AIQueueBanner` s'abonne dans `AppShell` via `useEffect`
-- Bandeau fixe au-dessus de la tab bar, snooze 10 s sur tap
 
 ### Encyclopédie (`src/data/knowledgeBase.ts`)
 - 80 entrées statiques, 100 % hors-ligne, aucune IA nécessaire
@@ -278,13 +284,14 @@ type KView =
 | Composant | Fichier | Rôle |
 |-----------|---------|------|
 | `DrawerMenu` | `components/DrawerMenu.tsx` | Menu latéral animé (slide 300ms), section IA (générateur + encyclopédie) |
-| `AIQueueBanner` | `components/AIQueueBanner.tsx` | Bandeau IA en bas, snooze 10 s sur tap |
+| `AIQueueBanner` | `components/AIQueueBanner.tsx` | Bandeau IA en bas — tap snooze 10 s si jobs en cours, dismiss permanent si tous terminés |
 | `Icon` | `components/Icon.tsx` | Feather icons wrappés |
 | `CalendarModal` | `components/CalendarModal.tsx` | Sélecteur de date pour navigation journal |
 | `CompatibilityBadge` | `components/CompatibilityBadge.tsx` | Badge/carte compatibilité allergènes |
 | `HelpModal` | `components/HelpModal.tsx` | Modales d'aide contextuelles |
 | `PlateFilterSheet` | `components/PlateFilterSheet.tsx` | Bottom sheet filtres plats |
 | `SymptomWidget` | `components/SymptomWidget.tsx` | Widget saisie symptômes quotidiens |
+| `AIGenIcon` | inline dans `AppShell.tsx` | Icône flottante ✦ (haut-droite) — clignote pendant génération repas, verte quand terminé |
 
 ---
 
@@ -309,12 +316,15 @@ type KView =
 - Chips « Découvrir » (CIQUAL, OFF, Scanner, IA, Photo)
 - Tap sur un aliment → `DetailScreen` (pour ajouter au journal)
 - Tap icône livre → `PlatePickerSheet` (bottom sheet maison, pour ajouter à un plat)
+- **Bouton de suppression** : icône corbeille sur chaque ligne — `Alert.alert` sur mobile, `window.confirm` sur web ; supprime l'aliment de `foodList`
 
 ### Générateur de repas IA (`MealGeneratorScreen`)
 - Profile-aware : allergènes avec sévérité, régimes actifs, phase FODMAP, kcal cible, macros
 - Chips de suggestions générées à partir du profil
-- Cartes expandables : macros, ingrédients (avec note FODMAP par ingrédient), micronutriments, score anti-inflammatoire (barre SVG), note FODMAP globale, "pourquoi c'est adapté"
+- Cartes expandables : macros, ingrédients (avec note FODMAP par ingrédient), micronutriments, score anti-inflammatoire, note FODMAP globale, "pourquoi c'est adapté"
 - Requiert `isAIReady(settings)` — affiche un avertissement si aucune IA configurée
+- **Génération en arrière-plan** : via `aiQueue`. `handleGenerateMeals` ajoute un job, navigue immédiatement. L'icône `AIGenIcon` (haut-droite) clignote pendant l'exécution, devient verte une fois terminée. Un tap sur l'icône rouvre l'écran avec le résultat.
+- **Sauvegarde** : bouton « Sauvegarder ce repas » dans chaque carte expandée → `handleSaveGeneratedMeal` dans `AppShell` → convertit `GeneratedMeal` en `SavedPlate` (id `gen-<timestamp>`, emoji dans le nom, description comme note, ingrédients comme recipe items) → `setSavedPlates`, toast de confirmation
 
 ### Encyclopédie nutritionnelle (`KnowledgeScreen` + `src/data/knowledgeBase.ts`)
 - 80 entrées statiques, aucune connexion requise
@@ -340,6 +350,8 @@ type KView =
 - **ScrollView dans flex-column** : ajouter `flex: 1` sur le `ScrollView` si le contenu ne s'affiche pas.
 - **Bottom sheet** : utiliser un overlay `View` absolu (pas `Modal`) pour éviter les problèmes de z-index Android.
 - **KnowledgeScreen** : la navigation interne (`KView`) est locale à l'écran — pas de StackScreen supplémentaire dans `AppShell`.
+- **Chips dans ScrollView horizontal (web)** : les enfants s'étirent pour remplir la hauteur du conteneur sur web. Correction : `alignSelf: 'flex-start'` sur chaque chip. Ne pas mettre `alignItems: 'center'` sur `contentContainerStyle` (provoque la disparition des chips quand les résultats apparaissent).
+- **Types IA en AsyncStorage** : l'IA peut retourner des `number` là où on attend des `string` (ex: `pct: 27` au lieu de `"27%"`). Toujours faire `String(val ?? '')` avant `.match()`, `.toUpperCase()`, etc. sur des champs enrichis par l'IA.
 
 ---
 
@@ -369,4 +381,3 @@ python3 scripts/gen_icon.py
 - [ ] Build iOS (TestFlight)
 - [ ] Données Monash FODMAP officielles (licence commerciale)
 - [ ] Retirer les `console.log` de débogage avant la production
-- [ ] Mode hors-ligne complet (cache OFF)

@@ -12,6 +12,7 @@ export const KEYS = {
   fodmapProtocol:  'nutritor:fodmap_protocol',
   migrationV1:     'nutritor:migration_v1',
   onboardingDone:  'nutritor:onboarding_done',
+  comments:        'nutritor:comments',
 };
 
 export async function load<T>(key: string): Promise<T | null> {

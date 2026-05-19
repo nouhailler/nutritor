@@ -3,11 +3,12 @@
  * Journal nutritionnel du jour : anneau kcal SVG, 5 repas, résumé macros,
  * micronutriments, widget symptômes et calendrier de navigation historique.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -262,6 +263,73 @@ function MealCard({
   );
 }
 
+// ── Day comment ──────────────────────────────────────────────
+
+const LINE_HEIGHT = 22;
+const MAX_LINES   = 10;
+const MAX_COMMENT_HEIGHT = LINE_HEIGHT * MAX_LINES;
+
+function DayComment({
+  date,
+  value,
+  readOnly,
+  onSave,
+}: {
+  date: string;
+  value: string;
+  readOnly: boolean;
+  onSave: (date: string, text: string) => void;
+}) {
+  const [text, setText] = useState(value);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync when navigating between days
+  useEffect(() => {
+    setText(value);
+  }, [date, value]);
+
+  // Flush on unmount
+  useEffect(() => {
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, []);
+
+  if (readOnly && !value.trim()) return null;
+
+  const handleChange = (t: string) => {
+    setText(t);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => onSave(date, t), 600);
+  };
+
+  const handleBlur = () => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    onSave(date, text);
+  };
+
+  return (
+    <View style={styles.commentCard}>
+      <TextInput
+        value={text}
+        onChangeText={readOnly ? undefined : handleChange}
+        onBlur={readOnly ? undefined : handleBlur}
+        multiline
+        scrollEnabled
+        editable={!readOnly}
+        placeholder="Notes du jour, ressenti, observations…"
+        placeholderTextColor={Colors.muted2}
+        style={[styles.commentInput, readOnly && styles.commentInputReadOnly]}
+        textAlignVertical="top"
+        maxLength={2000}
+      />
+      {!readOnly && (
+        <Text style={styles.commentCounter}>
+          {text.length > 0 ? `${text.length} car.` : ''}
+        </Text>
+      )}
+    </View>
+  );
+}
+
 // ── Home Screen ──────────────────────────────────────────────
 
 interface HomeScreenProps {
@@ -270,9 +338,11 @@ interface HomeScreenProps {
   viewingDate: string | null;
   journalDates: string[];
   symptomEntry: SymptomEntry | null;
+  comment: string;
   onDateChange: (date: string | null) => void;
   onRemoveItem: (mealId: string, itemIdx: number) => void;
   onSaveSymptom: (date: string, scores: SymptomScores) => void;
+  onSaveComment: (date: string, text: string) => void;
   onOpenMenu: () => void;
   onOpenSearch: () => void;
 }
@@ -283,9 +353,11 @@ export function HomeScreen({
   viewingDate,
   journalDates,
   symptomEntry,
+  comment,
   onDateChange,
   onRemoveItem,
   onSaveSymptom,
+  onSaveComment,
   onOpenMenu,
   onOpenSearch,
 }: HomeScreenProps) {
@@ -463,6 +535,20 @@ export function HomeScreen({
               readOnly={!isToday}
               onSave={(scores) => onSaveSymptom(effectiveDate, scores)}
             />
+
+            {/* Notes du jour */}
+            <View style={styles.sectionHead}>
+              <Text style={styles.sectionTitle}>Notes</Text>
+              <Text style={styles.sectionMeta}>{isToday ? 'saisie libre' : 'lecture seule'}</Text>
+            </View>
+            <View style={styles.commentWrap}>
+              <DayComment
+                date={effectiveDate}
+                value={comment}
+                readOnly={!isToday}
+                onSave={onSaveComment}
+              />
+            </View>
           </>
         )}
       </ScrollView>
@@ -923,6 +1009,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   mealEmptyBtnText: { fontFamily: Fonts.sans, fontSize: 12, color: Colors.ink },
+
+  // Day comment
+  commentWrap: {
+    paddingHorizontal: 20,
+    marginBottom: 8,
+  },
+  commentCard: {
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.hairline2,
+    borderRadius: 20,
+    padding: 16,
+  },
+  commentInput: {
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    color: Colors.ink,
+    lineHeight: LINE_HEIGHT,
+    maxHeight: MAX_COMMENT_HEIGHT,
+    minHeight: LINE_HEIGHT * 2,
+    textAlignVertical: 'top',
+  },
+  commentInputReadOnly: {
+    color: Colors.ink2,
+  },
+  commentCounter: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    color: Colors.muted2,
+    letterSpacing: 0.5,
+    textAlign: 'right',
+    marginTop: 8,
+  },
 
   // FAB
   fab: {

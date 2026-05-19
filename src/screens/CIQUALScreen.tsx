@@ -79,14 +79,13 @@ function ResultRow({
 
 // ── Group badge ────────────────────────────────────────────────
 
-function GroupChip({ label, icon, active, onPress }: { label: string; icon: string; active: boolean; onPress: () => void }) {
+function GroupChip({ label, active, onPress }: { label: string; icon: string; active: boolean; onPress: () => void }) {
   return (
     <TouchableOpacity
       style={[styles.groupChip, active && styles.groupChipActive]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Text style={styles.groupChipIcon}>{icon}</Text>
       <Text style={[styles.groupChipText, active && styles.groupChipTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -321,18 +320,15 @@ const styles = StyleSheet.create({
 
   groupStrip: { paddingHorizontal: 16, paddingBottom: 10, gap: 6, flexDirection: 'row' },
   groupChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
+    alignSelf: 'flex-start',
     paddingVertical: 5,
-    paddingHorizontal: 9,
+    paddingHorizontal: 10,
     borderRadius: 100,
     borderWidth: 1,
     borderColor: Colors.hairline,
     backgroundColor: Colors.paper2,
   },
   groupChipActive: { backgroundColor: Colors.signal, borderColor: Colors.signal },
-  groupChipIcon: { fontSize: 12 },
   groupChipText: { fontFamily: Fonts.mono, fontSize: 10, letterSpacing: 0.8, color: Colors.muted },
   groupChipTextActive: { color: Colors.paper2 },
 

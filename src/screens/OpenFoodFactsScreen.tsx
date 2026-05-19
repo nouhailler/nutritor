@@ -21,7 +21,7 @@ import { Colors, Fonts } from '../theme/tokens';
 import { Food } from '../types';
 import { AppSettings } from '../types/settings';
 import { UserProfile } from '../data/user';
-import { OFFProduct, offProductToFood, searchOFF, searchOFFByCategory } from '../services/openFoodFacts';
+import { OFFProduct, offProductToFood, searchOFF, searchOFFByCategory, getOFFRecentSearches, saveOFFRecentSearch } from '../services/openFoodFacts';
 import { enrichFoodWithAI, isAIReady } from '../services/aiService';
 import { aiQueue } from '../services/aiQueue';
 import { LabelAnalysis, TextSegment, analyzeLabel } from '../data/labelAnalysis';
@@ -261,14 +261,13 @@ const GROUPS: { label: string; icon: string; tag: string }[] = [
   { label: 'Boissons',          icon: '🥤', tag: 'en:beverages' },
 ];
 
-function GroupChip({ label, icon, active, onPress }: { label: string; icon: string; active: boolean; onPress: () => void }) {
+function GroupChip({ label, active, onPress }: { label: string; icon: string; active: boolean; onPress: () => void }) {
   return (
     <TouchableOpacity
       style={[styles.groupChip, active && styles.groupChipActive]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Text style={styles.groupChipIcon}>{icon}</Text>
       <Text style={[styles.groupChipText, active && styles.groupChipTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -296,11 +295,15 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
   const [products, setProducts] = useState<OFFProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [fromCache, setFromCache] = useState(false);
   const [error, setError] = useState('');
   const [importedIds, setImportedIds] = useState<Set<string>>(new Set());
   const [helpVisible, setHelpVisible] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
   useEffect(() => {
+    void getOFFRecentSearches().then(setRecentSearches);
     if (initialQuery.trim()) runSearch({ text: initialQuery.trim() });
   }, []);
 
@@ -308,6 +311,8 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
     setLoading(true);
     setError('');
     setSearched(true);
+    setFromCache(false);
+    setInputFocused(false);
     try {
       const result = opts.categoryTag
         ? await searchOFFByCategory(opts.categoryTag)
@@ -316,6 +321,7 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
         (p) => (p.product_name_fr || p.product_name) && (p.nutriments?.['energy-kcal_100g'] ?? 0) > 0
       );
       setProducts(valid);
+      setFromCache(result.fromCache ?? false);
     } catch (e: unknown) {
       setError((e as Error).message);
       setProducts([]);
@@ -328,7 +334,16 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
     const q = query.trim();
     if (!q) return;
     setActiveGroup(null);
+    void saveOFFRecentSearch(q).then(() =>
+      getOFFRecentSearches().then(setRecentSearches)
+    );
     void runSearch({ text: q });
+  };
+
+  const selectRecent = (s: string) => {
+    setQuery(s);
+    setActiveGroup(null);
+    void runSearch({ text: s });
   };
 
   const handleGroupPress = (group: typeof GROUPS[0]) => {
@@ -340,8 +355,11 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
     }
     setActiveGroup(group.label);
     setQuery('');
+    setInputFocused(false);
     void runSearch({ categoryTag: group.tag });
   };
+
+  const showDropdown = inputFocused && recentSearches.length > 0;
 
   const handleImport = (product: OFFProduct) => {
     const pid = product.code || product.id;
@@ -388,29 +406,46 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
       </View>
       <HelpModal visible={helpVisible} content={HELP.openFoodFacts} onClose={() => setHelpVisible(false)} />
 
-      {/* Search input */}
-      <View style={styles.searchWrap}>
-        <View style={styles.searchInput}>
-          <Icon name="search" size={18} color={Colors.muted2} />
-          <TextInput
-            ref={inputRef}
-            style={styles.input}
-            placeholder="Rechercher un produit, une marque…"
-            placeholderTextColor={Colors.muted2}
-            value={query}
-            onChangeText={(t) => { setQuery(t); if (t) setActiveGroup(null); }}
-            onSubmitEditing={handleSearch}
-            returnKeyType="search"
-            autoCorrect={false}
-            autoCapitalize="none"
-            autoFocus
-          />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={() => { setQuery(''); setActiveGroup(null); setProducts([]); setSearched(false); }} activeOpacity={0.7}>
-              <Text style={styles.clearBtn}>Effacer</Text>
-            </TouchableOpacity>
+      {/* Search input + dropdown */}
+      <View style={[styles.searchWrap, { zIndex: 10 }]}>
+        <View style={{ flex: 1 }}>
+          <View style={styles.searchInput}>
+            <Icon name="search" size={18} color={Colors.muted2} />
+            <TextInput
+              ref={inputRef}
+              style={styles.input}
+              placeholder="Rechercher un produit, une marque…"
+              placeholderTextColor={Colors.muted2}
+              value={query}
+              onChangeText={(t) => { setQuery(t); if (t) setActiveGroup(null); }}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setTimeout(() => setInputFocused(false), 150)}
+              onSubmitEditing={handleSearch}
+              returnKeyType="search"
+              autoCorrect={false}
+              autoCapitalize="none"
+              autoFocus
+            />
+            {query.length > 0 && (
+              <TouchableOpacity onPress={() => { setQuery(''); setActiveGroup(null); setProducts([]); setSearched(false); }} activeOpacity={0.7}>
+                <Text style={styles.clearBtn}>Effacer</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Recent searches dropdown */}
+          {showDropdown && (
+            <View style={styles.dropdown}>
+              {recentSearches.map((s) => (
+                <TouchableOpacity key={s} style={styles.dropdownItem} onPress={() => selectRecent(s)} activeOpacity={0.7}>
+                  <Icon name="clock" size={13} color={Colors.muted2} />
+                  <Text style={styles.dropdownText} numberOfLines={1}>{s}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           )}
         </View>
+
         <TouchableOpacity
           style={[styles.searchBtn, !query.trim() && styles.searchBtnDisabled]}
           onPress={handleSearch}
@@ -429,6 +464,7 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.groupScrollView}
         contentContainerStyle={styles.groupStrip}
       >
         {GROUPS.map((g) => (
@@ -443,6 +479,7 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
       </ScrollView>
 
       <ScrollView
+        style={styles.resultsList}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
@@ -451,7 +488,23 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
         {error ? (
           <View style={styles.errorBox}>
             <Icon name="alert" size={16} color={Colors.warn} />
-            <Text style={styles.errorText}>{error}</Text>
+            <View style={{ flex: 1, gap: 8 }}>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity
+                style={styles.retryBtn}
+                onPress={() => {
+                  if (activeGroup) {
+                    const g = GROUPS.find((gr) => gr.label === activeGroup);
+                    if (g) void runSearch({ categoryTag: g.tag });
+                  } else if (query.trim()) {
+                    void runSearch({ text: query.trim() });
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.retryBtnText}>Réessayer</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : null}
 
@@ -484,7 +537,14 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
           <>
             <View style={styles.resultHeader}>
               <Text style={styles.resultCount}>{products.length} résultats</Text>
-              <Text style={styles.resultSource}>Open Food Facts · France</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {fromCache && (
+                  <View style={styles.cacheBadge}>
+                    <Text style={styles.cacheBadgeText}>hors-ligne</Text>
+                  </View>
+                )}
+                <Text style={styles.resultSource}>Open Food Facts</Text>
+              </View>
             </View>
             {products.map((p) => (
               <ResultCard
@@ -536,12 +596,12 @@ const styles = StyleSheet.create({
 
   searchWrap: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: 8,
     paddingHorizontal: 16,
     paddingBottom: 12,
   },
   searchInput: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -551,6 +611,39 @@ const styles = StyleSheet.create({
     borderColor: Colors.hairline2,
     paddingHorizontal: 14,
     paddingVertical: 10,
+  },
+  dropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.paper2,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    marginTop: 4,
+    overflow: 'hidden',
+    zIndex: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline2,
+  },
+  dropdownText: {
+    flex: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    color: Colors.ink,
   },
   input: {
     flex: 1,
@@ -576,20 +669,19 @@ const styles = StyleSheet.create({
   },
   searchBtnDisabled: { opacity: 0.4 },
 
+  groupScrollView: { flexShrink: 0, flexGrow: 0 },
   groupStrip: { paddingHorizontal: 16, paddingBottom: 10, gap: 6, flexDirection: 'row' },
+  resultsList: { flex: 1 },
   groupChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
+    alignSelf: 'flex-start',
     paddingVertical: 5,
-    paddingHorizontal: 9,
+    paddingHorizontal: 10,
     borderRadius: 100,
     borderWidth: 1,
     borderColor: Colors.hairline,
     backgroundColor: Colors.paper2,
   },
   groupChipActive: { backgroundColor: Colors.ok, borderColor: Colors.ok },
-  groupChipIcon: { fontSize: 12 },
   groupChipText: { fontFamily: Fonts.mono, fontSize: 10, letterSpacing: 0.8, color: Colors.muted },
   groupChipTextActive: { color: Colors.paper2 },
 
@@ -605,7 +697,17 @@ const styles = StyleSheet.create({
     padding: 14,
     alignItems: 'flex-start',
   },
-  errorText: { flex: 1, fontFamily: Fonts.sans, fontSize: 13, color: Colors.warn, lineHeight: 18 },
+  errorText: { fontFamily: Fonts.sans, fontSize: 13, color: Colors.warn, lineHeight: 18 },
+  retryBtn: {
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: 'rgba(139,58,46,0.35)',
+    backgroundColor: 'rgba(139,58,46,0.08)',
+  },
+  retryBtnText: { fontFamily: Fonts.mono, fontSize: 11, letterSpacing: 0.5, color: Colors.warn },
 
   emptyBox: { alignItems: 'center', paddingVertical: 48, gap: 10 },
   emptyTitle: { fontFamily: Fonts.serif, fontSize: 20, color: Colors.ink },
@@ -645,6 +747,21 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: 'uppercase',
     color: Colors.muted2,
+  },
+  cacheBadge: {
+    paddingVertical: 2,
+    paddingHorizontal: 7,
+    borderRadius: 100,
+    backgroundColor: 'rgba(107,90,46,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(107,90,46,0.25)',
+  },
+  cacheBadgeText: {
+    fontFamily: Fonts.mono,
+    fontSize: 8,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: '#6B5A2E',
   },
 
   card: {

@@ -44,6 +44,8 @@ import { KnowledgeScreen } from '../screens/KnowledgeScreen';
 import { AppSettings, DEFAULT_SETTINGS } from '../types/settings';
 import { FodmapProtocol, DEFAULT_FODMAP_PROTOCOL } from '../data/fodmapProtocol';
 import { refreshCiqualAllergens } from '../services/ciqual';
+import { generateMeals } from '../services/aiService';
+import { GeneratedMeal, MealGeneratorResult } from '../types/mealGenerator';
 import { JournalEntry, EMPTY_DAY_MEALS, computeDayLog } from '../data/weeklyStats';
 import { SymptomEntry, SymptomScores } from '../types/symptoms';
 
@@ -82,6 +84,39 @@ function Toast({ message }: { message: string | null }) {
     <Animated.View style={[styles.toast, { opacity }]}>
       <Icon name="check" size={16} color={Colors.paper2} />
       <Text style={styles.toastText}>{message}</Text>
+    </Animated.View>
+  );
+}
+
+// ── Duplicate-day banner ──────────────────────────────────────
+
+function DuplicateBanner({ visible }: { visible: boolean }) {
+  const insets = useSafeAreaInsets();
+  const translateY = useRef(new Animated.Value(60)).current;
+  const opacity    = useRef(new Animated.Value(0)).current;
+  const bottomOffset = insets.bottom + 62 + 8;
+
+  React.useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(translateY, { toValue: 0,  duration: 280, useNativeDriver: true, easing: Easing.out(Easing.quad) }),
+        Animated.timing(opacity,    { toValue: 1,  duration: 280, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(translateY, { toValue: 20, duration: 250, useNativeDriver: true }),
+        Animated.timing(opacity,    { toValue: 0,  duration: 250, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible]);
+
+  return (
+    <Animated.View
+      style={[styles.duplicateBanner, { bottom: bottomOffset, opacity, transform: [{ translateY }] }]}
+      pointerEvents="none"
+    >
+      <Icon name="layers" size={14} color={Colors.paper2} />
+      <Text style={styles.duplicateBannerText}>Journée d'hier copiée dans le journal</Text>
     </Animated.View>
   );
 }
@@ -145,6 +180,64 @@ function PlaceholderScreen({ title }: { title: string }) {
   );
 }
 
+// ── AI Generation icon (floating, top-right) ──────────────────
+
+function AIGenIcon({
+  running,
+  done,
+  top,
+  onPress,
+}: {
+  running: boolean;
+  done: boolean;
+  top: number;
+  onPress: () => void;
+}) {
+  const pulse = useRef(new Animated.Value(1)).current;
+  const scale = useRef(new Animated.Value(0)).current;
+
+  // Appear on mount
+  useEffect(() => {
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, damping: 12, stiffness: 200 }).start();
+  }, []);
+
+  // Blink while running
+  useEffect(() => {
+    if (running) {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulse, { toValue: 0.25, duration: 500, useNativeDriver: true }),
+          Animated.timing(pulse, { toValue: 1,    duration: 500, useNativeDriver: true }),
+        ]),
+      );
+      loop.start();
+      return () => loop.stop();
+    }
+    pulse.setValue(1);
+  }, [running]);
+
+  const bgColor = done ? Colors.ok : Colors.ink;
+
+  return (
+    <Animated.View
+      style={[
+        styles.aiGenIconWrap,
+        { top, transform: [{ scale }] },
+      ]}
+    >
+      <TouchableOpacity
+        style={[styles.aiGenIconBtn, { backgroundColor: bgColor }]}
+        onPress={onPress}
+        activeOpacity={0.8}
+      >
+        <Animated.View style={{ opacity: pulse }}>
+          <Icon name="sparkle" size={14} color={Colors.paper2} />
+        </Animated.View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
 // ── App Shell ─────────────────────────────────────────────────
 
 export function AppShell() {
@@ -161,6 +254,9 @@ export function AppShell() {
   const [selectedPlate, setSelectedPlate] = useState<SavedPlate | null>(null);
   const [plateForEdit, setPlateForEdit] = useState<SavedPlate | null>(null);
   const [pendingQuery, setPendingQuery] = useState('');
+  const [mealResult, setMealResult] = useState<MealGeneratorResult | null>(null);
+  const [mealJobId, setMealJobId] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
 
   const [profile, setProfile, profileLoading] = usePersistedState<UserProfile>(
     KEYS.profile,
@@ -190,6 +286,10 @@ export function AppShell() {
     KEYS.symptoms,
     [],
   );
+  const [comments, setComments] = usePersistedState<Record<string, string>>(
+    KEYS.comments,
+    {},
+  );
   const [fodmapProtocol, setFodmapProtocol] = usePersistedState<FodmapProtocol>(
     KEYS.fodmapProtocol,
     DEFAULT_FODMAP_PROTOCOL,
@@ -199,6 +299,7 @@ export function AppShell() {
     false,
   );
   const [viewingDate, setViewingDate] = useState<string | null>(null); // null = today
+  const [showDuplicateBanner, setShowDuplicateBanner] = useState(false);
 
   console.log(`[AppShell] loading — profile:${profileLoading} foods:${foodsLoading} meals:${mealsLoading}`);
 
@@ -210,16 +311,29 @@ export function AppShell() {
       const today = todayStr();
       console.log(`[AppShell] mealsDate stored="${storedDate}" today="${today}"`);
       if (storedDate !== today) {
-        // Archive yesterday's meals before reset
         if (storedDate) {
+          // Archive yesterday's meals before reset
           setJournal((prev) => {
             const without = prev.filter((e) => e.date !== storedDate);
             return [...without, { date: storedDate, meals }].slice(-365); // keep 1 year
           });
           console.log(`[AppShell] journal: archived ${storedDate}`);
+
+          // Duplicate yesterday's meals if they had items, otherwise start fresh
+          const hadItems = meals.some((m) => m.items.length > 0);
+          if (hadItems) {
+            setMeals(meals.map((m) => ({ ...m, items: m.items.map((i) => ({ ...i })) })));
+            setShowDuplicateBanner(true);
+            setTimeout(() => setShowDuplicateBanner(false), 3720);
+            console.log('[AppShell] duplicated yesterday meals into new day');
+          } else {
+            console.log('[AppShell] resetting meals for new day (yesterday was empty)');
+            setMeals(INITIAL_MEALS);
+          }
+        } else {
+          console.log('[AppShell] first launch — using initial meals');
+          setMeals(INITIAL_MEALS);
         }
-        console.log('[AppShell] resetting meals for new day');
-        setMeals(INITIAL_MEALS);
         save(KEYS.mealsDate, today);
       }
     });
@@ -230,6 +344,23 @@ export function AppShell() {
     const unsub = aiQueue.subscribe(setQueueJobs);
     return unsub;
   }, []);
+
+  // Meal generation — background job
+  const mealJob    = mealJobId ? queueJobs.find((j) => j.id === mealJobId) : null;
+  const mealRunning = mealJob?.status === 'pending' || mealJob?.status === 'running';
+  const mealDone   = mealJob?.status === 'done';
+  const showAIIcon = mealRunning || mealDone;
+
+  const handleGenerateMeals = (query: string) => {
+    setMealResult(null);
+    const jobId = aiQueue.add(`Génération · ${query}`, async () => {
+      const fodmapPhase = fodmapProtocol.active ? fodmapProtocol.phase : undefined;
+      const res = await generateMeals(query, profile, fodmapPhase, settings);
+      setMealResult(res);
+    });
+    setMealJobId(jobId);
+    setStack(null); // back to main app immediately
+  };
 
   // One-time migration: recompute CIQUAL allergens for stored foods
   useEffect(() => {
@@ -268,6 +399,16 @@ export function AppShell() {
     setSymptoms((prev) => {
       const without = prev.filter((e) => e.date !== date);
       return [...without, { date, scores }].sort((a, b) => a.date.localeCompare(b.date));
+    });
+  };
+
+  const handleSaveComment = (date: string, text: string) => {
+    setComments((prev) => {
+      if (!text.trim()) {
+        const { [date]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [date]: text };
     });
   };
 
@@ -473,6 +614,35 @@ export function AppShell() {
     setTimeout(() => setToast(null), 2600);
   };
 
+  const handleSaveGeneratedMeal = (meal: GeneratedMeal) => {
+    const totalTime = (meal.prepTime ?? 0) + (meal.cookTime ?? 0);
+    const plate: SavedPlate = {
+      id: `gen-${Date.now()}`,
+      name: `${meal.emoji} ${meal.name}`,
+      kcal: meal.per_serving.kcal,
+      time: totalTime > 0 ? `${totalTime} min` : '—',
+      timeMin: totalTime,
+      tags: meal.tags.slice(0, 4),
+      items: meal.ingredients.length,
+      last: todayStr(),
+      macros: {
+        protein: meal.per_serving.protein,
+        carbs: meal.per_serving.carbs,
+        fat: meal.per_serving.fat,
+      },
+      recipe: meal.ingredients.map((ing) => ({
+        name: ing.name,
+        qty: ing.amount,
+        kcal: 0,
+        macros: { protein: 0, carbs: 0, fat: 0 },
+      })),
+      note: meal.description,
+    };
+    setSavedPlates((prev) => [...prev, plate]);
+    setToast(`« ${meal.name} » sauvegardé dans les plats`);
+    setTimeout(() => setToast(null), 2600);
+  };
+
   const showTabs = stack === null;
 
   // ── Active screen ────────────────────────────────────────
@@ -621,7 +791,17 @@ export function AppShell() {
         profile={profile}
         fodmapProtocol={fodmapProtocol}
         settings={settings}
-        onBack={() => setStack(null)}
+        externalResult={mealResult}
+        onGenerateInBackground={handleGenerateMeals}
+        onSaveMeal={handleSaveGeneratedMeal}
+        onBack={() => {
+          setStack(null);
+          // Clear icon once user has seen the result
+          if (mealDone) {
+            setMealJobId(null);
+            setMealResult(null);
+          }
+        }}
         onOpenMenu={openMenu}
       />
     );
@@ -663,11 +843,13 @@ export function AppShell() {
             viewingDate={viewingDate}
             journalDates={journalDates}
             symptomEntry={symptomEntry}
+            comment={comments[effectiveDate] ?? ''}
             onDateChange={setViewingDate}
             onRemoveItem={handleRemoveItem}
             onOpenMenu={() => setDrawerOpen(true)}
             onOpenSearch={openSearch}
             onSaveSymptom={handleSaveSymptom}
+            onSaveComment={handleSaveComment}
           />
         );
         break;
@@ -679,6 +861,7 @@ export function AppShell() {
             profile={profile}
             onPickFood={(food) => openDetail(food, null)}
             onAddToPlate={handleAddFoodToPlate}
+            onDeleteFood={(foodId) => setFoodList((prev) => prev.filter((f) => f.id !== foodId))}
             onOpenMenu={() => setDrawerOpen(true)}
             onAddWithAI={(q) => { setPendingQuery(q); setStack('addFood'); }}
             onOpenFoodFacts={(q) => { setPendingQuery(q); setStack('openFoodFacts'); }}
@@ -749,11 +932,32 @@ export function AppShell() {
       </FadeScreen>
       {showTabs && <Tabbar activeTab={tab} onSelect={showTab} />}
       <Toast message={toast} />
+      <DuplicateBanner visible={showDuplicateBanner} />
       <AIQueueBanner
         jobs={queueJobs}
         hasTabBar={showTabs}
         onDismiss={() => aiQueue.dismissCompleted()}
+        onViewResult={
+          mealDone
+            ? () => setStack('mealGenerator')
+            : queueJobs.some((j) => j.status === 'done')
+              ? () => showTab('foods')
+              : undefined
+        }
+        doneSubText={
+          mealDone
+            ? 'Disponible dans le Générateur de repas'
+            : 'Ajouté dans les Aliments'
+        }
       />
+      {showAIIcon && (
+        <AIGenIcon
+          running={mealRunning}
+          done={mealDone}
+          top={insets.top + 8}
+          onPress={() => setStack('mealGenerator')}
+        />
+      )}
       <DrawerMenu
         visible={drawerOpen}
         activeTab={tab}
@@ -779,6 +983,24 @@ export function AppShell() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.paper },
   screenWrap: { flex: 1 },
+
+  aiGenIconWrap: {
+    position: 'absolute',
+    right: 16,
+    zIndex: 200,
+  },
+  aiGenIconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 6,
+  },
 
   tabbar: {
     flexDirection: 'row',
@@ -829,6 +1051,29 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   toastText: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.paper2,
+  },
+
+  duplicateBanner: {
+    position: 'absolute',
+    alignSelf: 'center',
+    backgroundColor: Colors.ink2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 13,
+    paddingHorizontal: 20,
+    borderRadius: 100,
+    shadowColor: '#0f0c08',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.22,
+    shadowRadius: 20,
+    elevation: 12,
+    zIndex: 90,
+  },
+  duplicateBannerText: {
     fontFamily: Fonts.sans,
     fontSize: 13,
     color: Colors.paper2,

@@ -232,6 +232,9 @@ interface MealGeneratorScreenProps {
   profile: UserProfile;
   fodmapProtocol: FodmapProtocol;
   settings: AppSettings;
+  externalResult?: MealGeneratorResult | null;
+  onGenerateInBackground?: (query: string) => void;
+  onSaveMeal?: (meal: GeneratedMeal) => void;
   onBack: () => void;
   onOpenMenu: () => void;
 }
@@ -240,6 +243,9 @@ export function MealGeneratorScreen({
   profile,
   fodmapProtocol,
   settings,
+  externalResult,
+  onGenerateInBackground,
+  onSaveMeal,
   onBack,
   onOpenMenu,
 }: MealGeneratorScreenProps) {
@@ -248,16 +254,30 @@ export function MealGeneratorScreen({
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<MealGeneratorResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sentToBackground, setSentToBackground] = useState(false);
   const aiReady = isAIReady(settings);
   const suggestions = buildSuggestions(profile);
+
+  // Show externally generated result when it arrives
+  const displayResult = externalResult ?? result;
 
   const handleGenerate = async (q: string) => {
     const trimmed = q.trim();
     if (!trimmed) return;
     setQuery(trimmed);
-    setLoading(true);
     setError(null);
     setResult(null);
+    setSentToBackground(false);
+
+    if (onGenerateInBackground) {
+      // Launch in background and let user navigate freely
+      onGenerateInBackground(trimmed);
+      setSentToBackground(true);
+      return;
+    }
+
+    // Fallback: inline generation (no background handler)
+    setLoading(true);
     try {
       const fodmapPhase = fodmapProtocol.active ? fodmapProtocol.phase : undefined;
       const res = await generateMeals(trimmed, profile, fodmapPhase, settings);
@@ -330,10 +350,19 @@ export function MealGeneratorScreen({
               {loading ? 'Génération en cours…' : 'Générer 3 repas'}
             </Text>
           </TouchableOpacity>
+
+          {sentToBackground && !displayResult && (
+            <View style={styles.bgNotice}>
+              <Icon name="sparkle" size={13} color={Colors.ok} />
+              <Text style={styles.bgNoticeText}>
+                Génération en cours en arrière-plan. L'icône ✦ en haut à droite deviendra verte quand c'est prêt.
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Suggestion chips */}
-        {!result && !loading && (
+        {!displayResult && !loading && (
           <View style={styles.suggestionsSection}>
             <Text style={styles.suggestionsLabel}>Suggestions pour ton profil</Text>
             <View style={styles.chipsWrap}>
@@ -381,10 +410,10 @@ export function MealGeneratorScreen({
         )}
 
         {/* Results */}
-        {result && !loading && (
+        {displayResult && !loading && (
           <View style={styles.resultsSection}>
             <View style={styles.resultsHeader}>
-              <Text style={styles.resultsTitle}>{result.meals.length} repas générés</Text>
+              <Text style={styles.resultsTitle}>{displayResult.meals.length} repas générés</Text>
               <TouchableOpacity
                 style={styles.regenerateBtn}
                 onPress={() => handleGenerate(query)}
@@ -394,11 +423,11 @@ export function MealGeneratorScreen({
                 <Text style={styles.regenerateBtnText}>Régénérer</Text>
               </TouchableOpacity>
             </View>
-            {result.contextNote && (
-              <Text style={styles.contextNote}>{result.contextNote}</Text>
+            {displayResult.contextNote && (
+              <Text style={styles.contextNote}>{displayResult.contextNote}</Text>
             )}
-            {result.meals.map((meal, i) => (
-              <MealCard key={i} meal={meal} />
+            {displayResult.meals.map((meal, i) => (
+              <MealCard key={i} meal={meal} onSave={onSaveMeal} />
             ))}
           </View>
         )}
@@ -570,6 +599,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 19,
   },
+  bgNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(63,90,58,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(63,90,58,0.2)',
+  },
+  bgNoticeText: {
+    flex: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.ok,
+    lineHeight: 18,
+  },
+
   retryBtn: {
     flexDirection: 'row',
     alignItems: 'center',

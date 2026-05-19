@@ -107,10 +107,10 @@ function NutriRow({
         {sub ? <Text style={styles.nutri3Sub}>{sub}</Text> : null}
       </View>
       <View style={styles.nutri3Qty}>
-        <Text style={styles.nutri3QtyText}>{qty}</Text>
-        {anr ? <Text style={styles.nutri3AnrText}>{anr} ANR</Text> : null}
+        <Text style={styles.nutri3QtyText}>{String(qty ?? '')}</Text>
+        {anr ? <Text style={styles.nutri3AnrText}>{String(anr)} ANR</Text> : null}
       </View>
-      <Text style={styles.nutri3Role}>{role}</Text>
+      <Text style={styles.nutri3Role}>{String(role ?? '')}</Text>
     </View>
   );
 }
@@ -174,26 +174,27 @@ function ApportsSection({
 // ── Section 02 · Protéines ─────────────────────────────────
 
 function ProteinSection({ p }: { p: ProteinDetail }) {
+  const amino = Array.isArray(p.amino) ? p.amino : [];
   return (
     <View style={styles.section}>
       <SectionHead
         num="02"
         title="Protéines & acides aminés"
-        right={`${p.totalG} g · PDCAAS ${p.pdcaas}`}
+        right={`${p.totalG ?? 0} g · PDCAAS ${p.pdcaas ?? 0}`}
       />
       <Text style={styles.lede}>
         Protéine {p.complete ? 'complète' : 'incomplète'} — les 9 acides aminés essentiels sont
         présents. BCAA cumulés :{' '}
-        <Text style={styles.ledeBold}>{p.bcaaG} g</Text>, signal anabolique modéré.
+        <Text style={styles.ledeBold}>{p.bcaaG ?? 0} g</Text>, signal anabolique modéré.
       </Text>
       <View style={styles.nutri3}>
-        {p.amino.map((a) => (
+        {amino.map((a, i) => (
           <NutriRow
-            key={a.name}
-            name={a.name}
+            key={a.name ?? i}
+            name={a.name ?? ''}
             sub={a.essential ? 'Essentiel' : 'Non-essentiel'}
-            qty={a.qty}
-            role={a.role}
+            qty={a.qty ?? ''}
+            role={a.role ?? ''}
           />
         ))}
       </View>
@@ -245,9 +246,9 @@ function CarbSection({ c }: { c: CarbDetail }) {
 // ── Section 04 · Lipides ───────────────────────────────────
 
 function LipidSection({ l }: { l: LipidDetail }) {
-  const parsed = l.fa.map((fa, i) => {
-    const m = fa.pct.match(/(\d+(?:\.\d+)?)/);
-    return { ...fa, num: m ? parseFloat(m[1]) : 0, color: FA_COLORS[i % FA_COLORS.length] };
+  const parsed = (Array.isArray(l.fa) ? l.fa : []).map((fa, i) => {
+    const m = String(fa.pct ?? '').match(/(\d+(?:\.\d+)?)/);
+    return { ...fa, pct: String(fa.pct ?? ''), qty: String(fa.qty ?? ''), num: m ? parseFloat(m[1]) : 0, color: FA_COLORS[i % FA_COLORS.length] };
   });
   const sum = parsed.reduce((s, f) => s + f.num, 0) || 100;
 
@@ -326,22 +327,24 @@ function NutriTableSection({
 const FODMAP_MAX = 300;
 
 function FodmapSection({ f }: { f: Fodmap }) {
-  const pct = (str: string) =>
-    Math.min(100, (parseFloat(str) / FODMAP_MAX) * 100);
+  const pct = (str: unknown) =>
+    Math.min(100, (parseFloat(String(str ?? 0)) / FODMAP_MAX) * 100);
+
+  const elim = f.elimination ?? { portion: '0', status: '', note: '' };
+  const reintro = f.reintroduction ?? { portion: '0', status: '', note: '' };
+  const absLimit = f.absoluteLimit ?? { portion: '0', status: '', note: '' };
+  const types = Array.isArray(f.types) ? f.types : [];
+  const alternatives = Array.isArray(f.alternatives) ? f.alternatives : [];
 
   const markers = [
-    { pct: pct(f.elimination.portion), label: 'Élimination', sub: `${f.elimination.portion} g` },
-    {
-      pct: pct(f.reintroduction.portion),
-      label: 'Réintroduction',
-      sub: `${f.reintroduction.portion} g`,
-    },
-    { pct: pct(f.absoluteLimit.portion), label: 'Limite', sub: `${f.absoluteLimit.portion} g` },
+    { pct: pct(elim.portion), label: 'Élimination', sub: `${elim.portion} g` },
+    { pct: pct(reintro.portion), label: 'Réintroduction', sub: `${reintro.portion} g` },
+    { pct: pct(absLimit.portion), label: 'Limite', sub: `${absLimit.portion} g` },
   ];
 
   return (
     <View style={styles.section}>
-      <SectionHead num="07" title="FODMAP" right={`profil ${f.overall.toUpperCase()}`} />
+      <SectionHead num="07" title="FODMAP" right={`profil ${String(f.overall ?? '').toUpperCase()}`} />
       <Text style={styles.lede}>
         Trois seuils calculés pour la phase d'élimination, de réintroduction et la dose maximale
         tolérée. Échelle de référence : 0 → 300 g cuit.
@@ -369,12 +372,13 @@ function FodmapSection({ f }: { f: Fodmap }) {
       {/* Types */}
       <Text style={styles.sectionMicrolabel}>Types présents</Text>
       <View>
-        {f.types.map((t, i) => {
-          const isOk = t.present === 'non';
-          const isWarn = t.present === 'oui';
+        {types.map((t, i) => {
+          const present = String(t.present ?? '');
+          const isOk = present === 'non';
+          const isWarn = present === 'oui';
           return (
             <View
-              key={t.name}
+              key={t.name ?? i}
               style={[styles.fodmapTypeRow, i === 0 && styles.fodmapTypeRowFirst]}
             >
               <Text style={styles.fodmapTypeName}>{t.name}</Text>
@@ -385,7 +389,7 @@ function FodmapSection({ f }: { f: Fodmap }) {
                   isOk && styles.fodmapTypeOk,
                 ]}
               >
-                {t.present.toUpperCase()}
+                {present.toUpperCase()}
               </Text>
               <Text style={styles.fodmapTypeLevel}>{t.level}</Text>
             </View>
@@ -396,8 +400,8 @@ function FodmapSection({ f }: { f: Fodmap }) {
       {/* Alternatives */}
       <Text style={[styles.sectionMicrolabel, { marginTop: 22 }]}>Alternatives low FODMAP</Text>
       <View style={styles.altGrid}>
-        {f.alternatives.map((a) => (
-          <View key={a.name} style={styles.altCard}>
+        {alternatives.map((a, i) => (
+          <View key={a.name ?? i} style={styles.altCard}>
             <Text style={styles.altName}>{a.name}</Text>
             <Text style={styles.altWhy}>{a.why}</Text>
           </View>
@@ -425,6 +429,7 @@ function BioactiveSection({ items }: { items: Bioactive[] }) {
 // ── Section 09 · Action métabolique ──────────────────────
 
 function MetabolicSection({ items }: { items: MetabolicItem[] }) {
+  const safeItems = Array.isArray(items) ? items : [];
   const toneLabel = (tone: MetabolicItem['tone']) => {
     if (tone === 'high') return '↑ favorable';
     if (tone === 'mid') return '~ modéré';
@@ -435,7 +440,7 @@ function MetabolicSection({ items }: { items: MetabolicItem[] }) {
     <View style={styles.section}>
       <SectionHead num="09" title="Action métabolique" />
       <View>
-        {items.map((m, i) => (
+        {safeItems.map((m, i) => (
           <View key={m.axis} style={[styles.metabolicRow, i === 0 && styles.metabolicRowFirst]}>
             <Text style={styles.metabolicAxis}>{m.axis}</Text>
             <View
@@ -467,9 +472,9 @@ function MetabolicSection({ items }: { items: MetabolicItem[] }) {
 
 function SensorySection({ s }: { s: Sensory }) {
   const axes: { label: string; words: string[] }[] = [
-    { label: 'Goût', words: s.taste },
-    { label: 'Texture', words: s.texture },
-    { label: 'Arôme', words: s.aroma },
+    { label: 'Goût', words: Array.isArray(s.taste) ? s.taste : [] },
+    { label: 'Texture', words: Array.isArray(s.texture) ? s.texture : [] },
+    { label: 'Arôme', words: Array.isArray(s.aroma) ? s.aroma : [] },
   ];
 
   return (
@@ -490,7 +495,7 @@ function SensorySection({ s }: { s: Sensory }) {
       <View style={styles.sensoryPairings}>
         <Text style={styles.sectionMicrolabel}>Pairings recommandés</Text>
         <View style={[styles.sensoryWords, { marginTop: 8 }]}>
-          {s.pairings.map((p) => (
+          {(Array.isArray(s.pairings) ? s.pairings : []).map((p) => (
             <View key={p} style={styles.sensoryWordPill}>
               <Text style={styles.sensoryWordText}>{p}</Text>
             </View>
@@ -510,29 +515,30 @@ const STATUS_MAP: Record<Allergen['status'], { text: string; color: string }> = 
 };
 
 function AllergenSection({ allergens }: { allergens: Allergen[] }) {
+  const safeAllergens = Array.isArray(allergens) ? allergens : [];
   const pairs: [Allergen, Allergen | undefined][] = [];
-  for (let i = 0; i < allergens.length; i += 2) {
-    pairs.push([allergens[i], allergens[i + 1]]);
+  for (let i = 0; i < safeAllergens.length; i += 2) {
+    pairs.push([safeAllergens[i], safeAllergens[i + 1]]);
   }
 
   return (
     <View style={styles.section}>
       <SectionHead num="11" title="Allergènes" right="14 prioritaires" />
       <View style={styles.allergenGrid}>
-        {pairs.map(([left, right], i) => (
+        {pairs.map(([left, right], i) => left ? (
           <View key={i} style={styles.allergenGridRow}>
             <AllergenCell item={left} />
             <View style={styles.allergenDivider} />
             {right ? <AllergenCell item={right} /> : <View style={{ flex: 1 }} />}
           </View>
-        ))}
+        ) : null)}
       </View>
     </View>
   );
 }
 
 function AllergenCell({ item }: { item: Allergen }) {
-  const s = STATUS_MAP[item.status];
+  const s = STATUS_MAP[item.status] ?? { text: '?', color: Colors.muted };
   return (
     <View style={styles.allergenCell}>
       <Text style={styles.allergenName}>{item.name}</Text>
@@ -550,24 +556,27 @@ function CompositionSection({
   text: string;
   highlights: string[];
 }) {
-  if (!highlights.length) {
+  const safeText = String(text ?? '');
+  const safeHL = Array.isArray(highlights) ? highlights : [];
+
+  if (!safeHL.length) {
     return (
       <View style={[styles.section, { paddingBottom: 30 }]}>
         <SectionHead num="12" title="Composition" />
-        <Text style={styles.ingredientsText}>{text}</Text>
+        <Text style={styles.ingredientsText}>{safeText}</Text>
       </View>
     );
   }
 
-  const re = new RegExp(`(${highlights.map((h) => h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
-  const parts = text.split(re);
+  const re = new RegExp(`(${safeHL.map((h) => h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+  const parts = safeText.split(re);
 
   return (
     <View style={[styles.section, { paddingBottom: 30 }]}>
       <SectionHead num="12" title="Composition" />
       <Text style={styles.ingredientsText}>
         {parts.map((part, i) => {
-          const isHL = highlights.some((h) => part.toLowerCase() === h.toLowerCase());
+          const isHL = safeHL.some((h) => part.toLowerCase() === h.toLowerCase());
           return isHL ? (
             <Text key={i} style={styles.ingredientsHighlight}>
               {part}
@@ -740,7 +749,7 @@ export function DetailScreen({
         )}
 
         {/* Compat strip (static food properties) */}
-        {food.compat.length > 0 && (
+        {Array.isArray(food.compat) && food.compat.length > 0 && (
           <View style={styles.compatStrip}>
             {food.compat.map((c, i) => (
               <CompatPill key={i} item={c} />
@@ -771,9 +780,9 @@ export function DetailScreen({
         {food.bioactives && <BioactiveSection items={food.bioactives} />}
         {food.metabolic && <MetabolicSection items={food.metabolic} />}
         {food.sensory && <SensorySection s={food.sensory} />}
-        <AllergenSection allergens={food.allergens} />
+        <AllergenSection allergens={food.allergens ?? []} />
         <CompositionSection
-          text={food.ingredients}
+          text={food.ingredients ?? ''}
           highlights={food.ingredientsHighlights ?? []}
         />
       </ScrollView>

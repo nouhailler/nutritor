@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Food, Allergen, CompatItem } from '../types';
 
 // ── Types OFF ──────────────────────────────────────────────────
@@ -33,6 +34,7 @@ export interface OFFProduct {
 export interface OFFSearchResult {
   count: number;
   products: OFFProduct[];
+  fromCache?: boolean;
 }
 
 // ── Allergen mapping ───────────────────────────────────────────
@@ -173,26 +175,139 @@ export function offProductToFood(p: OFFProduct): Food {
   };
 }
 
+// ── Cache & historique ─────────────────────────────────────────
+
+const CACHE_PREFIX = 'nutritor:off_cache:';
+const RECENT_KEY   = 'nutritor:off_recent';
+const CACHE_TTL    = 12 * 60 * 60 * 1000; // 12h
+const MAX_RECENT   = 12;
+
+async function getCached(key: string): Promise<OFFSearchResult | null> {
+  try {
+    const raw = await AsyncStorage.getItem(CACHE_PREFIX + key);
+    if (!raw) return null;
+    const { data, ts } = JSON.parse(raw) as { data: OFFSearchResult; ts: number };
+    if (Date.now() - ts > CACHE_TTL) return null;
+    return data;
+  } catch { return null; }
+}
+
+async function setCached(key: string, data: OFFSearchResult): Promise<void> {
+  try {
+    await AsyncStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ data, ts: Date.now() }));
+  } catch { /* ignore */ }
+}
+
+export async function getOFFRecentSearches(): Promise<string[]> {
+  try {
+    const raw = await AsyncStorage.getItem(RECENT_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch { return []; }
+}
+
+export async function saveOFFRecentSearch(query: string): Promise<void> {
+  try {
+    const prev = await getOFFRecentSearches();
+    const updated = [query, ...prev.filter((s) => s !== query)].slice(0, MAX_RECENT);
+    await AsyncStorage.setItem(RECENT_KEY, JSON.stringify(updated));
+  } catch { /* ignore */ }
+}
+
+// ── Relevance scoring ──────────────────────────────────────────
+
+function norm(s: string): string {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+
+function relevanceScore(p: OFFProduct, query: string): number {
+  const q = norm(query);
+  const name  = norm(p.product_name_fr || p.product_name || '');
+  const brand = norm((p.brands ?? '').split(',')[0]);
+
+  if (name === q)                                         return 100;
+  if (brand === q)                                        return 90;
+  if (name.startsWith(q + ' ') || name.startsWith(q + ',') || name.startsWith(q + '-')) return 85;
+  if (name.startsWith(q))                                 return 80;
+  if (brand.startsWith(q))                                return 70;
+  if (name.includes(q))                                   return 60;
+  if (brand.includes(q))                                  return 50;
+
+  const ingredients = norm(p.ingredients_text_fr || p.ingredients_text || '');
+  if (ingredients.includes(q))                            return 10;
+
+  return 0; // query absent from all meaningful fields
+}
+
+function sortByRelevance(products: OFFProduct[], query: string): OFFProduct[] {
+  return products
+    .map((p) => ({ p, score: relevanceScore(p, query) }))
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map(({ p }) => p);
+}
+
 // ── API calls ──────────────────────────────────────────────────
 
 const BASE = 'https://world.openfoodfacts.org';
 const FIELDS = 'id,code,product_name,product_name_fr,brands,categories_tags,ingredients_text,ingredients_text_fr,nutriments,allergens_tags,traces_tags,quantity';
+const TIMEOUT_MS = 12000;
+const MAX_RETRIES = 3;
+
+async function fetchOFF(url: string): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timer);
+      if (res.status === 503 && attempt < MAX_RETRIES - 1) {
+        await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
+      }
+      return res;
+    } catch (e) {
+      clearTimeout(timer);
+      lastError = e;
+      if (attempt < MAX_RETRIES - 1) {
+        await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+      }
+    }
+  }
+  const isAbort = (lastError as Error)?.name === 'AbortError';
+  throw new Error(isAbort
+    ? 'Open Food Facts ne répond pas (délai dépassé). Vérifie ta connexion et réessaie.'
+    : 'Impossible de joindre Open Food Facts. Vérifie ta connexion internet.',
+  );
+}
 
 export async function searchOFF(query: string, page = 1): Promise<OFFSearchResult> {
+  const cacheKey = `q2:${query}:${page}`;
   const params = new URLSearchParams({
     search_terms: query,
     page: String(page),
-    page_size: '20',
+    page_size: '50',
     fields: FIELDS,
     lc: 'fr',
     cc: 'fr',
   });
-  const res = await fetch(`${BASE}/api/v2/search?${params}`);
-  if (!res.ok) throw new Error(`Open Food Facts ${res.status}`);
-  return res.json();
+  try {
+    const res = await fetchOFF(`${BASE}/api/v2/search?${params}`);
+    if (!res.ok) throw new Error(`Open Food Facts ${res.status} — réessaie dans quelques instants.`);
+    const data: OFFSearchResult = await res.json();
+    const sorted = sortByRelevance(data.products, query);
+    const result: OFFSearchResult = { ...data, products: sorted };
+    void setCached(cacheKey, result);
+    return result;
+  } catch (e) {
+    const cached = await getCached(cacheKey);
+    if (cached) return { ...cached, fromCache: true };
+    throw e;
+  }
 }
 
 export async function searchOFFByCategory(categoryTag: string, page = 1): Promise<OFFSearchResult> {
+  const cacheKey = `cat:${categoryTag}:${page}`;
   const params = new URLSearchParams({
     categories_tags: categoryTag,
     page: String(page),
@@ -201,14 +316,26 @@ export async function searchOFFByCategory(categoryTag: string, page = 1): Promis
     lc: 'fr',
     cc: 'fr',
   });
-  const res = await fetch(`${BASE}/api/v2/search?${params}`);
-  if (!res.ok) throw new Error(`Open Food Facts ${res.status}`);
-  return res.json();
+  try {
+    const res = await fetchOFF(`${BASE}/api/v2/search?${params}`);
+    if (!res.ok) throw new Error(`Open Food Facts ${res.status} — réessaie dans quelques instants.`);
+    const data: OFFSearchResult = await res.json();
+    void setCached(cacheKey, data);
+    return data;
+  } catch (e) {
+    const cached = await getCached(cacheKey);
+    if (cached) return { ...cached, fromCache: true };
+    throw e;
+  }
 }
 
 export async function getOFFByBarcode(barcode: string): Promise<OFFProduct | null> {
-  const res = await fetch(`${BASE}/api/v2/product/${barcode}.json?fields=${FIELDS}`);
-  if (!res.ok) return null;
-  const json = await res.json();
-  return json.status === 1 ? json.product : null;
+  try {
+    const res = await fetchOFF(`${BASE}/api/v2/product/${barcode}.json?fields=${FIELDS}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.status === 1 ? json.product : null;
+  } catch {
+    return null;
+  }
 }

@@ -325,6 +325,7 @@ export function SearchScreen({ foodList, profile, onBack, onPickItem, onDeleteFo
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.filterScrollView}
         contentContainerStyle={styles.filterStrip}
       >
         <TouchableOpacity style={styles.chip} activeOpacity={0.7}>
@@ -489,6 +490,8 @@ const styles = StyleSheet.create({
 
   resultsList: { flex: 1 },
 
+  filterScrollView: { flexShrink: 0, flexGrow: 0 },
+
   filterStrip: {
     flexDirection: 'row',
     gap: 8,
@@ -498,6 +501,7 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     gap: 7,
     paddingVertical: 8,
     paddingHorizontal: 14,

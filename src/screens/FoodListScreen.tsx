@@ -6,6 +6,8 @@
  */
 import React, { useState } from 'react';
 import {
+  Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -185,11 +187,13 @@ function FoodRow({
   profile,
   onPress,
   onAddToPlate,
+  onDelete,
 }: {
   food: Food;
   profile: UserProfile;
   onPress: () => void;
   onAddToPlate: () => void;
+  onDelete: () => void;
 }) {
   const kcal = Math.round((food.per100.kcal * food.defaultPortion) / 100);
   const compat = computeCompatibilityScore(food, profile);
@@ -215,6 +219,9 @@ function FoodRow({
       <TouchableOpacity style={styles.plateBtn} onPress={onAddToPlate} activeOpacity={0.7}>
         <Icon name="book" size={15} color={Colors.ok} />
       </TouchableOpacity>
+      <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} activeOpacity={0.7}>
+        <Icon name="trash" size={14} color={Colors.warn} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -238,6 +245,7 @@ interface Props {
   profile: UserProfile;
   onPickFood: (food: Food) => void;
   onAddToPlate: (food: Food, plateId: string) => void;
+  onDeleteFood: (foodId: string) => void;
   onOpenMenu: () => void;
   onAddWithAI: (query: string) => void;
   onOpenFoodFacts: (query: string) => void;
@@ -252,6 +260,7 @@ export function FoodListScreen({
   profile,
   onPickFood,
   onAddToPlate,
+  onDeleteFood,
   onOpenMenu,
   onAddWithAI,
   onOpenFoodFacts,
@@ -270,6 +279,23 @@ export function FoodListScreen({
         f.brand.toLowerCase().includes(debouncedQuery.toLowerCase())
       )
     : foodList;
+
+  const confirmDelete = (food: Food) => {
+    const doDelete = () => onDeleteFood(food.id);
+    if (Platform.OS === 'web') {
+      // eslint-disable-next-line no-alert
+      if (window.confirm(`Supprimer « ${food.name} » de ta bibliothèque ?`)) doDelete();
+      return;
+    }
+    Alert.alert(
+      'Supprimer cet aliment ?',
+      `« ${food.name} » sera retiré de ta bibliothèque.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Supprimer', style: 'destructive', onPress: doDelete },
+      ],
+    );
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -365,6 +391,7 @@ export function FoodListScreen({
             profile={profile}
             onPress={() => onPickFood(food)}
             onAddToPlate={() => setPlatePickerFood(food)}
+            onDelete={() => confirmDelete(food)}
           />
         ))}
 
@@ -588,6 +615,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(63,90,58,0.07)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  deleteBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(139,58,46,0.25)',
+    backgroundColor: 'rgba(139,58,46,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
   },
 
   emptyBox: { alignItems: 'center', paddingVertical: 40, gap: 10, paddingHorizontal: 32 },

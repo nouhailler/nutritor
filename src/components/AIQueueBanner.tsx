@@ -10,6 +10,8 @@ interface Props {
   jobs: AIJobSnapshot[];
   hasTabBar: boolean;
   onDismiss: () => void;
+  onViewResult?: () => void;
+  doneSubText?: string;
 }
 
 function PulseDot() {
@@ -25,9 +27,9 @@ function PulseDot() {
   return <Animated.View style={[styles.dot, { opacity: anim }]} />;
 }
 
-export function AIQueueBanner({ jobs, hasTabBar, onDismiss }: Props) {
+export function AIQueueBanner({ jobs, hasTabBar, onDismiss, onViewResult, doneSubText }: Props) {
   const insets = useSafeAreaInsets();
-  const slideAnim = useRef(new Animated.Value(80)).current;
+  const slideAnim = useRef(new Animated.Value(200)).current;
   const [snoozed, setSnoozed] = useState(false);
   const snoozeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -36,7 +38,7 @@ export function AIQueueBanner({ jobs, hasTabBar, onDismiss }: Props) {
 
   useEffect(() => {
     Animated.timing(slideAnim, {
-      toValue: effectiveVisible ? 0 : 80,
+      toValue: effectiveVisible ? 0 : 200,
       duration: 260,
       useNativeDriver: true,
     }).start();
@@ -62,7 +64,11 @@ export function AIQueueBanner({ jobs, hasTabBar, onDismiss }: Props) {
 
   if (!hasJobs) return null;
 
-  const handleSnooze = () => {
+  const handleTap = () => {
+    if (allFinished) {
+      onDismiss();
+      return;
+    }
     if (snoozeTimer.current) clearTimeout(snoozeTimer.current);
     setSnoozed(true);
     snoozeTimer.current = setTimeout(() => {
@@ -98,8 +104,9 @@ export function AIQueueBanner({ jobs, hasTabBar, onDismiss }: Props) {
   } else if (allFinished) {
     icon = '✓';
     const n = done.length;
-    mainText = n === 1 ? `« ${done[0].label} » ajouté` : `${n} aliments ajoutés`;
-    subText = errors.length > 0 ? `${errors.length} erreur${errors.length > 1 ? 's' : ''}` : '';
+    mainText = n === 1 ? done[0].label : `${n} tâches terminées`;
+    subText = doneSubText
+      ?? (errors.length > 0 ? `${errors.length} erreur${errors.length > 1 ? 's' : ''}` : '');
   }
 
   return (
@@ -112,7 +119,7 @@ export function AIQueueBanner({ jobs, hasTabBar, onDismiss }: Props) {
       ]}
     >
       {/* Main content — tap to snooze 10 s */}
-      <TouchableOpacity style={styles.left} onPress={handleSnooze} activeOpacity={0.75}>
+      <TouchableOpacity style={styles.left} onPress={handleTap} activeOpacity={0.75}>
         {running ? <PulseDot /> : (
           <Text style={[styles.iconText, isError && styles.iconError, allFinished && !isError && styles.iconDone]}>
             {icon}
@@ -126,11 +133,22 @@ export function AIQueueBanner({ jobs, hasTabBar, onDismiss }: Props) {
         </View>
       </TouchableOpacity>
 
-      {/* Permanent dismiss when all done */}
+      {/* Actions when all done */}
       {allFinished && (
-        <TouchableOpacity onPress={onDismiss} style={styles.dismissBtn} activeOpacity={0.7}>
-          <Text style={styles.dismissText}>Fermer</Text>
-        </TouchableOpacity>
+        <View style={styles.actions}>
+          {onViewResult && (
+            <TouchableOpacity
+              onPress={() => { onViewResult(); onDismiss(); }}
+              style={styles.viewBtn}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.viewBtnText}>Voir</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={onDismiss} style={styles.dismissBtn} activeOpacity={0.7}>
+            <Text style={styles.dismissText}>Fermer</Text>
+          </TouchableOpacity>
+        </View>
       )}
     </Animated.View>
   );
@@ -199,18 +217,38 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
+  viewBtn: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 100,
+    backgroundColor: 'rgba(247,242,231,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(247,242,231,0.55)',
+  },
+  viewBtnText: {
+    fontFamily: Fonts.monoMedium,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    color: Colors.paper2,
+  },
   dismissBtn: {
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 100,
     borderWidth: 1,
-    borderColor: 'rgba(247,242,231,0.3)',
+    borderColor: 'rgba(247,242,231,0.25)',
     flexShrink: 0,
   },
   dismissText: {
     fontFamily: Fonts.mono,
     fontSize: 10,
     letterSpacing: 0.8,
-    color: 'rgba(247,242,231,0.7)',
+    color: 'rgba(247,242,231,0.5)',
   },
 });
