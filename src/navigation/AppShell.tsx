@@ -34,6 +34,7 @@ import { usePersistedState } from '../storage/usePersistedState';
 import { KEYS, load, save } from '../storage/store';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { AddFoodScreen } from '../screens/AddFoodScreen';
+import { EditFoodScreen } from '../screens/EditFoodScreen';
 import { OpenFoodFactsScreen } from '../screens/OpenFoodFactsScreen';
 import { CIQUALScreen } from '../screens/CIQUALScreen';
 import { BarcodeScannerScreen } from '../screens/BarcodeScannerScreen';
@@ -56,7 +57,7 @@ function todayStr() {
 }
 
 type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile';
-type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge' | null;
+type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'editFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge' | null;
 
 const TABS: { id: Tab; label: string; icon: 'home' | 'leaf' | 'book' | 'chart' | 'user' }[] = [
   { id: 'home',    label: 'Journal',  icon: 'home' },
@@ -258,6 +259,7 @@ export function AppShell() {
   const [pendingQuery, setPendingQuery] = useState('');
   const [mealResult, setMealResult] = useState<MealGeneratorResult | null>(null);
   const [mealJobId, setMealJobId] = useState<string | null>(null);
+  const [lastAddedFoodId, setLastAddedFoodId] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
 
   const [profile, setProfile, profileLoading] = usePersistedState<UserProfile>(
@@ -391,9 +393,9 @@ export function AppShell() {
 
   const handleGenerateMeals = (query: string) => {
     setMealResult(null);
-    const jobId = aiQueue.add(`Génération · ${query}`, async () => {
+    const jobId = aiQueue.add(`Génération · ${query}`, async (signal) => {
       const fodmapPhase = fodmapProtocol.active ? fodmapProtocol.phase : undefined;
-      const res = await generateMeals(query, profile, fodmapPhase, settings);
+      const res = await generateMeals(query, profile, fodmapPhase, settings, signal);
       setMealResult(res);
     });
     setMealJobId(jobId);
@@ -832,7 +834,19 @@ export function AppShell() {
         profile={profile}
         onBack={() => setStack(detailOrigin ?? null)}
         onAdd={handleAdd}
+        onEdit={() => setStack('editFood')}
         onOpenMenu={openMenu}
+      />
+    );
+  } else if (stack === 'editFood') {
+    screen = (
+      <EditFoodScreen
+        food={selectedFood}
+        onSave={(updated) => {
+          setFoodList((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
+          setSelectedFood(updated);
+        }}
+        onBack={() => setStack('detail')}
       />
     );
   } else if (stack === 'savedDetail' && selectedPlate) {
@@ -908,6 +922,7 @@ export function AppShell() {
         settings={settings}
         onAdd={(food) => {
           setFoodList((prev) => [...prev, food]);
+          setLastAddedFoodId(food.id);
         }}
         onBack={() => setStack('search')}
         onOpenMenu={openMenu}
@@ -1115,13 +1130,21 @@ export function AppShell() {
       <AIQueueBanner
         jobs={queueJobs}
         hasTabBar={showTabs}
-        onDismiss={() => aiQueue.dismissCompleted()}
+        onDismiss={() => { aiQueue.dismissCompleted(); setLastAddedFoodId(null); }}
+        onCancelRunning={() => aiQueue.cancelRunning()}
         onViewResult={
           mealDone
             ? () => setStack('mealGenerator')
-            : queueJobs.some((j) => j.status === 'done')
-              ? () => showTab('foods')
-              : undefined
+            : lastAddedFoodId
+              ? () => {
+                  const f = foodList.find((x) => x.id === lastAddedFoodId);
+                  if (f) openDetail(f, null);
+                  else showTab('foods');
+                  setLastAddedFoodId(null);
+                }
+              : queueJobs.some((j) => j.status === 'done')
+                ? () => showTab('foods')
+                : undefined
         }
         doneSubText={
           mealDone

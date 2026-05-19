@@ -465,7 +465,7 @@ export function FoodListScreen({
     debouncedQuery
       ? reversedList.filter((f) =>
           f.name.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
-          f.brand.toLowerCase().includes(debouncedQuery.toLowerCase())
+          (f.brand ?? '').toLowerCase().includes(debouncedQuery.toLowerCase())
         )
       : reversedList,
     [reversedList, debouncedQuery],

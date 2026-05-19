@@ -10,6 +10,7 @@ interface Props {
   jobs: AIJobSnapshot[];
   hasTabBar: boolean;
   onDismiss: () => void;
+  onCancelRunning: () => void;
   onViewResult?: () => void;
   doneSubText?: string;
 }
@@ -27,7 +28,7 @@ function PulseDot() {
   return <Animated.View style={[styles.dot, { opacity: anim }]} />;
 }
 
-export function AIQueueBanner({ jobs, hasTabBar, onDismiss, onViewResult, doneSubText }: Props) {
+export function AIQueueBanner({ jobs, hasTabBar, onDismiss, onCancelRunning, onViewResult, doneSubText }: Props) {
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(200)).current;
   const [snoozed, setSnoozed] = useState(false);
@@ -132,6 +133,13 @@ export function AIQueueBanner({ jobs, hasTabBar, onDismiss, onViewResult, doneSu
           ) : null}
         </View>
       </TouchableOpacity>
+
+      {/* Cancel button while running */}
+      {!allFinished && running && (
+        <TouchableOpacity onPress={onCancelRunning} style={styles.cancelBtn} activeOpacity={0.7}>
+          <Text style={styles.cancelText}>Annuler</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Actions when all done */}
       {allFinished && (
@@ -250,5 +258,19 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 0.8,
     color: 'rgba(247,242,231,0.5)',
+  },
+  cancelBtn: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: 'rgba(247,242,231,0.4)',
+    flexShrink: 0,
+  },
+  cancelText: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    color: 'rgba(247,242,231,0.7)',
   },
 });

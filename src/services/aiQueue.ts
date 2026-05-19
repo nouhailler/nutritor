@@ -12,17 +12,18 @@ export interface AIJobSnapshot {
 }
 
 type QueueListener = (jobs: AIJobSnapshot[]) => void;
+export type ExecuteFn = (signal: AbortSignal) => Promise<void>;
 
 interface InternalJob extends AIJobSnapshot {
-  execute: () => Promise<void>;
+  execute: ExecuteFn;
 }
 
 class AIQueueManager {
   private jobs: InternalJob[] = [];
   private listeners = new Set<QueueListener>();
   private busy = false;
+  private currentController: AbortController | null = null;
 
-  // Subscribe returns an unsubscribe function
   subscribe(cb: QueueListener): () => void {
     this.listeners.add(cb);
     return () => this.listeners.delete(cb);
@@ -35,7 +36,7 @@ class AIQueueManager {
     this.listeners.forEach((cb) => cb(snap));
   }
 
-  add(label: string, execute: () => Promise<void>): string {
+  add(label: string, execute: ExecuteFn): string {
     const id = `ai-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     this.jobs.push({ id, label, status: 'pending', execute });
     this.notify();
@@ -47,19 +48,37 @@ class AIQueueManager {
     if (this.busy) return;
     const next = this.jobs.find((j) => j.status === 'pending');
     if (!next) return;
+
+    const controller = new AbortController();
+    this.currentController = controller;
     this.busy = true;
     next.status = 'running';
     this.notify();
+
     try {
-      await next.execute();
+      await next.execute(controller.signal);
       next.status = 'done';
     } catch (e: unknown) {
-      next.status = 'error';
-      next.error = (e as Error).message ?? 'Erreur inconnue';
+      if ((e as Error)?.name === 'AbortError') {
+        // Cancelled — remove silently, no error shown
+        this.jobs = this.jobs.filter((j) => j.id !== next.id);
+      } else {
+        next.status = 'error';
+        next.error = (e as Error).message ?? 'Erreur inconnue';
+      }
     }
+
+    this.currentController = null;
     this.busy = false;
     this.notify();
-    void this.tick(); // process next job if any
+    void this.tick();
+  }
+
+  cancelRunning() {
+    const running = this.jobs.find((j) => j.status === 'running');
+    if (running && this.currentController) {
+      this.currentController.abort();
+    }
   }
 
   dismiss(id: string) {

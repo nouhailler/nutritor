@@ -89,18 +89,26 @@ function extractJSON(raw: string): string {
 function validateFood(obj: unknown): obj is Food {
   if (typeof obj !== 'object' || obj === null) return false;
   const f = obj as Record<string, unknown>;
-  return (
-    typeof f.id === 'string' &&
-    typeof f.name === 'string' &&
-    typeof f.per100 === 'object' &&
-    Array.isArray(f.allergens) &&
-    Array.isArray(f.compat)
-  );
+  if (
+    typeof f.id !== 'string' || !f.id.trim() ||
+    typeof f.name !== 'string' || !f.name.trim() ||
+    typeof f.per100 !== 'object' || f.per100 === null ||
+    !Array.isArray(f.allergens) ||
+    !Array.isArray(f.compat)
+  ) return false;
+  // Normalize fields that must be strings but IA sometimes omits
+  if (typeof f.brand !== 'string') f.brand = 'Générique';
+  if (typeof f.unit !== 'string') f.unit = 'g';
+  if (typeof f.defaultPortion !== 'number') f.defaultPortion = 100;
+  if (typeof f.subtitle !== 'string') f.subtitle = '';
+  if (typeof f.category !== 'string') f.category = '';
+  return true;
 }
 
 async function callOpenRouter(
   settings: AppSettings['openrouter'],
   messages: { role: string; content: string }[],
+  signal?: AbortSignal,
 ): Promise<string> {
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -113,6 +121,7 @@ async function callOpenRouter(
       messages,
       temperature: 0.2,
     }),
+    signal,
   });
   if (!res.ok) {
     const body = await res.text();
@@ -125,6 +134,7 @@ async function callOpenRouter(
 async function callOllama(
   settings: AppSettings['ollama'],
   messages: { role: string; content: string }[],
+  signal?: AbortSignal,
 ): Promise<string> {
   const url = settings.baseUrl.replace(/\/$/, '');
   const res = await fetch(`${url}/api/chat`, {
@@ -135,6 +145,7 @@ async function callOllama(
       messages,
       stream: false,
     }),
+    signal,
   });
   if (!res.ok) {
     throw new Error(`Ollama ${res.status}: ${await res.text().then((t) => t.slice(0, 200))}`);
@@ -148,6 +159,7 @@ export async function generateFoodWithAI(
   brand: string,
   context: string,
   appSettings: AppSettings,
+  signal?: AbortSignal,
 ): Promise<Food> {
   const { aiProvider, ollama, openrouter } = appSettings;
 
@@ -168,8 +180,8 @@ export async function generateFoodWithAI(
 
   const raw =
     aiProvider === 'openrouter'
-      ? await callOpenRouter(openrouter, messages)
-      : await callOllama(ollama, messages);
+      ? await callOpenRouter(openrouter, messages, signal)
+      : await callOllama(ollama, messages, signal);
 
   if (!raw) throw new Error('L\'IA n\'a retourné aucune réponse.');
 
@@ -300,7 +312,7 @@ function buildCompatFull(food: Food): CompatItem[] {
 
 // ── Enrich a partial Food with AI (CIQUAL / OFF import) ──────
 
-export async function enrichFoodWithAI(food: Food, settings: AppSettings): Promise<Food> {
+export async function enrichFoodWithAI(food: Food, settings: AppSettings, signal?: AbortSignal): Promise<Food> {
   const allAllergenAbsent = food.allergens.every((a) => a.status === 'absent');
 
   const missing: string[] = [];
@@ -349,8 +361,8 @@ ${ENRICH_SCHEMA}`;
 
   const raw =
     settings.aiProvider === 'openrouter'
-      ? await callOpenRouter(settings.openrouter, messages)
-      : await callOllama(settings.ollama, messages);
+      ? await callOpenRouter(settings.openrouter, messages, signal)
+      : await callOllama(settings.ollama, messages, signal);
 
   if (!raw) throw new Error('Réponse IA vide lors de l\'enrichissement.');
 
@@ -757,6 +769,7 @@ export async function generateMeals(
   profile: UserProfile,
   fodmapPhase: FodmapPhase | undefined,
   appSettings: AppSettings,
+  signal?: AbortSignal,
 ): Promise<MealGeneratorResult> {
   if (appSettings.aiProvider === 'openrouter' && !appSettings.openrouter.apiKey) {
     throw new Error('Clé API OpenRouter manquante. Configure-la dans les Paramètres.');
@@ -775,8 +788,8 @@ export async function generateMeals(
 
   const raw =
     appSettings.aiProvider === 'openrouter'
-      ? await callOpenRouter(appSettings.openrouter, messages)
-      : await callOllama(appSettings.ollama, messages);
+      ? await callOpenRouter(appSettings.openrouter, messages, signal)
+      : await callOllama(appSettings.ollama, messages, signal);
 
   if (!raw) throw new Error('L\'IA n\'a retourné aucune réponse.');
 

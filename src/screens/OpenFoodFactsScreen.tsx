@@ -289,6 +289,7 @@ interface Props {
 export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFood, onBack, onOpenMenu, settings, initialQuery = '' }: Props) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
+  const dropdownPressRef = useRef(false);
 
   const [query, setQuery] = useState(initialQuery);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
@@ -318,7 +319,10 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
         ? await searchOFFByCategory(opts.categoryTag)
         : await searchOFF(opts.text ?? '');
       const valid = result.products.filter(
-        (p) => (p.product_name_fr || p.product_name) && (p.nutriments?.['energy-kcal_100g'] ?? 0) > 0
+        (p) =>
+          (p.product_name_fr || p.product_name) &&
+          ((p.nutriments?.['energy-kcal_100g'] ?? 0) > 0 ||
+           (p.nutriments?.['energy_100g'] ?? 0) > 0)
       );
       setProducts(valid);
       setFromCache(result.fromCache ?? false);
@@ -376,8 +380,8 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
 
     if (settings && isAIReady(settings)) {
       const capturedUpdate = onUpdateFood;
-      aiQueue.add(`Enrichissement · ${baseFood.name}`, async () => {
-        const enriched = await enrichFoodWithAI(baseFood, settings!);
+      aiQueue.add(`Enrichissement · ${baseFood.name}`, async (signal) => {
+        const enriched = await enrichFoodWithAI(baseFood, settings!, signal);
         capturedUpdate(enriched);
       });
     }
@@ -419,7 +423,7 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
               value={query}
               onChangeText={(t) => { setQuery(t); if (t) setActiveGroup(null); }}
               onFocus={() => setInputFocused(true)}
-              onBlur={() => setTimeout(() => setInputFocused(false), 150)}
+              onBlur={() => setTimeout(() => { if (!dropdownPressRef.current) setInputFocused(false); }, 150)}
               onSubmitEditing={handleSearch}
               returnKeyType="search"
               autoCorrect={false}
@@ -437,7 +441,14 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
           {showDropdown && (
             <View style={styles.dropdown}>
               {recentSearches.map((s) => (
-                <TouchableOpacity key={s} style={styles.dropdownItem} onPress={() => selectRecent(s)} activeOpacity={0.7}>
+                <TouchableOpacity
+                  key={s}
+                  style={styles.dropdownItem}
+                  onPressIn={() => { dropdownPressRef.current = true; }}
+                  onPress={() => { dropdownPressRef.current = false; selectRecent(s); }}
+                  onPressOut={() => { dropdownPressRef.current = false; }}
+                  activeOpacity={0.7}
+                >
                   <Icon name="clock" size={13} color={Colors.muted2} />
                   <Text style={styles.dropdownText} numberOfLines={1}>{s}</Text>
                 </TouchableOpacity>
@@ -513,8 +524,9 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
           <View style={styles.emptyBox}>
             <Text style={styles.emptyTitle}>Aucun résultat</Text>
             <Text style={styles.emptyDesc}>
-              Essaie un autre terme ou vérifie l'orthographe.{'\n'}
-              Open Food Facts contient 3 millions de produits.
+              OFF référence surtout des produits scannés par des utilisateurs — la fiche existe souvent mais sans données nutritionnelles, ce qui les rend inutilisables.{'\n\n'}
+              Pour un produit de marque : utilise le scanner code-barres (icône 📷) — c'est plus fiable que la recherche texte.{'\n\n'}
+              Pour un aliment générique (yaourt soja, tofu…) : cherche dans CIQUAL ou ajoute-le via l'IA.
             </Text>
           </View>
         )}
