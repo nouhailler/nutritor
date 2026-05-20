@@ -426,6 +426,30 @@ export function AppShell() {
     });
   }, [foodsLoading]);
 
+  // ── Viewed date helpers (must be before any conditional return) ──
+
+  const today = todayStr();
+
+  const viewedMeals = (() => {
+    if (!viewingDate || viewingDate === today) return meals;
+    const entry = journal.find((e) => e.date === viewingDate);
+    return (entry && Array.isArray(entry.meals)) ? entry.meals : EMPTY_DAY_MEALS;
+  })();
+
+  const effectiveDate = viewingDate ?? today;
+
+  // useMemo must be called unconditionally — never place it after a conditional return
+  const dayTips = useMemo((): DayTip[] => {
+    try {
+      const isFuture = effectiveDate > today;
+      if (isFuture) return [];
+      return computeDayTips({ meals: viewedMeals, journal, symptoms, profile, date: effectiveDate });
+    } catch (e) {
+      console.warn('[AppShell] computeDayTips error:', e);
+      return [];
+    }
+  }, [viewedMeals, journal, symptoms, profile, effectiveDate, today]);
+
   const appLoading = profileLoading || foodsLoading || mealsLoading || journalLoading;
 
   if (appLoading) {
@@ -536,19 +560,7 @@ export function AppShell() {
     }
   };
 
-  // ── Viewed date helpers ──────────────────────────────────────
-
-  const today = todayStr();
-
-  // Meals for the currently viewed date
-  const viewedMeals = (() => {
-    if (!viewingDate || viewingDate === today) return meals;
-    const entry = journal.find((e) => e.date === viewingDate);
-    return (entry && Array.isArray(entry.meals)) ? entry.meals : EMPTY_DAY_MEALS;
-  })();
-
   // Symptom entry for the currently viewed date
-  const effectiveDate = viewingDate ?? today;
   const symptomEntry = symptoms.find((e) => e.date === effectiveDate) ?? null;
 
   // Dates that have data (for calendar dots)
@@ -559,18 +571,6 @@ export function AppShell() {
     if (meals.some((m) => m.items.length > 0)) dates.push(today);
     return [...new Set(dates)];
   })();
-
-  // Tips for the currently viewed date (not computed for future dates)
-  const dayTips = useMemo((): DayTip[] => {
-    try {
-      const isFuture = effectiveDate > today;
-      if (isFuture) return [];
-      return computeDayTips({ meals: viewedMeals, journal, symptoms, profile, date: effectiveDate });
-    } catch (e) {
-      console.warn('[AppShell] computeDayTips error:', e);
-      return [];
-    }
-  }, [viewedMeals, journal, symptoms, profile, effectiveDate, today]);
 
   // Update meals for viewingDate (routes to meals or journal)
   const updateViewedMeals = (updater: (prev: Meal[]) => Meal[]) => {
