@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AIJobSnapshot } from '../services/aiQueue';
 import { Colors, Fonts } from '../theme/tokens';
@@ -20,8 +20,8 @@ function PulseDot() {
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(anim, { toValue: 0.3, duration: 600, useNativeDriver: true }),
-        Animated.timing(anim, { toValue: 1,   duration: 600, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0.3, duration: 600, useNativeDriver: Platform.OS !== 'web' }),
+        Animated.timing(anim, { toValue: 1,   duration: 600, useNativeDriver: Platform.OS !== 'web' }),
       ])
     ).start();
   }, []);
@@ -51,7 +51,7 @@ export function AIQueueBanner({ jobs, hasTabBar, onDismiss, onCancelRunning, onV
     Animated.timing(slideAnim, {
       toValue: effectiveVisible ? 0 : 200,
       duration: 260,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     }).start();
   }, [effectiveVisible]);
 
