@@ -975,7 +975,10 @@ export function AppShell() {
           setFoodList((prev) => [...prev, food]);
           setLastImportedFood(food);
         }}
-        onUpdateFood={handleUpdateFood}
+        onUpdateFood={(food) => {
+          setFoodList((prev) => prev.map((f) => (f.id === food.id ? food : f)));
+          setLastAddedFoodId(food.id);
+        }}
         onBack={handleImportScreenBack}
         onOpenMenu={openMenu}
       />
@@ -991,7 +994,10 @@ export function AppShell() {
           setFoodList((prev) => [...prev, food]);
           setLastImportedFood(food);
         }}
-        onUpdateFood={handleUpdateFood}
+        onUpdateFood={(food) => {
+          setFoodList((prev) => prev.map((f) => (f.id === food.id ? food : f)));
+          setLastAddedFoodId(food.id);
+        }}
         onBack={handleImportScreenBack}
         onOpenMenu={openMenu}
       />
