@@ -20,7 +20,6 @@ import { Icon } from '../components/Icon';
 import { HelpButton, HelpModal } from '../components/HelpModal';
 import { HELP } from '../data/helpContent';
 import {
-  RECENT,
   SEARCH_FILTERS,
   SearchFilter,
   SearchFilterId,
@@ -141,6 +140,7 @@ function SectionLabel({ left, right }: { left: string; right?: string }) {
 interface Props {
   foodList: Food[];
   profile: UserProfile;
+  recentFoodIds: string[];
   onBack: () => void;
   onPickItem: (food: Food) => void;
   onDeleteFood: (foodId: string) => void;
@@ -151,7 +151,7 @@ interface Props {
   onOpenMenu: () => void;
 }
 
-export function SearchScreen({ foodList, profile, onBack, onPickItem, onDeleteFood, onAddWithAI, onOpenFoodFacts, onOpenCIQUAL, onOpenScanner, onOpenMenu }: Props) {
+export function SearchScreen({ foodList, profile, recentFoodIds, onBack, onPickItem, onDeleteFood, onAddWithAI, onOpenFoodFacts, onOpenCIQUAL, onOpenScanner, onOpenMenu }: Props) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
@@ -191,11 +191,20 @@ export function SearchScreen({ foodList, profile, onBack, onPickItem, onDeleteFo
     return Array.from(allActiveFilterIds).every((id) => passesFilter(food, id));
   }
 
+  const isSearching = !!debouncedQuery.trim();
+
   // Smart search: synonyms + fuzzy matching + NLP nutrition criteria
   const smartResults = smartSearch(foodList, debouncedQuery, intent);
   const textFiltered = smartResults.filter((food) => passesNLPCriteria(food, intent));
   const compatible   = textFiltered.filter((f) => isCompatible(f));
   const incompatible = textFiltered.filter((f) => !isCompatible(f));
+
+  // When no search query: split compatible into recent vs others (no duplication)
+  const recentSet = new Set(recentFoodIds);
+  const recentCompatible: Food[] = isSearching ? [] : recentFoodIds
+    .map((id) => compatible.find((f) => f.id === id))
+    .filter(Boolean) as Food[];
+  const otherCompatible = isSearching ? compatible : compatible.filter((f) => !recentSet.has(f.id));
 
   // NLP intent chips to display (filters inferred from natural language)
   const nlpOnlyFilters = intent.impliedFilters.filter(
@@ -352,31 +361,63 @@ export function SearchScreen({ foodList, profile, onBack, onPickItem, onDeleteFo
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: 40 }}
       >
-        {/* Compatible */}
-        <SectionLabel
-          left={activeFilters.length ? 'Compatible avec tes filtres' : 'Tous les aliments'}
-          right={`${compatible.length} aliment${compatible.length !== 1 ? 's' : ''}`}
-        />
-        {compatible.map((food) => {
-          const sr = foodToSearchResult(food);
-          const compat = computeCompatibilityScore(food, profile);
-          return (
-            <ResultRow
-              key={food.id}
-              name={sr.name}
-              brand={sr.brand}
-              portion={sr.portion}
-              kcal={sr.kcal}
-              glyph={sr.glyph}
-              tags={sr.tags}
-              compat={compat}
-              onPress={() => onPickItem(food)}
-              onDelete={() => confirmDelete(food)}
+        {/* Recently added/viewed — top section, only when no active search */}
+        {recentCompatible.length > 0 && (
+          <>
+            <SectionLabel
+              left="Récemment ajoutés"
+              right={`${recentCompatible.length}`}
             />
-          );
-        })}
+            {recentCompatible.map((food) => {
+              const sr = foodToSearchResult(food);
+              const compat = computeCompatibilityScore(food, profile);
+              return (
+                <ResultRow
+                  key={food.id}
+                  name={sr.name}
+                  brand={sr.brand}
+                  portion={sr.portion}
+                  kcal={sr.kcal}
+                  glyph={sr.glyph}
+                  tags={sr.tags}
+                  compat={compat}
+                  onPress={() => onPickItem(food)}
+                  onDelete={() => confirmDelete(food)}
+                />
+              );
+            })}
+          </>
+        )}
 
-        {/* Incompatible */}
+        {/* All other compatible foods */}
+        {otherCompatible.length > 0 && (
+          <>
+            <SectionLabel
+              left={activeFilters.length ? 'Compatible avec tes filtres' : 'Tous les aliments'}
+              right={`${otherCompatible.length} aliment${otherCompatible.length !== 1 ? 's' : ''}`}
+            />
+            {otherCompatible.map((food) => {
+              const sr = foodToSearchResult(food);
+              const compat = computeCompatibilityScore(food, profile);
+              return (
+                <ResultRow
+                  key={food.id}
+                  name={sr.name}
+                  brand={sr.brand}
+                  portion={sr.portion}
+                  kcal={sr.kcal}
+                  glyph={sr.glyph}
+                  tags={sr.tags}
+                  compat={compat}
+                  onPress={() => onPickItem(food)}
+                  onDelete={() => confirmDelete(food)}
+                />
+              );
+            })}
+          </>
+        )}
+
+        {/* Incompatible (only shown when filters active) */}
         {incompatible.length > 0 && (
           <>
             <SectionLabel left="Filtré · ne correspond pas aux critères actifs" />
@@ -402,24 +443,6 @@ export function SearchScreen({ foodList, profile, onBack, onPickItem, onDeleteFo
             </View>
           </>
         )}
-
-        {/* Recents */}
-        <SectionLabel left="Récents" />
-        {RECENT.map((item) => (
-          <ResultRow
-            key={item.id}
-            name={item.name}
-            brand={item.brand}
-            portion={item.portion}
-            kcal={item.kcal}
-            glyph={item.glyph}
-            tags={[{ label: 'récent', kind: '' }]}
-            onPress={() => {
-              const food = foodList.find((f) => f.id === item.id);
-              if (food) onPickItem(food);
-            }}
-          />
-        ))}
       </ScrollView>
     </View>
   );

@@ -882,6 +882,10 @@ export function AppShell() {
       <SearchScreen
         foodList={foodList}
         profile={profile}
+        recentFoodIds={[
+          ...recentFoodViewIds,
+          ...recentFoodUseIds.filter((id) => !recentFoodViewIds.includes(id)),
+        ].slice(0, 10)}
         onBack={() => setStack(null)}
         onPickItem={(food) => openDetail(food, 'search')}
         onDeleteFood={(foodId) => {

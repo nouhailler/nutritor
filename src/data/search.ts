@@ -36,8 +36,8 @@ export interface SearchFilter {
 }
 
 export const SEARCH_FILTERS: SearchFilter[] = [
-  { id: 'gf',  label: 'Sans gluten',        active: true  },
-  { id: 'lf',  label: 'Sans lactose',        active: true  },
+  { id: 'gf',  label: 'Sans gluten',        active: false },
+  { id: 'lf',  label: 'Sans lactose',        active: false },
   { id: 'vg',  label: 'Végétarien',          active: false },
   { id: 'vgn', label: 'Vegan',               active: false },
   { id: 'nf',  label: 'Sans fruits à coque', active: false },
