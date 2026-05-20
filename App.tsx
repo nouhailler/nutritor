@@ -23,7 +23,7 @@ import { Colors } from './src/theme/tokens';
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     InstrumentSerif_400Regular,
     InstrumentSerif_400Regular_Italic,
     Geist_300Light,
@@ -34,13 +34,15 @@ export default function App() {
     JetBrainsMono_500Medium,
   });
 
+  const ready = fontsLoaded || !!fontError;
+
   const onLayout = useCallback(async () => {
-    if (fontsLoaded) {
+    if (ready) {
       await SplashScreen.hideAsync();
     }
-  }, [fontsLoaded]);
+  }, [ready]);
 
-  if (!fontsLoaded) return null;
+  if (!ready) return null;
 
   return (
     <SafeAreaProvider>

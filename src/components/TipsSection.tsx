@@ -1,19 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  LayoutAnimation,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
-  UIManager,
   View,
 } from 'react-native';
 import { Colors, Fonts } from '../theme/tokens';
 import { DayTip, TipLevel } from '../types/tips';
-
-if (Platform.OS === 'android') {
-  UIManager.setLayoutAnimationEnabledExperimental?.(true);
-}
 
 // ── Border color per level ──────────────────────────────────────
 
@@ -63,7 +56,6 @@ export function TipsSection({ tips, dismissedIds, onDismiss }: TipsSectionProps)
   if (visible.length === 0) return null;
 
   const handleDismiss = (id: string) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     onDismiss(id);
   };
 

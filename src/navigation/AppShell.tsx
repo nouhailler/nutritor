@@ -561,10 +561,15 @@ export function AppShell() {
   })();
 
   // Tips for the currently viewed date (not computed for future dates)
-  const dayTips = useMemo(() => {
-    const isFuture = effectiveDate > today;
-    if (isFuture) return [];
-    return computeDayTips({ meals: viewedMeals, journal, symptoms, profile, date: effectiveDate });
+  const dayTips = useMemo((): DayTip[] => {
+    try {
+      const isFuture = effectiveDate > today;
+      if (isFuture) return [];
+      return computeDayTips({ meals: viewedMeals, journal, symptoms, profile, date: effectiveDate });
+    } catch (e) {
+      console.warn('[AppShell] computeDayTips error:', e);
+      return [];
+    }
   }, [viewedMeals, journal, symptoms, profile, effectiveDate, today]);
 
   // Update meals for viewingDate (routes to meals or journal)
