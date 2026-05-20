@@ -4,13 +4,13 @@
 
 ---
 
-## État actuel (2026-05-19)
+## État actuel (2026-05-20)
 
 ### Derniers commits
+- `a21bb3e` — feat: modifier proportions journal, métriques timeline cliquables, fix avis IA
 - `0a89638` — feat: mise à jour menus d'aide — nouvelles fonctionnalités
 - `31adb6e` — feat: mise à jour onboarding — nouvelles fonctionnalités
 - `ad53a18` — feat: annulation IA, modifier aliment, fix recherches OFF + crash brand
-- `de92609` — feat: liste aliments organisée en 4 sections contextuelles
 
 ### Dernier build APK
 - **Build ID** : `8fc6725c-7e2b-484a-9e06-1ddb494e4840`
@@ -153,6 +153,7 @@ Au premier démarrage après mise à jour, recompute les allergènes CIQUAL pour
 - `enrichFoodWithAI(food, settings): Promise<Food>`
 - `generateMeals(query, profile, fodmapPhase, settings): Promise<MealGeneratorResult>`
 - `generateDayAdvice(totals, profile, settings, signal?): Promise<string>` — accepte `AbortSignal`, valide le contenu (filtre les réponses techniques erronées < 20 chars ou contenant "text is empty")
+- `enrichFoodWithAI(food, settings, signal?, onStep?)` et `generateFoodWithAI(name, brand, context, settings, signal?, onStep?)` — appellent `onStep` aux étapes clés pour remonter la progression au bandeau IA
 - `analyzeFoodPhoto(imageBase64, settings): Promise<VisionItem[]>`
 - `isAIReady(settings): boolean` — vérifie si un provider est configuré
 - Valide les réponses JSON, strips markdown fences avant `JSON.parse`
@@ -163,7 +164,8 @@ Au premier démarrage après mise à jour, recompute les allergènes CIQUAL pour
 - `aiQueue.add(label, fn)` → retourne un `jobId` (string)
 - `aiQueue.subscribe(callback)` → retourne un `unsubscribe`
 - `aiQueue.dismissCompleted()` → retire les jobs `done`/`error` de la liste
-- `AIJobSnapshot` : `{ id, label, status: 'pending'|'running'|'done'|'error', error? }`
+- `AIJobSnapshot` : `{ id, label, status: 'pending'|'running'|'done'|'error', error?, step? }`
+- `ExecuteFn` : `(signal: AbortSignal, setStep: (step: string) => void) => Promise<void>` — rétrocompatible (les fonctions avec un seul paramètre fonctionnent)
 - `AIQueueBanner` s'abonne dans `AppShell` via `useEffect`
 
 ### Encyclopédie (`src/data/knowledgeBase.ts`)
@@ -296,7 +298,7 @@ type KView =
 | Composant | Fichier | Rôle |
 |-----------|---------|------|
 | `DrawerMenu` | `components/DrawerMenu.tsx` | Menu latéral animé (slide 300ms), section IA (générateur + encyclopédie) |
-| `AIQueueBanner` | `components/AIQueueBanner.tsx` | Bandeau IA en bas — tap snooze 10 s si jobs en cours, dismiss permanent si tous terminés |
+| `AIQueueBanner` | `components/AIQueueBanner.tsx` | Bandeau IA en bas — tap snooze 10 s, décompte secondes, étapes temps réel, bouton "Voir" fiche, dismiss si terminé |
 | `Icon` | `components/Icon.tsx` | Feather icons wrappés |
 | `CalendarModal` | `components/CalendarModal.tsx` | Sélecteur de date pour navigation journal |
 | `CompatibilityBadge` | `components/CompatibilityBadge.tsx` | Badge/carte compatibilité allergènes |
@@ -354,7 +356,9 @@ type KView =
 
 ## Points d'attention / pièges connus
 
-- **Hooks React** : tous les hooks doivent être avant tout `return` conditionnel dans `AppShell`.
+- **Hooks React** : tous les hooks doivent être avant tout `return` conditionnel dans `AppShell`. La violation de cette règle produit l'erreur React #310 (silencieuse en dev mais fatale sur web).
+- **`useNativeDriver` sur web** : `useNativeDriver: true` bloque les animations `Animated` sur react-native-web — utiliser `useNativeDriver: Platform.OS !== 'web'`. Symptôme : composant coincé à sa position initiale, invisible si `translateY` commence à une valeur non-nulle.
+- **`useFonts` sur web** : peut rester bloqué (`fontsLoaded = false`, `fontError` undefined) si les assets échouent silencieusement. Passer `{}` sur web pour résoudre immédiatement.
 - **expo-file-system** : `from 'expo-file-system/legacy'` (le nouveau module ne re-exporte pas `cacheDirectory`/`EncodingType`).
 - **CIQUAL nombres** : séparateur décimal français = virgule → `.replace(',', '.')` dans le parser.
 - **Scanner** : `scanLocked` ref pour éviter le double-déclenchement de `onBarcodeScanned`.

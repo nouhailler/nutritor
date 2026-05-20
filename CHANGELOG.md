@@ -9,6 +9,28 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [0.13.0] — 2026-05-20
+
+### Ajouté
+- **Bandeau IA — Décompte en secondes** : le sous-texte du bandeau affiche le nombre de secondes écoulées depuis le début de la tâche courante (`14s`), remis à zéro à chaque nouveau job.
+- **Bandeau IA — Étapes en temps réel** : `enrichFoodWithAI` et `generateFoodWithAI` rapportent leur progression via un callback `onStep` transmis par la file d'attente. Les étapes s'affichent dans le bandeau : "Analyse des données…", "Préparation de la requête…", "Envoi à l'IA…", "Lecture de la réponse…", "Mise à jour de la fiche…" (ou "Création de la fiche…").
+- **Import rapide depuis le Journal** : en ouvrant CIQUAL, OFF ou le Scanner depuis l'écran "Ajouter un aliment" du Journal, le retour en arrière ouvre désormais directement la fiche détail de l'aliment importé — sans passer par l'onglet Aliments — pour ajouter immédiatement au repas en cours.
+- **Recherche — Aliments récents en premier** : la liste de recherche affiche une section "Récemment ajoutés" (récemment consultés + récemment utilisés, sans doublon) avant la liste complète lorsqu'aucune requête n'est saisie.
+
+### Corrigé
+- **Bandeau IA — Bouton "Voir"** : après enrichissement depuis CIQUAL ou OFF, le bouton "Voir" ouvre désormais correctement la fiche détail de l'aliment enrichi (régression introduite par la refactorisation des callbacks `onUpdateFood`).
+- **Bandeau IA invisible sur le navigateur web** : `useNativeDriver: true` bloquait l'animation `translateY` sur react-native-web, laissant le bandeau hors écran. Corrigé avec `useNativeDriver: Platform.OS !== 'web'` pour les animations `AIQueueBanner` et `PulseDot`.
+- **Écran blanc sur navigateur web** : deux causes corrigées — (1) React error #310 (violation des Règles des Hooks) : `dayTips = useMemo(...)` était placé après un `return` conditionnel dans `AppShell` ; (2) `useFonts` pouvait rester bloqué sur web si les assets de polices échouaient silencieusement — corrigé en passant `{}` à `useFonts` sur web. Ajout d'un `ErrorBoundary` pour afficher les erreurs React à l'écran plutôt qu'une page blanche.
+- **Filtres Sans Gluten et Sans Lactose sélectionnés par défaut** : ces deux filtres étaient actifs au premier affichage de l'écran de recherche — désactivés par défaut.
+
+### Modifié
+- **`aiQueue.ts` — Signature `ExecuteFn`** : `(signal: AbortSignal, setStep: (step: string) => void) => Promise<void>`. Le paramètre `setStep` est rétrocompatible (les fonctions avec un seul paramètre continuent de fonctionner).
+- **`AIJobSnapshot`** : ajout du champ `step?: string` pour exposer l'étape courante aux abonnés.
+- **`aiService.ts`** : `enrichFoodWithAI` et `generateFoodWithAI` acceptent `onStep?: (step: string) => void` et l'appellent aux étapes clés.
+- **`AppShell.tsx`** : états `importScreenOrigin` + `lastImportedFood` + `lastAddedFoodId` pour gérer le flux de retour depuis les écrans d'import et le bouton "Voir" du bandeau.
+
+---
+
 ## [0.12.0] — 2026-05-19
 
 ### Ajouté

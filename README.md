@@ -2,7 +2,7 @@
 
 > **Application mobile de suivi nutritionnel** pensée pour les utilisateurs ayant des contraintes alimentaires fortes — allergies, intolérances, régimes Low FODMAP, sans gluten, sans lactose.
 
-![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS-lightgrey?style=flat-square)
+![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Web-lightgrey?style=flat-square)
 ![React Native](https://img.shields.io/badge/React%20Native-0.76-61DAFB?style=flat-square&logo=react)
 ![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020?style=flat-square&logo=expo)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript)
@@ -268,12 +268,13 @@ Nutritor supporte deux fournisseurs d'IA pour la génération de fiches nutritio
 - [x] **Commentaire IA sur les plats** — analyse de l'équilibre nutritionnel (trop glucidique ? trop lipidique ? bien équilibré ?)
 - [x] **Barre macros P/G/L sur les cartes de plats** — micro-barre colorée proportionnelle visible dès que les macros sont renseignées
 - [x] Persistance locale (AsyncStorage) — profil, aliments, repas, plats, journal, symptômes, commentaires
-- [x] Recherche avec debounce 300ms et filtres de compatibilité
+- [x] Recherche avec debounce 300ms, filtres de compatibilité et section **Récemment ajoutés** dynamique (aliments récents en premier, sans doublon)
 - [x] Base CIQUAL 2020 embarquée (3 167 aliments français)
 - [x] Open Food Facts — recherche avec **scoring de pertinence** (exact > marque > préfixe > inclusion) et import
 - [x] Scanner code-barres (EAN-13, EAN-8, UPC)
 - [x] Génération IA de fiches nutritionnelles (OpenRouter + Ollama) avec **robustesse aux données mal formées**
-- [x] **Bannière IA** avec destination du résultat et bouton "Voir" pour navigation directe, bouton "Annuler" pour interrompre l'enrichissement en cours
+- [x] **Bannière IA** avec bouton "Voir" pour ouvrir la fiche enrichie, bouton "Annuler" pour interrompre, décompte en secondes et étapes en temps réel ("Envoi à l'IA…", "Lecture de la réponse…"…)
+- [x] **Import rapide depuis le Journal** : après import CIQUAL / OFF / Scanner, le retour ouvre directement la fiche détail de l'aliment importé pour un ajout immédiat au repas (sans passer par l'onglet Aliments)
 - [x] **Journal — Modifier les proportions** : icône crayon sur chaque ligne d'aliment (aliments ajoutés depuis la version 0.12) — modal +/− par 10 g avec estimation kcal temps réel et recalcul complet des macros
 - [x] **Journal — Timeline mini-métriques cliquables** : Énergie / Digestion / FODMAP / Glycémie ouvrent un modal de détail avec événements, intensités et conseils contextuels
 - [x] **Fiche aliment — Éditer** : icône crayon en haut à droite ouvre `EditFoodScreen` pour corriger nom, marque, catégorie, portion et valeurs nutritionnelles de base
