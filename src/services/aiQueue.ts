@@ -8,11 +8,12 @@ export interface AIJobSnapshot {
   id: string;
   label: string;
   status: AIJobStatus;
+  step?: string;
   error?: string;
 }
 
 type QueueListener = (jobs: AIJobSnapshot[]) => void;
-export type ExecuteFn = (signal: AbortSignal) => Promise<void>;
+export type ExecuteFn = (signal: AbortSignal, setStep: (step: string) => void) => Promise<void>;
 
 interface InternalJob extends AIJobSnapshot {
   execute: ExecuteFn;
@@ -30,8 +31,8 @@ class AIQueueManager {
   }
 
   private notify() {
-    const snap: AIJobSnapshot[] = this.jobs.map(({ id, label, status, error }) => ({
-      id, label, status, error,
+    const snap: AIJobSnapshot[] = this.jobs.map(({ id, label, status, step, error }) => ({
+      id, label, status, step, error,
     }));
     this.listeners.forEach((cb) => cb(snap));
   }
@@ -55,8 +56,13 @@ class AIQueueManager {
     next.status = 'running';
     this.notify();
 
+    const setStep = (step: string) => {
+      next.step = step;
+      this.notify();
+    };
+
     try {
-      await next.execute(controller.signal);
+      await next.execute(controller.signal, setStep);
       next.status = 'done';
     } catch (e: unknown) {
       if ((e as Error)?.name === 'AbortError') {
@@ -94,7 +100,7 @@ class AIQueueManager {
   }
 
   getSnapshot(): AIJobSnapshot[] {
-    return this.jobs.map(({ id, label, status, error }) => ({ id, label, status, error }));
+    return this.jobs.map(({ id, label, status, step, error }) => ({ id, label, status, step, error }));
   }
 }
 

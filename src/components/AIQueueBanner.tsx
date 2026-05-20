@@ -105,8 +105,9 @@ export function AIQueueBanner({ jobs, hasTabBar, onDismiss, onCancelRunning, onV
   if (running) {
     icon = '✦';
     mainText = running.label;
+    const stepPart = running.step ?? 'IA en cours';
     const extra = pending.length > 0 ? `  ·  ${pending.length} en attente` : '';
-    subText = `IA en cours  ·  ${elapsedSeconds}s${extra}`;
+    subText = `${stepPart}  ·  ${elapsedSeconds}s${extra}`;
   } else if (errors.length > 0 && done.length === 0) {
     icon = '!';
     mainText = errors[0].label;

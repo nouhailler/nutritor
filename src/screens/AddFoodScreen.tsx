@@ -161,8 +161,8 @@ export function AddFoodScreen({ settings, onAdd, onBack, onOpenMenu, initialQuer
     setError('');
     const label = foodName.trim();
     const capturedOnAdd = onAdd;
-    aiQueue.add(label, async (signal) => {
-      const food = await generateFoodWithAI(label, brand.trim(), context.trim(), settings, signal);
+    aiQueue.add(label, async (signal, setStep) => {
+      const food = await generateFoodWithAI(label, brand.trim(), context.trim(), settings, signal, setStep);
       capturedOnAdd(food);
     });
     onBack(); // navigate away immediately — AI runs in background

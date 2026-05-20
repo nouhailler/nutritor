@@ -382,8 +382,8 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
 
     if (settings && isAIReady(settings)) {
       const capturedUpdate = onUpdateFood;
-      aiQueue.add(`Enrichissement · ${baseFood.name}`, async (signal) => {
-        const enriched = await enrichFoodWithAI(baseFood, settings!, signal);
+      aiQueue.add(`Enrichissement · ${baseFood.name}`, async (signal, setStep) => {
+        const enriched = await enrichFoodWithAI(baseFood, settings!, signal, setStep);
         capturedUpdate(enriched);
       });
     }

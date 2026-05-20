@@ -160,6 +160,7 @@ export async function generateFoodWithAI(
   context: string,
   appSettings: AppSettings,
   signal?: AbortSignal,
+  onStep?: (step: string) => void,
 ): Promise<Food> {
   const { aiProvider, ollama, openrouter } = appSettings;
 
@@ -173,11 +174,13 @@ export async function generateFoodWithAI(
     throw new Error('Aucun modèle Ollama configuré. Teste la connexion dans les Paramètres.');
   }
 
+  onStep?.('Préparation de la requête…');
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT },
     { role: 'user', content: buildUserPrompt(foodName, brand, context) },
   ];
 
+  onStep?.('Envoi à l\'IA…');
   const raw =
     aiProvider === 'openrouter'
       ? await callOpenRouter(openrouter, messages, signal)
@@ -185,6 +188,7 @@ export async function generateFoodWithAI(
 
   if (!raw) throw new Error('L\'IA n\'a retourné aucune réponse.');
 
+  onStep?.('Lecture de la réponse…');
   const json = extractJSON(raw);
   let parsed: unknown;
   try {
@@ -197,6 +201,7 @@ export async function generateFoodWithAI(
     throw new Error('Le JSON retourné ne correspond pas au format attendu. Réessaie.');
   }
 
+  onStep?.('Création de la fiche…');
   return parsed as Food;
 }
 
@@ -312,7 +317,8 @@ function buildCompatFull(food: Food): CompatItem[] {
 
 // ── Enrich a partial Food with AI (CIQUAL / OFF import) ──────
 
-export async function enrichFoodWithAI(food: Food, settings: AppSettings, signal?: AbortSignal): Promise<Food> {
+export async function enrichFoodWithAI(food: Food, settings: AppSettings, signal?: AbortSignal, onStep?: (step: string) => void): Promise<Food> {
+  onStep?.('Analyse des données…');
   const allAllergenAbsent = food.allergens.every((a) => a.status === 'absent');
 
   const missing: string[] = [];
@@ -335,6 +341,7 @@ export async function enrichFoodWithAI(food: Food, settings: AppSettings, signal
 
   if (missing.length === 0) return food;
 
+  onStep?.('Préparation de la requête…');
   const knownData: Record<string, unknown> = { per100: food.per100 };
   if (!allAllergenAbsent) knownData.allergens = food.allergens;
   if (food.minerals && food.minerals.length > 0) knownData.minerals = food.minerals;
@@ -359,6 +366,7 @@ ${ENRICH_SCHEMA}`;
     { role: 'user', content: userPrompt },
   ];
 
+  onStep?.('Envoi à l\'IA…');
   const raw =
     settings.aiProvider === 'openrouter'
       ? await callOpenRouter(settings.openrouter, messages, signal)
@@ -366,6 +374,7 @@ ${ENRICH_SCHEMA}`;
 
   if (!raw) throw new Error('Réponse IA vide lors de l\'enrichissement.');
 
+  onStep?.('Lecture de la réponse…');
   let enriched: Record<string, unknown>;
   try {
     enriched = JSON.parse(extractJSON(raw));
@@ -373,6 +382,7 @@ ${ENRICH_SCHEMA}`;
     throw new Error('JSON d\'enrichissement invalide.');
   }
 
+  onStep?.('Mise à jour de la fiche…');
   const enrichedAllergens = (enriched.allergens as Allergen[] | undefined);
   const finalAllergens: Allergen[] = allAllergenAbsent && enrichedAllergens?.length
     ? enrichedAllergens

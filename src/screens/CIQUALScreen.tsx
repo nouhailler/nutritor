@@ -164,8 +164,8 @@ export function CIQUALScreen({ existingIds, onImport, onUpdateFood, onBack, onOp
     // Queue enrichment in background if AI is ready
     if (settings && isAIReady(settings)) {
       const capturedUpdate = onUpdateFood;
-      aiQueue.add(`Enrichissement · ${entry.name}`, async (signal) => {
-        const enriched = await enrichFoodWithAI(baseFood, settings, signal);
+      aiQueue.add(`Enrichissement · ${entry.name}`, async (signal, setStep) => {
+        const enriched = await enrichFoodWithAI(baseFood, settings, signal, setStep);
         capturedUpdate(enriched);
       });
     }
