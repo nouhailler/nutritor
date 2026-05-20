@@ -868,6 +868,10 @@ export function AppShell() {
         onBack={() => setStack(detailOrigin ?? null)}
         onAdd={handleAdd}
         onEdit={() => setStack('editFood')}
+        onUpdateFood={(updated) => {
+          setFoodList((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
+          setSelectedFood(updated);
+        }}
         onOpenMenu={openMenu}
       />
     );
@@ -1059,6 +1063,7 @@ export function AppShell() {
             onEditItem={handleEditItem}
             onOpenMenu={() => setDrawerOpen(true)}
             onOpenSearch={openSearch}
+            onOpenFoods={() => showTab('foods')}
             onSaveSymptom={handleSaveSymptom}
             onSaveComment={handleSaveComment}
             onSaveAdvice={handleSaveAdvice}

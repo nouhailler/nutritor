@@ -4,14 +4,16 @@
  * minéraux, FODMAP, composés bioactifs, profil sensoriel.
  * Permet l'ajout au repas du journal du jour.
  */
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Modal,
   Pressable,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -117,26 +119,164 @@ function NutriRow({
   );
 }
 
+// ── Edit kcal modal ──────────────────────────────────────────
+
+function EditKcalModal({
+  visible,
+  currentKcal,
+  onSave,
+  onCancel,
+}: {
+  visible: boolean;
+  currentKcal: number;
+  onSave: (kcal: number) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(currentKcal === 0 ? '' : String(currentKcal));
+  useEffect(() => {
+    if (visible) setValue(currentKcal === 0 ? '' : String(currentKcal));
+  }, [visible, currentKcal]);
+
+  const handleSave = () => {
+    const num = parseFloat(value.replace(',', '.'));
+    if (!isNaN(num) && num >= 0) onSave(num);
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <View style={kcalModalStyles.overlay}>
+        <View style={kcalModalStyles.card}>
+          <Text style={kcalModalStyles.title}>Énergie pour 100 g</Text>
+          <View style={kcalModalStyles.inputRow}>
+            <TextInput
+              style={kcalModalStyles.input}
+              value={value}
+              onChangeText={setValue}
+              keyboardType="decimal-pad"
+              placeholder="ex : 38"
+              placeholderTextColor={Colors.muted2}
+              autoFocus
+              selectTextOnFocus
+            />
+            <Text style={kcalModalStyles.unit}>kcal</Text>
+          </View>
+          <View style={kcalModalStyles.btnRow}>
+            <TouchableOpacity style={kcalModalStyles.cancelBtn} onPress={onCancel} activeOpacity={0.7}>
+              <Text style={kcalModalStyles.cancelText}>Annuler</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={kcalModalStyles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
+              <Text style={kcalModalStyles.saveText}>Enregistrer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const kcalModalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  card: {
+    width: '100%',
+    backgroundColor: Colors.paper2,
+    borderRadius: 20,
+    padding: 24,
+    gap: 20,
+  },
+  title: {
+    fontFamily: Fonts.serif,
+    fontSize: 18,
+    color: Colors.ink,
+    letterSpacing: -0.2,
+    textAlign: 'center',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.paper,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  input: {
+    flex: 1,
+    fontFamily: Fonts.mono,
+    fontSize: 28,
+    color: Colors.ink,
+    textAlign: 'center',
+  },
+  unit: {
+    fontFamily: Fonts.mono,
+    fontSize: 14,
+    color: Colors.muted,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  cancelBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: Colors.hairline2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelText: { fontFamily: Fonts.sans, fontSize: 14, color: Colors.muted },
+  saveBtn: {
+    flex: 2,
+    height: 48,
+    borderRadius: 100,
+    backgroundColor: Colors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveText: { fontFamily: Fonts.sansMedium, fontSize: 14, color: Colors.paper2 },
+});
+
 // ── Section 01 · Apports ───────────────────────────────────
 
 function ApportsSection({
   food,
   portion,
+  onEditKcal,
 }: {
   food: Food;
   portion: number;
+  onEditKcal?: () => void;
 }) {
   const f = portion / 100;
   const sc = (v: number) => round1(v * f);
+  const kcalIsZero = food.per100.kcal === 0;
 
   return (
     <View style={styles.section}>
       <SectionHead num="01" title="Apports" right={`pour ${portion} ${food.unit}`} />
       <View style={styles.nutriTable}>
-        <View style={[styles.nutriRow, styles.nutriRowBorderless]}>
+        <TouchableOpacity
+          style={[styles.nutriRow, styles.nutriRowBorderless]}
+          onPress={kcalIsZero && onEditKcal ? onEditKcal : undefined}
+          activeOpacity={kcalIsZero && onEditKcal ? 0.6 : 1}
+          disabled={!kcalIsZero || !onEditKcal}
+        >
           <Text style={styles.nutriNameLarge}>Énergie</Text>
-          <Text style={styles.nutriValLarge}>{Math.round(food.per100.kcal * f)} kcal</Text>
-        </View>
+          <View style={styles.kcalValueRow}>
+            <Text style={[styles.nutriValLarge, kcalIsZero && styles.nutriValZero]}>
+              {Math.round(food.per100.kcal * f)} kcal
+            </Text>
+            {kcalIsZero && onEditKcal && (
+              <Icon name="edit" size={13} color={Colors.signal} />
+            )}
+          </View>
+        </TouchableOpacity>
         <View style={styles.nutriRow}>
           <Text style={styles.nutriName}>Protéines</Text>
           <View style={styles.nutriValRow}>
@@ -678,6 +818,7 @@ interface DetailScreenProps {
   onBack?: () => void;
   onOpenMenu?: () => void;
   onEdit?: () => void;
+  onUpdateFood?: (updated: Food) => void;
   onAdd?: (params: {
     food: Food;
     portion: number;
@@ -693,12 +834,14 @@ export function DetailScreen({
   onBack,
   onOpenMenu,
   onEdit,
+  onUpdateFood,
   onAdd,
 }: DetailScreenProps) {
   const insets = useSafeAreaInsets();
   const [portion, setPortion] = useState(food.defaultPortion);
   const [showSheet, setShowSheet] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
+  const [kcalModalVisible, setKcalModalVisible] = useState(false);
 
   const factor = portion / 100;
 
@@ -775,7 +918,11 @@ export function DetailScreen({
         )}
 
         {/* Sections */}
-        <ApportsSection food={food} portion={portion} />
+        <ApportsSection
+          food={food}
+          portion={portion}
+          onEditKcal={onUpdateFood ? () => setKcalModalVisible(true) : undefined}
+        />
         {food.proteinDetail && <ProteinSection p={food.proteinDetail} />}
         {food.carbDetail && <CarbSection c={food.carbDetail} />}
         {food.lipidDetail && <LipidSection l={food.lipidDetail} />}
@@ -844,6 +991,17 @@ export function DetailScreen({
         meals={meals}
         onSelect={handleAdd}
         onDismiss={() => setShowSheet(false)}
+      />
+
+      {/* Kcal quick-edit modal */}
+      <EditKcalModal
+        visible={kcalModalVisible}
+        currentKcal={food.per100.kcal}
+        onSave={(kcal) => {
+          onUpdateFood?.({ ...food, per100: { ...food.per100, kcal } });
+          setKcalModalVisible(false);
+        }}
+        onCancel={() => setKcalModalVisible(false)}
       />
     </View>
   );
@@ -1079,6 +1237,14 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.serif,
     fontSize: 20,
     color: Colors.ink,
+  },
+  nutriValZero: {
+    color: Colors.signal,
+  },
+  kcalValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   nutriPct: {
     fontFamily: Fonts.mono,

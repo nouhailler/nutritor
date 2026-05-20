@@ -295,31 +295,35 @@ function MealCard({
           </Text>
         )}
       </View>
-      {meal.items.map((item, i) => (
-        <View key={i} style={styles.foodRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.foodName}>{item.name}</Text>
-            <Text style={styles.foodQty}>{item.qty}</Text>
-          </View>
-          <Text style={styles.foodKcal}>{item.kcal} kcal</Text>
-          {item.foodId && (
+      {meal.items.map((item, i) => {
+        const canEdit = !!(item.foodId && item.portionNum);
+        return (
+          <View key={i} style={styles.foodRow}>
             <TouchableOpacity
-              style={styles.editItemBtn}
+              style={styles.foodRowContent}
               onPress={() => onEditPress(meal.id, i)}
+              activeOpacity={canEdit ? 0.55 : 1}
+              disabled={!canEdit}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.foodName}>{item.name}</Text>
+                <View style={styles.foodQtyRow}>
+                  <Text style={styles.foodQty}>{item.qty}</Text>
+                  {canEdit && <Icon name="edit" size={9} color={Colors.muted2} />}
+                </View>
+              </View>
+              <Text style={styles.foodKcal}>{item.kcal} kcal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.removeItemBtn}
+              onPress={() => onRemoveItem(meal.id, i)}
               activeOpacity={0.7}
             >
-              <Icon name="edit" size={11} color={Colors.muted2} />
+              <Icon name="close" size={11} color={Colors.muted2} />
             </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={styles.removeItemBtn}
-            onPress={() => onRemoveItem(meal.id, i)}
-            activeOpacity={0.7}
-          >
-            <Icon name="close" size={11} color={Colors.muted2} />
-          </TouchableOpacity>
-        </View>
-      ))}
+          </View>
+        );
+      })}
       {meal.items.length === 0 ? (
         <View style={styles.mealEmpty}>
           <Text style={styles.mealEmptyText}>Aucun aliment enregistré</Text>
@@ -434,6 +438,7 @@ interface HomeScreenProps {
   onDeleteTimelineEvent: (id: string) => void;
   onOpenMenu: () => void;
   onOpenSearch: () => void;
+  onOpenFoods: () => void;
 }
 
 export function HomeScreen({
@@ -456,6 +461,7 @@ export function HomeScreen({
   onDeleteTimelineEvent,
   onOpenMenu,
   onOpenSearch,
+  onOpenFoods,
 }: HomeScreenProps) {
   const insets = useSafeAreaInsets();
   const [helpVisible, setHelpVisible] = useState(false);
@@ -763,6 +769,14 @@ export function HomeScreen({
       >
         <Icon name="plus" size={20} color={Colors.paper2} />
         <Text style={styles.fabText}>{isFuture ? 'Planifier un repas' : 'Ajouter un aliment'}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.fab, styles.fabSecondary, { bottom: insets.bottom + 158 }]}
+        onPress={onOpenFoods}
+        activeOpacity={0.85}
+      >
+        <Icon name="plus" size={20} color={Colors.ink} />
+        <Text style={[styles.fabText, styles.fabSecondaryText]}>Ajouter un aliment aux repas</Text>
       </TouchableOpacity>
 
       <EditPortionModal
@@ -1179,19 +1193,19 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.mono,
     fontSize: 11,
     color: Colors.muted,
-    marginTop: 1,
     letterSpacing: 0.3,
   },
   foodKcal: { fontFamily: Fonts.mono, fontSize: 12, color: Colors.ink, marginLeft: 8 },
-  editItemBtn: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: Colors.hairline2,
+  foodRowContent: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 6,
+  },
+  foodQtyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 1,
   },
   removeItemBtn: {
     width: 22,
@@ -1342,6 +1356,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.paper2,
     letterSpacing: 0.1,
+  },
+  fabSecondary: {
+    backgroundColor: Colors.paper2,
+    borderWidth: 1.5,
+    borderColor: Colors.ink,
+  },
+  fabSecondaryText: {
+    color: Colors.ink,
   },
 });
 
