@@ -181,10 +181,30 @@ export async function generateFoodWithAI(
   ];
 
   onStep?.('Envoi à l\'IA…');
-  const raw =
-    aiProvider === 'openrouter'
-      ? await callOpenRouter(openrouter, messages, signal)
-      : await callOllama(ollama, messages, signal);
+  const FOOD_WAIT_MSGS = [
+    'Macros — CIQUAL / USDA…',
+    'Profil FODMAP (Monash)…',
+    'Vitamines & minéraux…',
+    'Allergènes (14 standards)…',
+    'Bioactifs & polyphénols…',
+    'Impact métabolique…',
+    'Profil sensoriel…',
+    'En attente de la réponse…',
+  ];
+  let foodMsgIdx = 0;
+  const foodMsgInterval = setInterval(() => {
+    foodMsgIdx = (foodMsgIdx + 1) % FOOD_WAIT_MSGS.length;
+    onStep?.(FOOD_WAIT_MSGS[foodMsgIdx]);
+  }, 8000);
+  let raw: string;
+  try {
+    raw =
+      aiProvider === 'openrouter'
+        ? await callOpenRouter(openrouter, messages, signal)
+        : await callOllama(ollama, messages, signal);
+  } finally {
+    clearInterval(foodMsgInterval);
+  }
 
   if (!raw) throw new Error('L\'IA n\'a retourné aucune réponse.');
 
@@ -366,11 +386,37 @@ ${ENRICH_SCHEMA}`;
     { role: 'user', content: userPrompt },
   ];
 
+  const ENRICH_FIELD_LABELS: Record<string, string> = {
+    proteinDetail: 'Profil acides aminés…',
+    carbDetail:    'Glucides & index glycémique…',
+    lipidDetail:   'Profil lipidique & oméga…',
+    minerals:      'Minéraux (Mg, Ca, Fe…)…',
+    vitamins:      'Vitamines (B, C, D, E…)…',
+    trace:         'Oligo-éléments (Zn, Se…)…',
+    fodmap:        'FODMAP — données Monash…',
+    bioactives:    'Bioactifs & polyphénols…',
+    metabolic:     'Axes métaboliques…',
+    sensory:       'Profil sensoriel…',
+    allergens:     'Allergènes (14 standards)…',
+    subtitle:      'Description de l\'aliment…',
+    origin:        'Origine géographique…',
+  };
+  const enrichWaitMsgs = ['Envoi à l\'IA…', ...missing.map((k) => ENRICH_FIELD_LABELS[k] ?? k)];
+  let enrichMsgIdx = 0;
   onStep?.('Envoi à l\'IA…');
-  const raw =
-    settings.aiProvider === 'openrouter'
-      ? await callOpenRouter(settings.openrouter, messages, signal)
-      : await callOllama(settings.ollama, messages, signal);
+  const enrichMsgInterval = setInterval(() => {
+    enrichMsgIdx = (enrichMsgIdx + 1) % enrichWaitMsgs.length;
+    onStep?.(enrichWaitMsgs[enrichMsgIdx]);
+  }, 8000);
+  let raw: string;
+  try {
+    raw =
+      settings.aiProvider === 'openrouter'
+        ? await callOpenRouter(settings.openrouter, messages, signal)
+        : await callOllama(settings.ollama, messages, signal);
+  } finally {
+    clearInterval(enrichMsgInterval);
+  }
 
   if (!raw) throw new Error('Réponse IA vide lors de l\'enrichissement.');
 

@@ -140,10 +140,11 @@ interface Props {
   onAdd: (food: Food) => void;
   onBack: () => void;
   onOpenMenu: () => void;
+  onManualEntry?: (name: string) => void;
   initialQuery?: string;
 }
 
-export function AddFoodScreen({ settings, onAdd, onBack, onOpenMenu, initialQuery = '' }: Props) {
+export function AddFoodScreen({ settings, onAdd, onBack, onOpenMenu, onManualEntry, initialQuery = '' }: Props) {
   const insets = useSafeAreaInsets();
   const [phase, setPhase] = useState<Phase>('input');
   const [foodName, setFoodName] = useState(initialQuery);
@@ -275,6 +276,16 @@ export function AddFoodScreen({ settings, onAdd, onBack, onOpenMenu, initialQuer
             <Icon name="sparkle" size={18} color={Colors.paper2} />
             <Text style={styles.generateBtnText}>Générer avec l'IA</Text>
           </TouchableOpacity>
+
+          {onManualEntry && (
+            <TouchableOpacity
+              style={styles.manualBtn}
+              onPress={() => onManualEntry(foodName.trim())}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.manualBtnText}>Saisie libre de l'aliment</Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </View>
     </KeyboardAvoidingView>
@@ -404,6 +415,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.paper2,
     letterSpacing: 0.2,
+  },
+
+  manualBtn: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+  },
+  manualBtnText: {
+    fontFamily: Fonts.mono,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    color: Colors.muted,
   },
 
 });

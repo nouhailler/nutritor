@@ -34,6 +34,7 @@ import { usePersistedState } from '../storage/usePersistedState';
 import { KEYS, load, save } from '../storage/store';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { AddFoodScreen } from '../screens/AddFoodScreen';
+import { ManualFoodScreen } from '../screens/ManualFoodScreen';
 import { EditFoodScreen } from '../screens/EditFoodScreen';
 import { OpenFoodFactsScreen } from '../screens/OpenFoodFactsScreen';
 import { CIQUALScreen } from '../screens/CIQUALScreen';
@@ -59,7 +60,7 @@ function todayStr() {
 }
 
 type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile';
-type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'editFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge' | null;
+type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'manualFood' | 'editFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge' | null;
 
 const TABS: { id: Tab; label: string; icon: 'home' | 'leaf' | 'book' | 'chart' | 'user' }[] = [
   { id: 'home',    label: 'Journal',  icon: 'home' },
@@ -1010,6 +1011,21 @@ export function AppShell() {
         onAdd={(food) => {
           setFoodList((prev) => [...prev, food]);
           setLastAddedFoodId(food.id);
+        }}
+        onBack={() => setStack('search')}
+        onOpenMenu={openMenu}
+        onManualEntry={(name) => { setPendingQuery(name); setStack('manualFood'); }}
+      />
+    );
+  } else if (stack === 'manualFood') {
+    screen = (
+      <ManualFoodScreen
+        initialName={pendingQuery}
+        onAdd={(food) => {
+          setFoodList((prev) => [...prev, food]);
+          setLastAddedFoodId(food.id);
+          setToast(`« ${food.name} » ajouté à ta liste`);
+          setTimeout(() => setToast(null), 2600);
         }}
         onBack={() => setStack('search')}
         onOpenMenu={openMenu}

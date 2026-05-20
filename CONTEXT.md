@@ -7,10 +7,15 @@
 ## État actuel (2026-05-20)
 
 ### Derniers commits
-- `a21bb3e` — feat: modifier proportions journal, métriques timeline cliquables, fix avis IA
-- `0a89638` — feat: mise à jour menus d'aide — nouvelles fonctionnalités
-- `31adb6e` — feat: mise à jour onboarding — nouvelles fonctionnalités
-- `ad53a18` — feat: annulation IA, modifier aliment, fix recherches OFF + crash brand
+- `d43feae` — docs: documentation 0.13.0 — bandeau IA, import rapide, fix web
+- `c5317f2` — fix: bandeau IA — animations compatibles web (useNativeDriver désactivé)
+- `137c93a` — feat: bandeau IA — étape courante affichée pendant l'enrichissement
+- `ae3f330` — feat: bandeau IA — décompte en secondes pendant l'enrichissement
+- `4d2cfa0` — fix: bandeau IA — bouton Voir ouvre la fiche aliment après enrichissement
+
+### Version courante : 0.14.0
+- **Bandeau IA — messages rotatifs** : `setInterval` 8 s dans `generateFoodWithAI` et `enrichFoodWithAI` (nettoyé dans `finally`) — messages contextuels tirés du tableau `missing` pour l'enrichissement.
+- **`ManualFoodScreen`** (stack `manualFood`) : saisie manuelle complète, sections 01-12, compatibilité `useMemo` temps réel, grille allergènes 3 états.
 
 ### Dernier build APK
 - **Build ID** : `8fc6725c-7e2b-484a-9e06-1ddb494e4840`
@@ -61,9 +66,9 @@
 type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile';
 type StackScreen =
   | 'search' | 'detail' | 'savedDetail' | 'editProfile'
-  | 'settings' | 'addFood' | 'editFood' | 'openFoodFacts' | 'ciqual'
-  | 'scanner' | 'editSavedPlate' | 'foodPhoto'
-  | 'fodmap' | 'mealGenerator' | 'knowledge' | null;
+  | 'settings' | 'addFood' | 'manualFood' | 'editFood'
+  | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate'
+  | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge' | null;
 ```
 
 - `stack === null` → écran de l'onglet actif, tabbar visible
@@ -149,14 +154,14 @@ Au premier démarrage après mise à jour, recompute les allergènes CIQUAL pour
 
 ### IA (`src/services/aiService.ts`)
 - Providers : `'openrouter'` | `'ollama'`
-- `generateFoodWithAI(name, brand, context, settings): Promise<Food>`
-- `enrichFoodWithAI(food, settings): Promise<Food>`
-- `generateMeals(query, profile, fodmapPhase, settings): Promise<MealGeneratorResult>`
-- `generateDayAdvice(totals, profile, settings, signal?): Promise<string>` — accepte `AbortSignal`, valide le contenu (filtre les réponses techniques erronées < 20 chars ou contenant "text is empty")
-- `enrichFoodWithAI(food, settings, signal?, onStep?)` et `generateFoodWithAI(name, brand, context, settings, signal?, onStep?)` — appellent `onStep` aux étapes clés pour remonter la progression au bandeau IA
+- `generateFoodWithAI(name, brand, context, settings, signal?, onStep?): Promise<Food>` — messages rotatifs toutes les 8 s via `setInterval` nettoyé dans `finally`
+- `enrichFoodWithAI(food, settings, signal?, onStep?): Promise<Food>` — les messages rotatifs sont construits depuis le tableau `missing` (champs à remplir connus avant l'appel)
+- `generateMeals(query, profile, fodmapPhase, settings, signal?): Promise<MealGeneratorResult>`
+- `generateDayAdvice(totals, profile, settings, signal?): Promise<string>` — accepte `AbortSignal`, valide le contenu (filtre les réponses < 20 chars ou contenant "text is empty")
 - `analyzeFoodPhoto(imageBase64, settings): Promise<VisionItem[]>`
 - `isAIReady(settings): boolean` — vérifie si un provider est configuré
 - Valide les réponses JSON, strips markdown fences avant `JSON.parse`
+- **Messages rotatifs** : dans `generateFoodWithAI`, cycle sur 8 messages prédéfinis (macros, FODMAP, vitamines, allergènes…). Dans `enrichFoodWithAI`, cycle sur `['Envoi à l\'IA…', ...missing.map(ENRICH_FIELD_LABELS)]`.
 - **⚠️ Typage runtime** : les champs enrichis par l'IA peuvent être `number` au lieu de `string` (ex: `pct`, `overall`). Toujours faire `String(val ?? '')` avant d'appeler des méthodes string sur des données IA persistées en AsyncStorage.
 
 ### File d'attente IA (`src/services/aiQueue.ts`)
@@ -264,6 +269,7 @@ interface KnowledgeEntry {
 | Éditer profil | `EditProfileScreen.tsx` | stack `'editProfile'` |
 | Paramètres | `SettingsScreen.tsx` | stack `'settings'` |
 | Ajouter via IA | `AddFoodScreen.tsx` | stack `'addFood'` |
+| Saisie libre | `ManualFoodScreen.tsx` | stack `'manualFood'` |
 | Éditer aliment | `EditFoodScreen.tsx` | stack `'editFood'` |
 | Open Food Facts | `OpenFoodFactsScreen.tsx` | stack `'openFoodFacts'` |
 | CIQUAL | `CIQUALScreen.tsx` | stack `'ciqual'` |
@@ -297,6 +303,7 @@ type KView =
 
 | Composant | Fichier | Rôle |
 |-----------|---------|------|
+| `ManualFoodScreen` | `screens/ManualFoodScreen.tsx` | Saisie libre — sections 01-06, 10-12 ; `buildManualCompat` local ; grille allergènes 3 états ; `useMemo` compat temps réel |
 | `DrawerMenu` | `components/DrawerMenu.tsx` | Menu latéral animé (slide 300ms), section IA (générateur + encyclopédie) |
 | `AIQueueBanner` | `components/AIQueueBanner.tsx` | Bandeau IA en bas — tap snooze 10 s, décompte secondes, étapes temps réel, bouton "Voir" fiche, dismiss si terminé |
 | `Icon` | `components/Icon.tsx` | Feather icons wrappés |
@@ -399,3 +406,4 @@ python3 scripts/gen_icon.py
 - [ ] Build iOS (TestFlight)
 - [ ] Données Monash FODMAP officielles (licence commerciale)
 - [ ] Retirer les `console.log` de débogage avant la production
+- [ ] `ManualFoodScreen` — aide contextuelle intégrée (bouton `?` → HELP.manualFood)

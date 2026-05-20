@@ -46,7 +46,8 @@ Et plus largement, un compagnon de **connaissance nutritionnelle** :
 | **Créer / éditer plat** | stack `editSavedPlate` | Autocomplete ingrédients, photo galerie/caméra, pairing de plats |
 | **Éditer profil** | stack `editProfile` | Nom, kcal, macros cibles, allergènes, régimes |
 | **Paramètres** | stack `settings` | Config IA (OpenRouter / Ollama), import/export JSON |
-| **Ajouter via IA** | stack `addFood` | Génération d'une fiche aliment par nom libre |
+| **Ajouter via IA** | stack `addFood` | Génération d'une fiche aliment par nom libre + accès saisie libre |
+| **Saisie libre** | stack `manualFood` | Création 100 % manuelle — 12 sections, compatibilité temps réel |
 | **Éditer aliment** | stack `editFood` | Correction nom, marque, catégorie, portion, macros de base |
 | **Open Food Facts** | stack `openFoodFacts` | Recherche +3 M produits, scoring de pertinence, chips catégories, enrichissement IA |
 | **CIQUAL** | stack `ciqual` | 3 167 aliments français embarqués, enrichissement IA |
@@ -177,6 +178,7 @@ nutritor/
         ├── EditProfileScreen.tsx     # stack 'editProfile'
         ├── SettingsScreen.tsx        # stack 'settings'
         ├── AddFoodScreen.tsx         # stack 'addFood'
+        ├── ManualFoodScreen.tsx      # stack 'manualFood'
         ├── EditFoodScreen.tsx        # stack 'editFood'
         ├── OpenFoodFactsScreen.tsx   # stack 'openFoodFacts'
         ├── CIQUALScreen.tsx          # stack 'ciqual'
@@ -272,8 +274,10 @@ Nutritor supporte deux fournisseurs d'IA pour la génération de fiches nutritio
 - [x] Base CIQUAL 2020 embarquée (3 167 aliments français)
 - [x] Open Food Facts — recherche avec **scoring de pertinence** (exact > marque > préfixe > inclusion) et import
 - [x] Scanner code-barres (EAN-13, EAN-8, UPC)
+- [x] **Saisie libre d'aliment** (`ManualFoodScreen`) — création manuelle complète sans IA : sections 01-06 (infos, macros, protéines, glucides, lipides, micronutriments), 10 (sensoriel), 11 (allergènes, grille 14 standards avec cycle 3 états), 12 (composition). Compatibilité personnalisée calculée en temps réel ; affiche "Données manquantes" si aucun macro n'est renseigné.
 - [x] Génération IA de fiches nutritionnelles (OpenRouter + Ollama) avec **robustesse aux données mal formées**
-- [x] **Bannière IA** avec bouton "Voir" pour ouvrir la fiche enrichie, bouton "Annuler" pour interrompre, décompte en secondes et étapes en temps réel ("Envoi à l'IA…", "Lecture de la réponse…"…)
+- [x] **Bannière IA — Messages rotatifs** : pendant l'attente de la réponse IA, le bandeau affiche des messages contextuels cyclant toutes les 8 s (macros, FODMAP, vitamines, allergènes…). Pour l'enrichissement, les messages reflètent exactement les champs manquants calculés (ex: "FODMAP — données Monash…", "Minéraux (Mg, Ca, Fe…)…").
+- [x] **Bannière IA** avec bouton "Voir" pour ouvrir la fiche enrichie, bouton "Annuler" pour interrompre, décompte en secondes et étapes en temps réel
 - [x] **Import rapide depuis le Journal** : après import CIQUAL / OFF / Scanner, le retour ouvre directement la fiche détail de l'aliment importé pour un ajout immédiat au repas (sans passer par l'onglet Aliments)
 - [x] **Journal — Modifier les proportions** : icône crayon sur chaque ligne d'aliment (aliments ajoutés depuis la version 0.12) — modal +/− par 10 g avec estimation kcal temps réel et recalcul complet des macros
 - [x] **Journal — Timeline mini-métriques cliquables** : Énergie / Digestion / FODMAP / Glycémie ouvrent un modal de détail avec événements, intensités et conseils contextuels

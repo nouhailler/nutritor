@@ -9,6 +9,29 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [0.14.0] — 2026-05-20
+
+### Ajouté
+- **Saisie libre d'aliment** (`ManualFoodScreen`, stack `manualFood`) : nouvel écran de saisie manuelle complète accessible depuis "Ajouter avec l'IA" via le bouton "Saisie libre de l'aliment". Permet de créer un aliment sans IA, sans CIQUAL et sans Open Food Facts — utile en cas d'indisponibilité réseau, de modèle non configuré, ou d'aliment introuvable dans les bases.
+  - **Section 01** — Informations générales : nom*, catégorie, marque, description courte, portion par défaut, unité g/ml.
+  - **Section 02** — Macronutriments (pour 100 g/ml) : kcal, protéines, glucides (dont sucres), lipides (dont saturés), fibres, sel.
+  - **Section 03** — Protéines (optionnel, collapsible) : protéines complètes (switch oui/non), BCAA (g).
+  - **Section 04** — Glucides (optionnel, collapsible) : index glycémique (0-100), charge glycémique.
+  - **Section 05** — Lipides (optionnel, collapsible) : ratio Oméga ω6/ω3 (ex : "5:1").
+  - **Section 06** — Minéraux & Vitamines (optionnel, collapsible) : liste dynamique de nutriments avec nom, quantité et ANR%.
+  - **Section 10** — Profil sensoriel : chips de goûts (sucré, salé, amer, acide, umami, neutre), textures, arômes, pairings texte libre.
+  - **Section 11** — Allergènes : grille des 14 allergènes prioritaires avec cycle absent → présent → traces au tap.
+  - **Section 12** — Composition : champ ingrédients multilignes.
+  - **Compatibilité personnalisée** : calculée en temps réel (`useMemo`) à partir des macros et allergènes saisis. Affiche "Données manquantes" si aucun macro n'est renseigné (kcal, protéines, glucides, lipides tous à 0). Se met à jour à chaque modification sans action utilisateur.
+- **Bandeau IA — Messages rotatifs** : au lieu de rester bloqué sur "Envoi à l'IA…" pendant toute la durée de la requête, le bandeau cycled désormais toutes les 8 secondes à travers des messages contextuels. Pour `generateFoodWithAI` : macros (CIQUAL/USDA), profil FODMAP (Monash), vitamines & minéraux, allergènes, bioactifs, impact métabolique, profil sensoriel. Pour `enrichFoodWithAI` : les messages sont générés depuis le tableau `missing` — l'utilisateur voit exactement quels champs sont en cours de calcul ("FODMAP — données Monash…", "Minéraux (Mg, Ca, Fe…)…", "Vitamines (B, C, D, E…)…", etc.). Le timer est nettoyé dans un `finally` — aucune fuite mémoire en cas d'annulation ou d'erreur.
+
+### Modifié
+- **`AddFoodScreen`** : ajout du bouton "Saisie libre de l'aliment" (discret, sous le bouton IA principal) et du prop `onManualEntry?: (name: string) => void`. Le nom déjà saisi dans le champ est transmis comme `initialName` à `ManualFoodScreen`.
+- **`AppShell`** : ajout du stack `'manualFood'` et rendu de `ManualFoodScreen`. La navigation retourne vers `'search'` après validation. Un toast de confirmation apparaît (2,6 s) avec le nom de l'aliment créé.
+- **`aiService.ts`** : `generateFoodWithAI` et `enrichFoodWithAI` utilisent `setInterval` + `finally` pour les messages rotatifs, sans modifier la signature des fonctions.
+
+---
+
 ## [0.13.0] — 2026-05-20
 
 ### Ajouté
