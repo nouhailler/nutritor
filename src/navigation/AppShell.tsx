@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -51,6 +51,8 @@ import { UserTimelineEvent } from '../types/timeline';
 import { GeneratedMeal, MealGeneratorResult } from '../types/mealGenerator';
 import { JournalEntry, EMPTY_DAY_MEALS, computeDayLog } from '../data/weeklyStats';
 import { SymptomEntry, SymptomScores } from '../types/symptoms';
+import { computeDayTips } from '../services/tipsEngine';
+import { DayTip } from '../types/tips';
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -338,6 +340,10 @@ export function AppShell() {
     KEYS.recentFoodViews,
     [],
   );
+  const [dismissedTips, setDismissedTips] = usePersistedState<Record<string, string[]>>(
+    KEYS.dismissedTips,
+    {},
+  );
   const [viewingDate, setViewingDate] = useState<string | null>(null); // null = today
   const [showDuplicateBanner, setShowDuplicateBanner] = useState(false);
 
@@ -553,6 +559,13 @@ export function AppShell() {
     if (meals.some((m) => m.items.length > 0)) dates.push(today);
     return [...new Set(dates)];
   })();
+
+  // Tips for the currently viewed date (not computed for future dates)
+  const dayTips = useMemo(() => {
+    const isFuture = effectiveDate > today;
+    if (isFuture) return [];
+    return computeDayTips({ meals: viewedMeals, journal, symptoms, profile, date: effectiveDate });
+  }, [viewedMeals, journal, symptoms, profile, effectiveDate, today]);
 
   // Update meals for viewingDate (routes to meals or journal)
   const updateViewedMeals = (updater: (prev: Meal[]) => Meal[]) => {
@@ -1064,6 +1077,14 @@ export function AppShell() {
             onOpenMenu={() => setDrawerOpen(true)}
             onOpenSearch={openSearch}
             onOpenFoods={() => showTab('foods')}
+            dayTips={dayTips}
+            dismissedTipIds={dismissedTips[effectiveDate] ?? []}
+            onDismissTip={(id) =>
+              setDismissedTips((prev) => ({
+                ...prev,
+                [effectiveDate]: [...(prev[effectiveDate] ?? []), id],
+              }))
+            }
             onSaveSymptom={handleSaveSymptom}
             onSaveComment={handleSaveComment}
             onSaveAdvice={handleSaveAdvice}

@@ -21,6 +21,7 @@ export const KEYS = {
   timelineEvents:         'nutritor:timeline_events',
   recentFoodUses:         'nutritor:recent_food_uses',
   recentFoodViews:        'nutritor:recent_food_views',
+  dismissedTips:          'nutritor:dismissed_tips',
 };
 
 export async function load<T>(key: string): Promise<T | null> {

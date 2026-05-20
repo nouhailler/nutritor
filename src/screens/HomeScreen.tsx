@@ -32,6 +32,8 @@ import { generateDayAdvice } from '../services/aiService';
 import { PhysioTimeline } from '../components/PhysioTimeline';
 import { AutoTimelineEvent, UserTimelineEvent } from '../types/timeline';
 import { computeAutoEvents, computeMiniMetrics, computeDaySummary } from '../services/timelineService';
+import { TipsSection } from '../components/TipsSection';
+import { DayTip } from '../types/tips';
 
 // ── Date helpers ──────────────────────────────────────────────
 
@@ -439,6 +441,9 @@ interface HomeScreenProps {
   onOpenMenu: () => void;
   onOpenSearch: () => void;
   onOpenFoods: () => void;
+  dayTips: DayTip[];
+  dismissedTipIds: string[];
+  onDismissTip: (id: string) => void;
 }
 
 export function HomeScreen({
@@ -462,6 +467,9 @@ export function HomeScreen({
   onOpenMenu,
   onOpenSearch,
   onOpenFoods,
+  dayTips,
+  dismissedTipIds,
+  onDismissTip,
 }: HomeScreenProps) {
   const insets = useSafeAreaInsets();
   const [helpVisible, setHelpVisible] = useState(false);
@@ -661,6 +669,15 @@ export function HomeScreen({
             />
           ))}
         </View>
+
+        {/* Tips du jour */}
+        {!isFuture && dayTips.length > 0 && (
+          <TipsSection
+            tips={dayTips}
+            dismissedIds={dismissedTipIds}
+            onDismiss={onDismissTip}
+          />
+        )}
 
         {/* Timeline physiologique */}
         {!isFuture && (autoEvents.length > 0 || isToday) && (
