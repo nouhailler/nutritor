@@ -33,9 +33,19 @@ export function AIQueueBanner({ jobs, hasTabBar, onDismiss, onCancelRunning, onV
   const slideAnim = useRef(new Animated.Value(200)).current;
   const [snoozed, setSnoozed] = useState(false);
   const snoozeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const hasJobs = jobs.length > 0;
   const effectiveVisible = hasJobs && !snoozed;
+
+  // Elapsed-seconds counter — resets whenever the running job changes
+  const runningJobId = jobs.find((j) => j.status === 'running')?.id ?? null;
+  useEffect(() => {
+    setElapsedSeconds(0);
+    if (!runningJobId) return;
+    const id = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [runningJobId]);
 
   useEffect(() => {
     Animated.timing(slideAnim, {
@@ -96,7 +106,7 @@ export function AIQueueBanner({ jobs, hasTabBar, onDismiss, onCancelRunning, onV
     icon = '✦';
     mainText = running.label;
     const extra = pending.length > 0 ? `  ·  ${pending.length} en attente` : '';
-    subText = `IA en cours${extra}`;
+    subText = `IA en cours  ·  ${elapsedSeconds}s${extra}`;
   } else if (errors.length > 0 && done.length === 0) {
     icon = '!';
     mainText = errors[0].label;
