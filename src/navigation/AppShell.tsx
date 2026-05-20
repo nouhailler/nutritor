@@ -262,6 +262,10 @@ export function AppShell() {
   const [mealResult, setMealResult] = useState<MealGeneratorResult | null>(null);
   const [mealJobId, setMealJobId] = useState<string | null>(null);
   const [lastAddedFoodId, setLastAddedFoodId] = useState<string | null>(null);
+  // Tracks where CIQUAL/OFF/Scanner was opened from ('search' or null=foods tab)
+  const [importScreenOrigin, setImportScreenOrigin] = useState<'search' | null>(null);
+  // Last food imported in a CIQUAL/OFF/Scanner session (for quick-add on back)
+  const [lastImportedFood, setLastImportedFood] = useState<Food | null>(null);
   const insets = useSafeAreaInsets();
 
   const [profile, setProfile, profileLoading] = usePersistedState<UserProfile>(
@@ -607,6 +611,21 @@ export function AppShell() {
     pushRecentView(food.id);
   };
 
+  // Called by back button of CIQUAL/OFF/Scanner.
+  // If a food was just imported and the flow started from Search, open its
+  // detail so the user can add it to a meal without going to the Aliments tab.
+  const handleImportScreenBack = () => {
+    const food = lastImportedFood;
+    setLastImportedFood(null);
+    if (food && importScreenOrigin === 'search') {
+      openDetail(food, 'search');
+    } else if (importScreenOrigin === 'search') {
+      setStack('search');
+    } else {
+      setStack(null); // back to foods tab
+    }
+  };
+
   const openSavedDetail = (plate: SavedPlate) => {
     setSelectedPlate(plate);
     setStack('savedDetail');
@@ -871,9 +890,9 @@ export function AppShell() {
           setTimeout(() => setToast(null), 2600);
         }}
         onAddWithAI={(q) => { setPendingQuery(q); setStack('addFood'); }}
-        onOpenFoodFacts={(q) => { setPendingQuery(q); setStack('openFoodFacts'); }}
-        onOpenCIQUAL={(q) => { setPendingQuery(q); setStack('ciqual'); }}
-        onOpenScanner={() => setStack('scanner')}
+        onOpenFoodFacts={(q) => { setPendingQuery(q); setLastImportedFood(null); setImportScreenOrigin('search'); setStack('openFoodFacts'); }}
+        onOpenCIQUAL={(q) => { setPendingQuery(q); setLastImportedFood(null); setImportScreenOrigin('search'); setStack('ciqual'); }}
+        onOpenScanner={() => { setLastImportedFood(null); setImportScreenOrigin('search'); setStack('scanner'); }}
         onOpenMenu={openMenu}
       />
     );
@@ -934,10 +953,11 @@ export function AppShell() {
         existingIds={new Set(foodList.map((f) => f.id))}
         onImport={(food) => {
           setFoodList((prev) => [...prev, food]);
+          setLastImportedFood(food);
           setToast(`« ${food.name} » ajouté à ta liste`);
           setTimeout(() => setToast(null), 2600);
         }}
-        onBack={() => setStack('search')}
+        onBack={handleImportScreenBack}
         onOpenMenu={openMenu}
       />
     );
@@ -949,9 +969,10 @@ export function AppShell() {
         settings={settings}
         onImport={(food) => {
           setFoodList((prev) => [...prev, food]);
+          setLastImportedFood(food);
         }}
         onUpdateFood={handleUpdateFood}
-        onBack={() => setStack('search')}
+        onBack={handleImportScreenBack}
         onOpenMenu={openMenu}
       />
     );
@@ -964,9 +985,10 @@ export function AppShell() {
         settings={settings}
         onImport={(food) => {
           setFoodList((prev) => [...prev, food]);
+          setLastImportedFood(food);
         }}
         onUpdateFood={handleUpdateFood}
-        onBack={() => setStack('search')}
+        onBack={handleImportScreenBack}
         onOpenMenu={openMenu}
       />
     );
@@ -1113,9 +1135,9 @@ export function AppShell() {
             onDeleteFood={(foodId) => setFoodList((prev) => prev.filter((f) => f.id !== foodId))}
             onOpenMenu={() => setDrawerOpen(true)}
             onAddWithAI={(q) => { setPendingQuery(q); setStack('addFood'); }}
-            onOpenFoodFacts={(q) => { setPendingQuery(q); setStack('openFoodFacts'); }}
-            onOpenCIQUAL={(q) => { setPendingQuery(q); setStack('ciqual'); }}
-            onOpenScanner={() => setStack('scanner')}
+            onOpenFoodFacts={(q) => { setPendingQuery(q); setLastImportedFood(null); setImportScreenOrigin(null); setStack('openFoodFacts'); }}
+            onOpenCIQUAL={(q) => { setPendingQuery(q); setLastImportedFood(null); setImportScreenOrigin(null); setStack('ciqual'); }}
+            onOpenScanner={() => { setLastImportedFood(null); setImportScreenOrigin(null); setStack('scanner'); }}
             onOpenPhotoAI={() => setStack('foodPhoto')}
           />
         );
