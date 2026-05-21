@@ -693,6 +693,8 @@ export function HomeScreen({
               daySummary={daySummary}
               date={effectiveDate}
               isToday={isToday}
+              meals={meals}
+              profile={profile}
               onAddEvent={onAddTimelineEvent}
               onDeleteEvent={onDeleteTimelineEvent}
             />

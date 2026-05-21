@@ -73,3 +73,25 @@ export interface DaySummaryLine {
   text: string;
   kind: 'ok' | 'mid' | 'warn';
 }
+
+// ── Event detail (fiche physiologique) ─────────────────────────
+
+export interface EventDetailData {
+  emoji: string;
+  title: string;
+  timeWindow: string;
+  intensityLabel: string;
+  intensityColor: string;
+  confidence: 'élevée' | 'modérée' | 'faible';
+  triggers: string[];
+  triggerNote?: string;
+  mechanism: string;
+  duration: string;
+  impacts: string[];
+  personalizedNote: string | null;
+  educationalNote: string;
+  dataPoints: string[];
+  whyPoints: string[];
+  simulation: string | null;
+  recommendation: string;
+}

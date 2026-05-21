@@ -1,5 +1,5 @@
 import { Meal } from '../types';
-import { UserProfile } from '../data/user';
+import { UserProfile, getDigestiveSensitivities } from '../data/user';
 import {
   AutoTimelineEvent,
   AutoEventKind,
@@ -7,6 +7,7 @@ import {
   EventIntensity,
   MiniMetric,
   DaySummaryLine,
+  EventDetailData,
 } from '../types/timeline';
 
 // ── Time helpers ────────────────────────────────────────────────
@@ -284,4 +285,317 @@ export function computeDaySummary(events: AutoTimelineEvent[]): DaySummaryLine[]
   }
 
   return lines.slice(0, 4);
+}
+
+// ── Event detail builder ────────────────────────────────────────
+
+const CONFIDENCE: Record<EventIntensity, EventDetailData['confidence']> = {
+  high: 'élevée', mid: 'modérée', low: 'faible',
+};
+
+function catColor(type: AutoEventKind): string {
+  if (type === 'caffeine' || type === 'vigilance') return '#9B7340';
+  if (type === 'glycemic' || type === 'postprandial' || type === 'satiety') return '#3A5A8B';
+  if (type === 'fermentation' || type === 'digestion') return '#3F5A3A';
+  if (type === 'anabolic') return '#5A3A8B';
+  return '#444444';
+}
+
+export function buildEventDetail(
+  event: AutoTimelineEvent,
+  meals: Meal[],
+  profile: UserProfile,
+): EventDetailData {
+  const meal = meals.find((m) => m.id === event.mealId) ?? null;
+  const items = meal?.items ?? [];
+  const allNames = items.map((i) => i.name).join(' ');
+  const kcal    = items.reduce((s, i) => s + i.kcal, 0);
+  const protein = items.reduce((s, i) => s + (i.macros?.protein ?? 0), 0);
+  const carbs   = items.reduce((s, i) => s + (i.macros?.carbs ?? 0), 0);
+  const fat     = items.reduce((s, i) => s + (i.macros?.fat ?? 0), 0);
+
+  const endTime = event.durationMin ? addMinutes(event.time, event.durationMin) : null;
+  const timeWindow = endTime ? `${event.time} → ${endTime}` : event.time;
+  const intensityLabel = event.intensity === 'high' ? 'Élevée' : event.intensity === 'mid' ? 'Modérée' : 'Faible';
+  const color = catColor(event.type);
+
+  const sensitivities = getDigestiveSensitivities(profile);
+  const pathologies = profile.pathologies ?? [];
+  const objectives  = profile.objectives ?? [];
+
+  const getSens = (id: string) => sensitivities.find((s) => s.id === id)?.level ?? 'none';
+
+  switch (event.type) {
+
+    case 'meal': {
+      const dataPoints = [
+        kcal > 0    ? `${Math.round(kcal)} kcal`    : null,
+        protein > 0 ? `${Math.round(protein)}g protéines` : null,
+        carbs > 0   ? `${Math.round(carbs)}g glucides`    : null,
+        fat > 0     ? `${Math.round(fat)}g lipides`       : null,
+      ].filter(Boolean) as string[];
+      return {
+        emoji: event.emoji, title: event.label, timeWindow,
+        intensityLabel, intensityColor: color, confidence: CONFIDENCE[event.intensity],
+        triggers: items.map((i) => i.name),
+        mechanism: 'Apport calorique et nutritionnel enregistré.',
+        duration: '', impacts: [],
+        personalizedNote: null, educationalNote: '',
+        dataPoints, whyPoints: [],
+        simulation: null, recommendation: '',
+      };
+    }
+
+    case 'glycemic': {
+      const carbFoods = items.filter((i) => matchesAny(i.name, HIGH_CARB_KW)).map((i) => i.name);
+      const whyPoints = [
+        carbs > 0 ? `${Math.round(carbs)}g glucides${carbs > 65 ? ' — charge élevée' : ''}` : null,
+        matchesAny(allNames, HIGH_CARB_KW) ? 'Aliments à index glycémique élevé détectés' : null,
+        protein < 10 && protein > 0 ? 'Faible apport protéique — frein naturel absent' : null,
+        fat < 5 && kcal > 0 ? 'Repas pauvre en lipides — absorption glucidique rapide' : null,
+      ].filter(Boolean) as string[];
+      const impacts = event.intensity === 'high'
+        ? ['Énergie rapide mais brève', 'Réponse insulinique importante', 'Creux possible 1–2h après', 'Fatigue secondaire éventuelle']
+        : ['Légère élévation glycémique', 'Réponse insulinique modérée', 'Énergie globalement stable'];
+      let personalizedNote: string | null = null;
+      if (objectives.includes('glycemia')) {
+        personalizedNote = 'Objectif glycémie stable : ce repas sollicite davantage votre pancréas — envisager des sources glucidiques à IG plus faible.';
+      }
+      return {
+        emoji: event.emoji, title: event.label, timeWindow,
+        intensityLabel, intensityColor: color, confidence: CONFIDENCE[event.intensity],
+        triggers: carbFoods.length ? carbFoods : items.map((i) => i.name).slice(0, 3),
+        triggerNote: `Charge glucidique estimée : ${event.intensity === 'high' ? 'élevée' : 'modérée'}`,
+        mechanism: 'Les glucides sont absorbés rapidement dans le sang, provoquant une élévation de la glycémie. L\'insuline est sécrétée pour ramener le taux à la normale.',
+        duration: event.durationMin ? `~${event.durationMin} min` : '45–90 min',
+        impacts, personalizedNote,
+        educationalNote: 'Un pic glycémique est normal après un repas riche en glucides. Son amplitude dépend de la composition : fibres, protéines et lipides ralentissent l\'absorption.',
+        dataPoints: [
+          carbs > 0   ? `${Math.round(carbs)}g glucides`    : null,
+          kcal > 0    ? `${Math.round(kcal)} kcal`          : null,
+          protein > 0 ? `${Math.round(protein)}g protéines` : null,
+        ].filter(Boolean) as string[],
+        whyPoints,
+        simulation: event.intensity === 'high' ? 'Avec plus de fibres ou protéines → pic réduit de 20–30 % estimé' : null,
+        recommendation: event.intensity === 'high'
+          ? 'Associer fibres, protéines et lipides aux glucides pour amortir le pic. Une marche de 10 min post-repas aide également.'
+          : 'Pic modéré — une activité légère post-repas favorise l\'utilisation du glucose.',
+      };
+    }
+
+    case 'postprandial': {
+      return {
+        emoji: event.emoji, title: event.label, timeWindow,
+        intensityLabel, intensityColor: color, confidence: CONFIDENCE[event.intensity],
+        triggers: items.map((i) => i.name).slice(0, 4),
+        triggerNote: `Repas ${kcal > 750 ? 'très copieux' : 'copieux'} — ${Math.round(kcal)} kcal`,
+        mechanism: 'Un repas copieux détourne le flux sanguin vers le système digestif. La sécrétion d\'insuline et de mélatonine contribue à la somnolence transitoire.',
+        duration: event.durationMin ? `~${event.durationMin} min` : '20–40 min',
+        impacts: ['Somnolence transitoire', 'Baisse de concentration', 'Ralentissement cognitif', 'Lourdeur digestive'],
+        personalizedNote: null,
+        educationalNote: 'Le creux post-prandial est un phénomène physiologique normal. Il est amplifié par les repas riches en glucides et les gros volumes alimentaires.',
+        dataPoints: [
+          kcal > 0  ? `${Math.round(kcal)} kcal`    : null,
+          carbs > 0 ? `${Math.round(carbs)}g glucides` : null,
+        ].filter(Boolean) as string[],
+        whyPoints: [
+          kcal > 600  ? `${Math.round(kcal)} kcal — repas volumineux`                  : null,
+          carbs > 65  ? `${Math.round(carbs)}g glucides — réponse insulinique marquée` : null,
+        ].filter(Boolean) as string[],
+        simulation: 'Avec un repas plus léger (< 500 kcal) → creux réduit ou absent',
+        recommendation: 'Une marche de 10–15 min ou une micro-sieste de 20 min aide à traverser ce creux.',
+      };
+    }
+
+    case 'satiety': {
+      const proteinFoods = items.filter((i) => matchesAny(i.name, PROTEIN_KW)).map((i) => i.name);
+      return {
+        emoji: event.emoji, title: event.label, timeWindow,
+        intensityLabel, intensityColor: color, confidence: 'élevée',
+        triggers: proteinFoods.length ? proteinFoods : items.map((i) => i.name).slice(0, 3),
+        triggerNote: `${Math.round(protein)}g protéines · ${Math.round(kcal)} kcal`,
+        mechanism: 'Les protéines et la distension gastrique stimulent GLP-1 et PYY, hormones de satiété qui signalent la plénitude au cerveau.',
+        duration: event.durationMin ? `~${Math.round(event.durationMin / 60 * 10) / 10}h` : '2–3 h',
+        impacts: ['Sensation de rassasiement', 'Réduction de l\'appétit', 'Stabilisation de l\'énergie'],
+        personalizedNote: null,
+        educationalNote: 'Les protéines sont les macronutriments les plus rassasiants. Elles maintiennent la satiété 2–4× plus longtemps que les glucides simples.',
+        dataPoints: [
+          `${Math.round(protein)}g protéines`,
+          kcal > 0 ? `${Math.round(kcal)} kcal` : null,
+        ].filter(Boolean) as string[],
+        whyPoints: [
+          protein > 0 ? `${Math.round(protein)}g protéines — satiété prolongée` : null,
+          kcal > 400  ? 'Repas calorique — distension gastrique notable' : null,
+        ].filter(Boolean) as string[],
+        simulation: null,
+        recommendation: 'Maintenir 20–30g de protéines par repas principal aide à contrôler les fringales tout au long de la journée.',
+      };
+    }
+
+    case 'caffeine': {
+      const caffFoods = items.filter((i) => matchesAny(i.name, CAFFEINE_KW)).map((i) => i.name);
+      const cafLevel = getSens('caffeine');
+      const parts: string[] = [];
+      if (cafLevel === 'strong' || cafLevel === 'moderate') {
+        parts.push('Votre profil indique une sensibilité à la caféine — effets potentiellement plus marqués (nervosité, palpitations).');
+      }
+      if (pathologies.includes('foodMigraine')) {
+        parts.push('Migraine alimentaire dans votre profil : la caféine peut être un déclencheur, surtout en cas de sevrage.');
+      }
+      return {
+        emoji: event.emoji, title: event.label, timeWindow,
+        intensityLabel, intensityColor: color, confidence: 'élevée',
+        triggers: caffFoods.length ? caffFoods : items.map((i) => i.name).slice(0, 2),
+        triggerNote: 'Source de caféine détectée',
+        mechanism: 'La caféine bloque les récepteurs à l\'adénosine, une molécule qui favorise la somnolence, maintenant ainsi l\'éveil et la vigilance.',
+        duration: '45–60 min de pic',
+        impacts: ['Éveil accru', 'Concentration améliorée', 'Légère accélération cardiaque', 'Possible anxiété si dose élevée'],
+        personalizedNote: parts.length ? parts.join(' ') : null,
+        educationalNote: 'La demi-vie de la caféine est de 5–6 heures. Une consommation après 14h peut retarder l\'endormissement de 1 à 2 heures.',
+        dataPoints: ['Source de caféine confirmée', 'Pic attendu 30–45 min après ingestion'],
+        whyPoints: caffFoods.map((f) => `${f} — source de caféine`),
+        simulation: 'Consommée avant 13h → impact minimal sur le sommeil nocturne',
+        recommendation: 'Éviter la caféine après 14h pour préserver la qualité du sommeil.',
+      };
+    }
+
+    case 'vigilance': {
+      const caffFoods = items.filter((i) => matchesAny(i.name, CAFFEINE_KW)).map((i) => i.name);
+      return {
+        emoji: event.emoji, title: event.label, timeWindow,
+        intensityLabel, intensityColor: color, confidence: 'modérée',
+        triggers: caffFoods.length ? caffFoods : items.map((i) => i.name).slice(0, 2),
+        triggerNote: 'Phase stabilisée après pic caféine',
+        mechanism: 'Après le pic initial, la caféine maintient un niveau de vigilance soutenu en continuant à bloquer les récepteurs à l\'adénosine.',
+        duration: event.durationMin ? `~${event.durationMin} min` : '1–2 h',
+        impacts: ['Concentration soutenue', 'Temps de réaction amélioré', 'Mémoire de travail optimisée'],
+        personalizedNote: null,
+        educationalNote: 'La phase de vigilance correspond au plateau de la caféine. C\'est la fenêtre idéale pour les tâches cognitives exigeantes.',
+        dataPoints: ['Phase post-pic caféine estimée'],
+        whyPoints: ['Phase naturelle suivant le pic de caféine'],
+        simulation: null,
+        recommendation: 'Profiter de cette fenêtre de vigilance pour les tâches nécessitant concentration et mémorisation.',
+      };
+    }
+
+    case 'fermentation': {
+      const allFodmapKW = [...FRUCTANE_KW, ...GOS_KW, ...LACTOSE_KW, ...FRUCTOSE_KW, ...POLYOL_KW];
+      const fodmapFoods = items.filter((i) => matchesAny(i.name, allFodmapKW)).map((i) => i.name);
+      const hasSII      = pathologies.includes('ibs');
+      const fructanLv   = getSens('fructans');
+      const polyolLv    = getSens('polyols');
+      const lactoseLv   = getSens('lactose');
+      let personalizedNote: string | null = null;
+      if (hasSII) {
+        personalizedNote = 'Syndrome de l\'intestin irritable dans votre profil — la fermentation FODMAP est souvent amplifiée avec des symptômes plus marqués.';
+      } else if ([fructanLv, polyolLv, lactoseLv].some((l) => l === 'strong')) {
+        personalizedNote = 'Forte sensibilité FODMAP dans votre profil — des symptômes digestifs sont probables après ce repas.';
+      } else if ([fructanLv, polyolLv, lactoseLv].some((l) => l === 'moderate')) {
+        personalizedNote = 'Sensibilité FODMAP modérée — les symptômes dépendront des quantités consommées.';
+      }
+      const durationH = event.durationMin ? `${Math.round(event.durationMin / 60)}–${Math.round(event.durationMin / 60) + 1}h` : '2–4 h';
+      return {
+        emoji: event.emoji, title: event.label, timeWindow,
+        intensityLabel, intensityColor: color, confidence: CONFIDENCE[event.intensity],
+        triggers: fodmapFoods.length ? fodmapFoods : items.map((i) => i.name).slice(0, 3),
+        triggerNote: `Charge FODMAP : ${event.intensity === 'high' ? 'élevée' : event.intensity === 'mid' ? 'modérée' : 'faible'}`,
+        mechanism: 'Les FODMAP atteignent le côlon non digérés et fermentent sous l\'action des bactéries intestinales, produisant des gaz (H₂, CO₂) et des acides gras courts.',
+        duration: durationH,
+        impacts: ['Ballonnements', 'Gaz et distension abdominale', 'Crampes possibles', 'Modification du transit'],
+        personalizedNote,
+        educationalNote: 'Les FODMAP sont des glucides fermentescibles (Oligosaccharides, Disaccharides, Monosaccharides And Polyols). Leur fermentation est normale mais peut causer des inconforts digestifs chez les personnes sensibles.',
+        dataPoints: [
+          fodmapFoods.length ? `${fodmapFoods.length} aliment(s) FODMAP détecté(s)` : 'Aliments FODMAP détectés par analyse',
+          event.intensity === 'high' ? 'Charge fermentative élevée' : 'Charge fermentative modérée',
+        ],
+        whyPoints: fodmapFoods.map((f) => `${f} — source FODMAP`),
+        simulation: 'Sans les aliments FODMAP → fermentation réduite ou absente',
+        recommendation: event.intensity === 'high'
+          ? 'Si sensible : réduire les portions de ces aliments ou les étaler sur plusieurs repas pour limiter la charge.'
+          : 'Quantités modérées généralement bien tolérées — observer vos réactions personnelles.',
+      };
+    }
+
+    case 'digestion': {
+      const fatFoods = items.filter((i) => matchesAny(i.name, HIGH_FAT_KW)).map((i) => i.name);
+      const fatLv     = getSens('fattyFoods');
+      const hasReflux = pathologies.includes('reflux');
+      const parts: string[] = [];
+      if (fatLv === 'strong' || fatLv === 'moderate') {
+        parts.push('Votre profil indique une sensibilité aux aliments gras — la digestion peut être plus inconfortable.');
+      }
+      if (hasReflux) {
+        parts.push('Reflux gastrique dans votre profil : éviter de vous allonger dans les 2–3h après ce repas.');
+      }
+      const durationH = event.durationMin ? `${Math.round(event.durationMin / 60)}–${Math.round(event.durationMin / 60) + 1}h` : '3–4 h';
+      return {
+        emoji: event.emoji, title: event.label, timeWindow,
+        intensityLabel, intensityColor: color, confidence: CONFIDENCE[event.intensity],
+        triggers: fatFoods.length ? fatFoods : items.map((i) => i.name).slice(0, 3),
+        triggerNote: fat > 0 ? `${Math.round(fat)}g lipides — charge ${event.intensity === 'high' ? 'élevée' : 'modérée'}` : undefined,
+        mechanism: 'Les lipides stimulent la libération de cholécystokinine (CCK), ralentissant la vidange gastrique et prolongeant le processus digestif.',
+        duration: durationH,
+        impacts: [
+          'Lourdeur post-repas',
+          'Digestion lente',
+          'Énergie mobilisée pour la digestion',
+          hasReflux ? 'Risque de reflux si couché trop tôt' : 'Reflux possible si position allongée rapidement',
+        ],
+        personalizedNote: parts.length ? parts.join(' ') : null,
+        educationalNote: 'La digestion des lipides est naturellement lente car elle nécessite l\'émulsification par la bile et les lipases pancréatiques — c\'est physiologiquement normal.',
+        dataPoints: [
+          fat > 0  ? `${Math.round(fat)}g lipides`       : null,
+          kcal > 0 ? `${Math.round(kcal)} kcal`          : null,
+          fatFoods.length ? `${fatFoods.length} source(s) lipidique(s) détectée(s)` : null,
+        ].filter(Boolean) as string[],
+        whyPoints: [
+          fat > 0 ? `${Math.round(fat)}g lipides${fat > 40 ? ' — charge très élevée' : ''}` : null,
+          ...fatFoods.slice(0, 2).map((f) => `${f} — aliment gras`),
+        ].filter(Boolean) as string[],
+        simulation: 'Avec moitié moins de lipides → durée de digestion réduite de 1–2h estimée',
+        recommendation: 'Rester assis ou en légère activité après ce repas. Éviter de s\'allonger dans les 2h suivantes.',
+      };
+    }
+
+    case 'anabolic': {
+      const proteinFoods = items.filter((i) => matchesAny(i.name, PROTEIN_KW)).map((i) => i.name);
+      let personalizedNote: string | null = null;
+      if (objectives.includes('sport')) {
+        personalizedNote = 'Objectif performance sportive : excellent timing protéique, surtout si pris dans les 2h post-effort.';
+      }
+      return {
+        emoji: event.emoji, title: event.label, timeWindow,
+        intensityLabel, intensityColor: color, confidence: CONFIDENCE[event.intensity],
+        triggers: proteinFoods.length ? proteinFoods : items.map((i) => i.name).slice(0, 3),
+        triggerNote: `${Math.round(protein)}g protéines — synthèse active`,
+        mechanism: 'Les acides aminés absorbés activent la voie mTOR, déclenchant la synthèse protéique musculaire et la réparation tissulaire.',
+        duration: event.durationMin ? `~${Math.round(event.durationMin / 60)}h` : '2–3 h',
+        impacts: ['Synthèse protéique musculaire', 'Récupération tissulaire', 'Réparation musculaire', 'Soutien immunitaire'],
+        personalizedNote,
+        educationalNote: 'La fenêtre anabolique est maximale dans les 2h après un effort physique. 20–40g de protéines de qualité suffisent à saturer la synthèse protéique par session.',
+        dataPoints: [
+          `${Math.round(protein)}g protéines`,
+          protein > 35 ? 'Apport optimal pour la synthèse musculaire' : 'Apport suffisant pour initier la synthèse',
+        ],
+        whyPoints: [
+          protein > 0 ? `${Math.round(protein)}g protéines — seuil anabolique atteint` : null,
+          ...proteinFoods.slice(0, 2).map((f) => `${f} — source de protéines`),
+        ].filter(Boolean) as string[],
+        simulation: objectives.includes('sport') ? 'Associé à un effort physique dans les 2h → gains musculaires maximisés' : null,
+        recommendation: protein > 35
+          ? 'Excellente prise protéique — idéalement associée à un effort physique dans les 2h suivantes.'
+          : 'Bonne fenêtre anabolique — un effort physique optimise l\'utilisation de ces protéines.',
+      };
+    }
+
+    default: {
+      return {
+        emoji: event.emoji, title: event.label, timeWindow,
+        intensityLabel, intensityColor: color, confidence: CONFIDENCE[event.intensity],
+        triggers: [], mechanism: '', duration: '', impacts: [],
+        personalizedNote: null, educationalNote: '', dataPoints: [], whyPoints: [],
+        simulation: null, recommendation: '',
+      };
+    }
+  }
 }

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -19,8 +20,11 @@ import {
   QuickSymptomKey,
   EventCategory,
   EventIntensity,
+  EventDetailData,
 } from '../types/timeline';
-import { addMinutes } from '../services/timelineService';
+import { Meal } from '../types';
+import { UserProfile } from '../data/user';
+import { addMinutes, buildEventDetail } from '../services/timelineService';
 
 // ── Category color palette ─────────────────────────────────────
 
@@ -331,9 +335,142 @@ function QuickAddModal({
   );
 }
 
+// ── Event detail modal ─────────────────────────────────────────
+
+function DetailSection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <View style={s.detailSection}>
+      <Text style={s.evDetailLabel}>{label}</Text>
+      {children}
+    </View>
+  );
+}
+
+function BulletRow({ text, color }: { text: string; color?: string }) {
+  return (
+    <View style={s.bulletRow}>
+      <View style={[s.bulletDot, { backgroundColor: color ?? Colors.muted }]} />
+      <Text style={s.bulletText}>{text}</Text>
+    </View>
+  );
+}
+
+function EventDetailModal({ detail, onClose }: { detail: EventDetailData | null; onClose: () => void }) {
+  if (!detail) return null;
+  const col = detail.intensityColor;
+  const confColor = detail.confidence === 'élevée' ? Colors.ok : detail.confidence === 'modérée' ? Colors.signal : Colors.muted;
+
+  return (
+    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
+      <View style={s.modalOverlay}>
+        <View style={s.eventDetailCard}>
+
+          {/* Header */}
+          <View style={s.eventDetailHeader}>
+            <View style={{ flex: 1 }}>
+              <View style={s.eventDetailTitleRow}>
+                <Text style={s.eventDetailEmoji}>{detail.emoji}</Text>
+                <Text style={[s.eventDetailTitle, { color: col }]} numberOfLines={2}>{detail.title}</Text>
+              </View>
+              <View style={s.eventDetailMeta}>
+                <Text style={s.eventDetailTime}>{detail.timeWindow}</Text>
+                <View style={[s.badge, { backgroundColor: col + '22', borderColor: col + '55' }]}>
+                  <Text style={[s.badgeText, { color: col }]}>{detail.intensityLabel}</Text>
+                </View>
+                <View style={[s.badge, { backgroundColor: confColor + '18', borderColor: confColor + '44' }]}>
+                  <Text style={[s.badgeText, { color: confColor }]}>Confiance : {detail.confidence}</Text>
+                </View>
+              </View>
+            </View>
+            <TouchableOpacity onPress={onClose} activeOpacity={0.7} style={s.closeBtn}>
+              <Icon name="close" size={18} color={Colors.muted} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={s.eventDetailScroll} showsVerticalScrollIndicator={false}>
+
+            {/* Triggers */}
+            {detail.triggers.length > 0 && (
+              <DetailSection label="🍽️ Déclencheurs probables">
+                {detail.triggers.map((t, i) => <BulletRow key={i} text={t} color={col} />)}
+                {detail.triggerNote ? <Text style={s.triggerNote}>{detail.triggerNote}</Text> : null}
+              </DetailSection>
+            )}
+
+            {/* Mechanism */}
+            {detail.mechanism ? (
+              <DetailSection label="🧠 Mécanisme physiologique">
+                <Text style={s.detailBody}>{detail.mechanism}</Text>
+                {detail.duration ? <Text style={s.detailDuration}>⏱️ Durée probable : {detail.duration}</Text> : null}
+              </DetailSection>
+            ) : null}
+
+            {/* Impact */}
+            {detail.impacts.length > 0 && (
+              <DetailSection label="⚠️ Impact potentiel">
+                {detail.impacts.map((t, i) => <BulletRow key={i} text={t} color={Colors.signal} />)}
+              </DetailSection>
+            )}
+
+            {/* Personalized */}
+            {detail.personalizedNote && (
+              <DetailSection label="👤 Votre profil">
+                <View style={[s.personalizedBox, { borderLeftColor: col }]}>
+                  <Text style={s.personalizedText}>{detail.personalizedNote}</Text>
+                </View>
+              </DetailSection>
+            )}
+
+            {/* Educational */}
+            {detail.educationalNote ? (
+              <DetailSection label="📚 Le saviez-vous ?">
+                <Text style={s.detailBody}>{detail.educationalNote}</Text>
+              </DetailSection>
+            ) : null}
+
+            {/* Data used */}
+            {detail.dataPoints.length > 0 && (
+              <DetailSection label="📊 Données utilisées">
+                {detail.dataPoints.map((t, i) => <BulletRow key={i} text={t} color={Colors.muted} />)}
+              </DetailSection>
+            )}
+
+            {/* Why */}
+            {detail.whyPoints.length > 0 && (
+              <DetailSection label="❓ Pourquoi cet événement ?">
+                {detail.whyPoints.map((t, i) => <BulletRow key={i} text={t} color={col} />)}
+              </DetailSection>
+            )}
+
+            {/* Simulation */}
+            {detail.simulation && (
+              <DetailSection label="🔮 Et si…">
+                <View style={[s.simulationBox, { borderColor: col + '44' }]}>
+                  <Text style={[s.simulationText, { color: col }]}>{detail.simulation}</Text>
+                </View>
+              </DetailSection>
+            )}
+
+            {/* Recommendation */}
+            {detail.recommendation ? (
+              <DetailSection label="💡 Recommandation">
+                <View style={s.recommendationBox}>
+                  <Text style={s.recommendationText}>{detail.recommendation}</Text>
+                </View>
+              </DetailSection>
+            ) : null}
+
+            <View style={{ height: 20 }} />
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 // ── Auto event row ─────────────────────────────────────────────
 
-function AutoRow({ event }: { event: AutoTimelineEvent }) {
+function AutoRow({ event, onPress }: { event: AutoTimelineEvent; onPress: () => void }) {
   const isMeal   = event.type === 'meal';
   const dotSize  = intensityToDotSize(event.intensity);
   const opacity  = intensityToOpacity(event.intensity);
@@ -341,7 +478,7 @@ function AutoRow({ event }: { event: AutoTimelineEvent }) {
   const endTime  = event.durationMin ? addMinutes(event.time, event.durationMin) : null;
 
   return (
-    <View style={[s.row, { opacity }]}>
+    <TouchableOpacity style={[s.row, { opacity }]} onPress={onPress} activeOpacity={0.75}>
       {/* Time column */}
       <View style={s.timeCol}>
         <Text style={[s.timeText, isMeal && s.timeTextMeal]}>{event.time}</Text>
@@ -378,6 +515,9 @@ function AutoRow({ event }: { event: AutoTimelineEvent }) {
               <Text style={s.sublabel}>{event.sublabel}</Text>
             )}
           </View>
+          <View style={s.tapHint}>
+            <Icon name="chevron-right" size={11} color={dotColor + '88'} />
+          </View>
           {event.intensity === 'high' && (
             <View style={[s.intensityBadge, { backgroundColor: dotColor + '22', borderColor: dotColor + '44' }]}>
               <Text style={[s.intensityBadgeText, { color: dotColor }]}>fort</Text>
@@ -385,7 +525,7 @@ function AutoRow({ event }: { event: AutoTimelineEvent }) {
           )}
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -468,6 +608,8 @@ interface PhysioTimelineProps {
   daySummary: DaySummaryLine[];
   date: string;
   isToday: boolean;
+  meals: Meal[];
+  profile: UserProfile;
   onAddEvent: (event: Omit<UserTimelineEvent, 'id' | 'kind'>) => void;
   onDeleteEvent: (id: string) => void;
 }
@@ -486,6 +628,8 @@ export function PhysioTimeline({
   daySummary,
   date,
   isToday,
+  meals,
+  profile,
   onAddEvent,
   onDeleteEvent,
 }: PhysioTimelineProps) {
@@ -494,6 +638,7 @@ export function PhysioTimeline({
     metric: MiniMetric;
     events: AutoTimelineEvent[];
   } | null>(null);
+  const [eventDetail, setEventDetail] = useState<EventDetailData | null>(null);
 
   const currentHHMM = useMemo(() => nowHHMM(), []);
 
@@ -550,7 +695,13 @@ export function PhysioTimeline({
           connectorColor = Colors.signal + '60';
         } else if (event.kind === 'auto') {
           const ae = event as AutoTimelineEvent;
-          row = <AutoRow key={`${ae.type}-${ae.time}-${ae.mealId}`} event={ae} />;
+          row = (
+            <AutoRow
+              key={`${ae.type}-${ae.time}-${ae.mealId}`}
+              event={ae}
+              onPress={() => setEventDetail(buildEventDetail(ae, meals, profile))}
+            />
+          );
           connectorColor = ae.durationMin
             ? CATEGORY_COLOR[ae.category] + '40'
             : Colors.hairline;
@@ -596,6 +747,10 @@ export function PhysioTimeline({
         events={detailMetric?.events ?? []}
         onClose={() => setDetailMetric(null)}
       />
+
+      {eventDetail && (
+        <EventDetailModal detail={eventDetail} onClose={() => setEventDetail(null)} />
+      )}
 
       <QuickAddModal
         visible={modalVisible}
@@ -741,6 +896,153 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: Colors.ink,
     lineHeight: 18,
+  },
+
+  // Event detail modal
+  eventDetailCard: {
+    backgroundColor: Colors.paper,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: 24,
+    paddingHorizontal: 22,
+    paddingBottom: 0,
+    maxHeight: '90%',
+  },
+  eventDetailHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+    gap: 8,
+  },
+  eventDetailTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  eventDetailEmoji: { fontSize: 22 },
+  eventDetailTitle: {
+    fontFamily: Fonts.serif,
+    fontSize: 20,
+    letterSpacing: -0.3,
+    flex: 1,
+  },
+  eventDetailMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  eventDetailTime: {
+    fontFamily: Fonts.mono,
+    fontSize: 11,
+    color: Colors.muted,
+    letterSpacing: 0.5,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  badgeText: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 0.5,
+  },
+  closeBtn: { padding: 4 },
+  eventDetailScroll: { marginTop: 4 },
+  detailSection: {
+    marginBottom: 18,
+  },
+  evDetailLabel: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase' as const,
+    color: Colors.muted,
+    marginBottom: 8,
+  },
+  detailBody: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.ink,
+    lineHeight: 20,
+  },
+  detailDuration: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 12,
+    color: Colors.muted,
+    marginTop: 6,
+  },
+  bulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginBottom: 5,
+  },
+  bulletDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    marginTop: 6,
+    flexShrink: 0,
+  },
+  bulletText: {
+    flex: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.ink,
+    lineHeight: 19,
+  },
+  triggerNote: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    color: Colors.muted,
+    letterSpacing: 0.3,
+    marginTop: 4,
+  },
+  personalizedBox: {
+    borderLeftWidth: 2,
+    paddingLeft: 12,
+    paddingVertical: 8,
+    backgroundColor: Colors.card,
+    borderRadius: 8,
+  },
+  personalizedText: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 13,
+    color: Colors.ink,
+    lineHeight: 19,
+  },
+  simulationBox: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  simulationText: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  recommendationBox: {
+    backgroundColor: Colors.card,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: Colors.hairline2,
+  },
+  recommendationText: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.ink,
+    lineHeight: 20,
+  },
+  tapHint: {
+    alignSelf: 'center',
+    marginLeft: 2,
   },
 
   // Row layout
