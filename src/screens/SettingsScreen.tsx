@@ -4,7 +4,7 @@
  * ou Ollama local avec URL + test de connexion).
  * Import et export JSON de la bibliothèque d'aliments.
  */
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Clipboard from 'expo-clipboard';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -26,6 +27,7 @@ import { Colors, Fonts } from '../theme/tokens';
 import { Food } from '../types';
 import { AIProvider, AppSettings, OpenRouterModel } from '../types/settings';
 import { KEYS, save } from '../storage/store';
+import { aiLogger } from '../services/aiLogger';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const APP_VERSION: string = require('../../package.json').version;
@@ -158,6 +160,22 @@ export function SettingsScreen({
   const [importLoading, setImportLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
+  const [logText, setLogText] = useState(() => aiLogger.export());
+
+  useEffect(() => {
+    const unsub = aiLogger.subscribe(() => setLogText(aiLogger.export()));
+    return unsub;
+  }, []);
+
+  const handleCopyLogs = useCallback(async () => {
+    await Clipboard.setStringAsync(logText);
+    showToast('Logs copiés dans le presse-papier');
+  }, [logText, showToast]);
+
+  const handleClearLogs = useCallback(() => {
+    aiLogger.clear();
+    showToast('Logs effacés');
+  }, []);
 
   const update = (patch: Partial<AppSettings>) =>
     setLocal((s) => {
@@ -471,6 +489,30 @@ export function SettingsScreen({
           </View>
         </Card>
 
+        {/* ── Diagnostic IA ────────────────────────────────────── */}
+        <SectionHeader icon="cpu" label="Diagnostic enrichissement IA" />
+        <Card>
+          <View style={styles.diagHeader}>
+            <Text style={styles.diagHint}>
+              Logs des appels IA — copie et colle dans un chat pour analyser
+            </Text>
+            <View style={styles.diagActions}>
+              <TouchableOpacity style={styles.diagBtn} onPress={handleCopyLogs} activeOpacity={0.7}>
+                <Icon name="upload" size={13} color={Colors.ink} />
+                <Text style={styles.diagBtnText}>Copier</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.diagBtn} onPress={handleClearLogs} activeOpacity={0.7}>
+                <Text style={styles.diagBtnText}>Effacer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.logBox}>
+            <Text style={styles.logText} selectable>
+              {logText}
+            </Text>
+          </View>
+        </Card>
+
         {/* ── Dev / Test ───────────────────────────────────────── */}
         <SectionHeader icon="alert" label="Développement" />
         <Card>
@@ -653,6 +695,59 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.muted,
     marginTop: 1,
+  },
+
+  diagHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline2,
+  },
+  diagHint: {
+    flex: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 11,
+    color: Colors.muted,
+    lineHeight: 15,
+  },
+  diagActions: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  diagBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.paper2,
+  },
+  diagBtnText: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    color: Colors.ink,
+    letterSpacing: 0.5,
+  },
+  logBox: {
+    backgroundColor: '#111',
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    padding: 12,
+    minHeight: 120,
+    maxHeight: 240,
+  },
+  logText: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    color: '#a8e6a3',
+    lineHeight: 16,
+    letterSpacing: 0.2,
   },
 
   aboutRow: {

@@ -2,6 +2,10 @@
 // Runs AI jobs serially (one at a time). Any screen can add jobs;
 // AppShell subscribes and shows the status banner.
 
+import { aiLogger } from './aiLogger';
+
+const JOB_TIMEOUT_MS = 90_000;
+
 export type AIJobStatus = 'pending' | 'running' | 'done' | 'error';
 
 export interface AIJobSnapshot {
@@ -59,18 +63,35 @@ class AIQueueManager {
     const setStep = (step: string) => {
       next.step = step;
       this.notify();
+      aiLogger.step(`[${next.label}] ${step}`);
     };
+
+    aiLogger.info(`Début job : ${next.label}`);
+    const startMs = Date.now();
+
+    const timeoutId = setTimeout(() => {
+      aiLogger.error(`[${next.label}] Timeout après ${JOB_TIMEOUT_MS / 1000}s — annulation automatique`);
+      controller.abort();
+    }, JOB_TIMEOUT_MS);
 
     try {
       await next.execute(controller.signal, setStep);
+      clearTimeout(timeoutId);
+      const elapsed = ((Date.now() - startMs) / 1000).toFixed(1);
       next.status = 'done';
+      aiLogger.info(`Succès job : ${next.label} (${elapsed}s)`);
     } catch (e: unknown) {
+      clearTimeout(timeoutId);
+      const elapsed = ((Date.now() - startMs) / 1000).toFixed(1);
       if ((e as Error)?.name === 'AbortError') {
+        aiLogger.warn(`[${next.label}] Annulé après ${elapsed}s`);
         // Cancelled — remove silently, no error shown
         this.jobs = this.jobs.filter((j) => j.id !== next.id);
       } else {
+        const msg = (e as Error).message ?? 'Erreur inconnue';
+        aiLogger.error(`[${next.label}] Erreur après ${elapsed}s : ${msg}`);
         next.status = 'error';
-        next.error = (e as Error).message ?? 'Erreur inconnue';
+        next.error = msg;
       }
     }
 

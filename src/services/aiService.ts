@@ -5,6 +5,7 @@ import { FodmapPhase } from '../data/fodmapProtocol';
 import { GeneratedMeal, MealGeneratorResult } from '../types/mealGenerator';
 import { SymptomEntry, SYMPTOM_CONFIG } from '../types/symptoms';
 import { LabScores } from '../types/labScores';
+import { aiLogger } from './aiLogger';
 
 const FOOD_SCHEMA = `{
   "id": "slug-unique-001",
@@ -110,25 +111,39 @@ async function callOpenRouter(
   messages: { role: string; content: string }[],
   signal?: AbortSignal,
 ): Promise<string> {
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${settings.apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: settings.model,
-      messages,
-      temperature: 0.2,
-    }),
-    signal,
-  });
+  aiLogger.info(`→ OpenRouter fetch (modèle: ${settings.model})`);
+  const t0 = Date.now();
+  let res: Response;
+  try {
+    res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${settings.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: settings.model,
+        messages,
+        temperature: 0.2,
+      }),
+      signal,
+    });
+  } catch (e: unknown) {
+    const ms = Date.now() - t0;
+    aiLogger.error(`OpenRouter fetch échoué après ${ms}ms : ${(e as Error).message}`);
+    throw e;
+  }
+  const ms = Date.now() - t0;
   if (!res.ok) {
     const body = await res.text();
+    aiLogger.error(`OpenRouter HTTP ${res.status} après ${ms}ms : ${body.slice(0, 300)}`);
     throw new Error(`OpenRouter ${res.status}: ${body.slice(0, 200)}`);
   }
   const json = await res.json();
-  return json.choices?.[0]?.message?.content ?? '';
+  const content: string = json.choices?.[0]?.message?.content ?? '';
+  aiLogger.info(`OpenRouter OK (${ms}ms) — réponse ${content.length} chars`);
+  if (!content) aiLogger.warn('OpenRouter a retourné une réponse vide');
+  return content;
 }
 
 async function callOllama(
@@ -137,21 +152,36 @@ async function callOllama(
   signal?: AbortSignal,
 ): Promise<string> {
   const url = settings.baseUrl.replace(/\/$/, '');
-  const res = await fetch(`${url}/api/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: settings.model,
-      messages,
-      stream: false,
-    }),
-    signal,
-  });
+  aiLogger.info(`→ Ollama fetch (modèle: ${settings.model}, url: ${url})`);
+  const t0 = Date.now();
+  let res: Response;
+  try {
+    res = await fetch(`${url}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: settings.model,
+        messages,
+        stream: false,
+      }),
+      signal,
+    });
+  } catch (e: unknown) {
+    const ms = Date.now() - t0;
+    aiLogger.error(`Ollama fetch échoué après ${ms}ms : ${(e as Error).message}`);
+    throw e;
+  }
+  const ms = Date.now() - t0;
   if (!res.ok) {
-    throw new Error(`Ollama ${res.status}: ${await res.text().then((t) => t.slice(0, 200))}`);
+    const body = await res.text();
+    aiLogger.error(`Ollama HTTP ${res.status} après ${ms}ms : ${body.slice(0, 300)}`);
+    throw new Error(`Ollama ${res.status}: ${body.slice(0, 200)}`);
   }
   const json = await res.json();
-  return json.message?.content ?? '';
+  const content: string = json.message?.content ?? '';
+  aiLogger.info(`Ollama OK (${ms}ms) — réponse ${content.length} chars`);
+  if (!content) aiLogger.warn('Ollama a retourné une réponse vide');
+  return content;
 }
 
 export async function generateFoodWithAI(
