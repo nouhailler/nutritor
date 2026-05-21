@@ -874,8 +874,9 @@ export function DetailScreen({
           </TouchableOpacity>
           <View style={styles.topbarRight}>
             {onEnrichAI && (
-              <TouchableOpacity style={styles.iconBtn} onPress={onEnrichAI} activeOpacity={0.7}>
-                <Icon name="zap" size={20} color={Colors.signal} />
+              <TouchableOpacity style={styles.aiBtn} onPress={onEnrichAI} activeOpacity={0.7}>
+                <Icon name="zap" size={18} color={Colors.signal} />
+                <Text style={styles.aiBtnLabel}>IA</Text>
               </TouchableOpacity>
             )}
             {onEdit && (
@@ -1047,6 +1048,19 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  aiBtn: {
+    width: 40,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+  },
+  aiBtnLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: Colors.signal,
+    letterSpacing: 0.5,
   },
 
   // Hero
