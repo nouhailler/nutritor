@@ -16,12 +16,12 @@ import { Colors, Fonts } from '../theme/tokens';
 const DRAWER_WIDTH = 290;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile';
+type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile' | 'shopping';
 
 interface NavItem {
   id: Tab;
   label: string;
-  icon: 'home' | 'leaf' | 'book' | 'chart' | 'user';
+  icon: 'home' | 'leaf' | 'book' | 'chart' | 'user' | 'shopping-cart';
   description: string;
 }
 

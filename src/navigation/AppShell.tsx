@@ -43,6 +43,9 @@ import { FoodPhotoScreen } from '../screens/FoodPhotoScreen';
 import { FodmapScreen } from '../screens/FodmapScreen';
 import { MealGeneratorScreen } from '../screens/MealGeneratorScreen';
 import { KnowledgeScreen } from '../screens/KnowledgeScreen';
+import { ShoppingAssistantScreen } from '../screens/ShoppingAssistantScreen';
+import { ShoppingScannerScreen } from '../screens/ShoppingScannerScreen';
+import { ScanHistoryEntry } from '../types/shopping';
 import { AppSettings, DEFAULT_SETTINGS } from '../types/settings';
 import { FodmapProtocol, DEFAULT_FODMAP_PROTOCOL } from '../data/fodmapProtocol';
 import { refreshCiqualAllergens } from '../services/ciqual';
@@ -59,15 +62,16 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
-type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile';
-type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'manualFood' | 'editFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge' | null;
+type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile' | 'shopping';
+type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'manualFood' | 'editFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge' | 'shoppingScanner' | null;
 
-const TABS: { id: Tab; label: string; icon: 'home' | 'leaf' | 'book' | 'chart' | 'user' }[] = [
-  { id: 'home',    label: 'Journal',  icon: 'home' },
-  { id: 'foods',   label: 'Aliments', icon: 'leaf' },
-  { id: 'saved',   label: 'Plats',    icon: 'book' },
-  { id: 'stats',   label: 'Stats',    icon: 'chart' },
-  { id: 'profile', label: 'Profil',   icon: 'user' },
+const TABS: { id: Tab; label: string; icon: 'home' | 'leaf' | 'book' | 'chart' | 'user' | 'shopping-cart' }[] = [
+  { id: 'home',     label: 'Journal',  icon: 'home' },
+  { id: 'foods',    label: 'Aliments', icon: 'leaf' },
+  { id: 'saved',    label: 'Plats',    icon: 'book' },
+  { id: 'stats',    label: 'Stats',    icon: 'chart' },
+  { id: 'profile',  label: 'Profil',   icon: 'user' },
+  { id: 'shopping', label: 'Courses',  icon: 'shopping-cart' },
 ];
 
 // ── Toast ─────────────────────────────────────────────────────
@@ -348,6 +352,10 @@ export function AppShell() {
   const [dismissedTips, setDismissedTips] = usePersistedState<Record<string, string[]>>(
     KEYS.dismissedTips,
     {},
+  );
+  const [scanHistory, setScanHistory] = usePersistedState<ScanHistoryEntry[]>(
+    KEYS.scanHistory,
+    [],
   );
   const [viewingDate, setViewingDate] = useState<string | null>(null); // null = today
   const [showDuplicateBanner, setShowDuplicateBanner] = useState(false);
@@ -1086,6 +1094,17 @@ export function AppShell() {
     screen = (
       <KnowledgeScreen onBack={() => setStack(null)} onOpenMenu={openMenu} />
     );
+  } else if (stack === 'shoppingScanner') {
+    screen = (
+      <ShoppingScannerScreen
+        profile={profile}
+        onBack={() => setStack(null)}
+        onScanComplete={(entry) => {
+          setScanHistory((prev) => [entry, ...prev].slice(0, 50));
+          setStack(null);
+        }}
+      />
+    );
   } else if (stack === 'settings') {
     screen = (
       <SettingsScreen
@@ -1215,6 +1234,16 @@ export function AppShell() {
             onOpenFodmap={() => setStack('fodmap')}
             onUpdateMemory={handleUpdateMemory}
             onGenerateLab={handleGenerateLab}
+          />
+        );
+        break;
+      case 'shopping':
+        screen = (
+          <ShoppingAssistantScreen
+            scanHistory={scanHistory}
+            onOpenMenu={() => setDrawerOpen(true)}
+            onOpenScanner={() => setStack('shoppingScanner')}
+            onClearHistory={() => setScanHistory([])}
           />
         );
         break;

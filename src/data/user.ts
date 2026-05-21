@@ -1,3 +1,12 @@
+import {
+  DigestiveSensitivity,
+  DigestiveTolerances,
+  DEFAULT_SENSITIVITIES,
+  DEFAULT_TOLERANCES,
+} from '../types/shopping';
+
+export type { DigestiveSensitivity, DigestiveTolerances };
+
 export interface Vitamin {
   name: string;
   short: string;
@@ -35,6 +44,19 @@ export interface UserProfile {
   activity: string;
   diets: Diet[];
   allergens: AllergenEntry[];
+  // Shopping assistant — optional for backward compat with persisted data
+  digestiveSensitivities?: DigestiveSensitivity[];
+  objectives?: string[];
+  digestiveTolerances?: DigestiveTolerances;
+  pathologies?: string[];
+}
+
+export function getDigestiveSensitivities(profile: UserProfile): DigestiveSensitivity[] {
+  return profile.digestiveSensitivities ?? DEFAULT_SENSITIVITIES;
+}
+
+export function getDigestiveTolerances(profile: UserProfile): DigestiveTolerances {
+  return profile.digestiveTolerances ?? DEFAULT_TOLERANCES;
 }
 
 /** Compute diet summary string from active diets */
@@ -84,6 +106,26 @@ export const DEFAULT_PROFILE: UserProfile = {
     { id: 'vgn', label: 'Vegan',         on: false, rule: '—' },
     { id: 'kt',  label: 'Cétogène',      on: false, rule: '—' },
   ],
+
+  digestiveSensitivities: [
+    { id: 'fructans',   level: 'strong'   },
+    { id: 'polyols',    level: 'moderate' },
+    { id: 'lactose',    level: 'moderate' },
+    { id: 'histamine',  level: 'none'     },
+    { id: 'gluten',     level: 'strong'   },
+    { id: 'caffeine',   level: 'none'     },
+    { id: 'sweeteners', level: 'mild'     },
+    { id: 'fattyFoods', level: 'none'     },
+  ],
+  objectives: ['digestion'],
+  digestiveTolerances: {
+    legumes:     'low',
+    fruits:      'medium',
+    cruciferous: 'medium',
+    alliums:     'low',
+    cereals:     'medium',
+  },
+  pathologies: ['ibs'],
 
   allergens: [
     { name: 'Gluten',           level: 'sévère',  note: 'Maladie cœliaque diagnostiquée 2019' },

@@ -51,7 +51,10 @@ type IconName =
   | 'flag'
   | 'award'
   | 'chevron-down'
-  | 'chevron-up';
+  | 'chevron-up'
+  | 'shopping-cart'
+  | 'heart'
+  | 'x-circle';
 
 const FEATHER_MAP: Record<IconName, keyof typeof Feather.glyphMap> = {
   menu: 'menu',
@@ -103,6 +106,9 @@ const FEATHER_MAP: Record<IconName, keyof typeof Feather.glyphMap> = {
   'award':          'award',
   'chevron-down':   'chevron-down',
   'chevron-up':     'chevron-up',
+  'shopping-cart':  'shopping-cart',
+  'heart':          'heart',
+  'x-circle':       'x-circle',
 };
 
 interface IconProps {

@@ -24,8 +24,20 @@ import {
   Diet,
   UserProfile,
   computeInitial,
+  getDigestiveSensitivities,
+  getDigestiveTolerances,
 } from '../data/user';
 import { Colors, Fonts } from '../theme/tokens';
+import {
+  DigestiveSensitivity,
+  DigestiveTolerances,
+  SensitivityLevel,
+  DigestiveTolerance,
+  SENSITIVITY_DEFINITIONS,
+  OBJECTIVE_DEFINITIONS,
+  TOLERANCE_DEFINITIONS,
+  PATHOLOGY_DEFINITIONS,
+} from '../types/shopping';
 
 // ── Severity cycle ────────────────────────────────────────────
 
@@ -170,6 +182,106 @@ function AllergenEditRow({
   );
 }
 
+// ── Sensitivity row ───────────────────────────────────────────
+
+const SENSITIVITY_LEVELS: { id: SensitivityLevel; label: string }[] = [
+  { id: 'none',     label: 'Aucune' },
+  { id: 'mild',     label: 'Légère' },
+  { id: 'moderate', label: 'Modérée' },
+  { id: 'strong',   label: 'Forte' },
+];
+
+const SENSITIVITY_COLORS: Record<SensitivityLevel, string> = {
+  none:     Colors.muted2,
+  mild:     '#c47d0a',
+  moderate: '#e67e22',
+  strong:   '#c0392b',
+};
+
+function SensitivityRow({
+  sensitivity,
+  onChange,
+}: {
+  sensitivity: DigestiveSensitivity;
+  onChange: (level: SensitivityLevel) => void;
+}) {
+  const def = SENSITIVITY_DEFINITIONS.find((d) => d.id === sensitivity.id);
+  if (!def) return null;
+  return (
+    <View style={epStyles.sensitivityRow}>
+      <Text style={epStyles.sensitivityLabel}>{def.label}</Text>
+      <View style={epStyles.sensitivityPills}>
+        {SENSITIVITY_LEVELS.map(({ id, label }) => {
+          const active = sensitivity.level === id;
+          return (
+            <TouchableOpacity
+              key={id}
+              style={[
+                epStyles.sensePill,
+                active && { backgroundColor: SENSITIVITY_COLORS[id], borderColor: SENSITIVITY_COLORS[id] },
+              ]}
+              onPress={() => onChange(id)}
+              activeOpacity={0.7}
+            >
+              <Text style={[epStyles.sensePillText, active && { color: Colors.paper2 }]}>{label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+// ── Tolerance row ─────────────────────────────────────────────
+
+const TOLERANCE_LEVELS: { id: DigestiveTolerance; label: string }[] = [
+  { id: 'low',    label: 'Faible' },
+  { id: 'medium', label: 'Moyenne' },
+  { id: 'good',   label: 'Bonne' },
+];
+
+const TOLERANCE_COLORS: Record<DigestiveTolerance, string> = {
+  low:    '#c0392b',
+  medium: '#c47d0a',
+  good:   '#2d8a4e',
+};
+
+function ToleranceRow({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: keyof DigestiveTolerances;
+  label: string;
+  value: DigestiveTolerance;
+  onChange: (v: DigestiveTolerance) => void;
+}) {
+  return (
+    <View style={epStyles.sensitivityRow}>
+      <Text style={epStyles.sensitivityLabel}>{label}</Text>
+      <View style={epStyles.sensitivityPills}>
+        {TOLERANCE_LEVELS.map(({ id: tid, label: tLabel }) => {
+          const active = value === tid;
+          return (
+            <TouchableOpacity
+              key={tid}
+              style={[
+                epStyles.sensePill,
+                active && { backgroundColor: TOLERANCE_COLORS[tid], borderColor: TOLERANCE_COLORS[tid] },
+              ]}
+              onPress={() => onChange(tid)}
+              activeOpacity={0.7}
+            >
+              <Text style={[epStyles.sensePillText, active && { color: Colors.paper2 }]}>{tLabel}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 // ── Edit Profile Screen ───────────────────────────────────────
 
 interface EditProfileScreenProps {
@@ -194,6 +306,10 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
   const [fat, setFat] = useState(String(profile.macroTargets.fat));
   const [diets, setDiets] = useState<Diet[]>(profile.diets);
   const [allergens, setAllergens] = useState<AllergenEntry[]>(profile.allergens);
+  const [sensitivities, setSensitivities] = useState<DigestiveSensitivity[]>(getDigestiveSensitivities(profile));
+  const [objectives, setObjectives] = useState<string[]>(profile.objectives ?? []);
+  const [tolerances, setTolerances] = useState<DigestiveTolerances>(getDigestiveTolerances(profile));
+  const [pathologies, setPathologies] = useState<string[]>(profile.pathologies ?? []);
 
   const cycleAllergen = (idx: number) => {
     setAllergens((prev) =>
@@ -253,6 +369,10 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
       },
       diets,
       allergens,
+      digestiveSensitivities: sensitivities,
+      objectives,
+      digestiveTolerances: tolerances,
+      pathologies,
     });
   };
 
@@ -352,6 +472,89 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
                 />
               </View>
             ))}
+          </View>
+
+          {/* ── Sensibilités digestives ── */}
+          <SectionLabel>Sensibilités digestives</SectionLabel>
+          <Text style={styles.sectionDesc}>
+            Indique l'intensité de chaque sensibilité. Utilisé pour personnaliser l'analyse des produits scannés.
+          </Text>
+          <View style={epStyles.sensitivityList}>
+            {sensitivities.map((s) => (
+              <SensitivityRow
+                key={s.id}
+                sensitivity={s}
+                onChange={(level) =>
+                  setSensitivities((prev) => prev.map((x) => x.id === s.id ? { ...x, level } : x))
+                }
+              />
+            ))}
+          </View>
+
+          {/* ── Objectifs santé ── */}
+          <SectionLabel>Objectifs santé</SectionLabel>
+          <View style={epStyles.pillWrap}>
+            {OBJECTIVE_DEFINITIONS.map((obj) => {
+              const active = objectives.includes(obj.id);
+              return (
+                <TouchableOpacity
+                  key={obj.id}
+                  style={[epStyles.tagPill, active && epStyles.tagPillActive]}
+                  onPress={() =>
+                    setObjectives((prev) =>
+                      active ? prev.filter((id) => id !== obj.id) : [...prev, obj.id]
+                    )
+                  }
+                  activeOpacity={0.7}
+                >
+                  <Text style={[epStyles.tagPillText, active && epStyles.tagPillTextActive]}>
+                    {obj.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* ── Tolérances digestives ── */}
+          <SectionLabel>Tolérances digestives</SectionLabel>
+          <Text style={styles.sectionDesc}>
+            Ton niveau de tolérance habituel pour ces familles d'aliments.
+          </Text>
+          <View style={epStyles.sensitivityList}>
+            {TOLERANCE_DEFINITIONS.map((tol) => (
+              <ToleranceRow
+                key={tol.id}
+                id={tol.id}
+                label={tol.label}
+                value={tolerances[tol.id]}
+                onChange={(v) => setTolerances((prev) => ({ ...prev, [tol.id]: v }))}
+              />
+            ))}
+          </View>
+
+          {/* ── Pathologies (optionnel) ── */}
+          <SectionLabel>Pathologies (optionnel)</SectionLabel>
+          <Text style={styles.sectionDesc}>Sélectionne uniquement si diagnostiqué.</Text>
+          <View style={epStyles.pillWrap}>
+            {PATHOLOGY_DEFINITIONS.map((p) => {
+              const active = pathologies.includes(p.id);
+              return (
+                <TouchableOpacity
+                  key={p.id}
+                  style={[epStyles.tagPill, active && epStyles.tagPillActive]}
+                  onPress={() =>
+                    setPathologies((prev) =>
+                      active ? prev.filter((id) => id !== p.id) : [...prev, p.id]
+                    )
+                  }
+                  activeOpacity={0.7}
+                >
+                  <Text style={[epStyles.tagPillText, active && epStyles.tagPillTextActive]}>
+                    {p.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* ── Objectifs caloriques ── */}
@@ -583,3 +786,71 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 });
+
+// ── Sensitivity / tolerance styles (suffix to avoid conflicts) ─
+
+const epStyles = StyleSheet.create({
+  sensitivityList: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.hairline2,
+    marginBottom: 8,
+  },
+  sensitivityRow: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline2,
+    gap: 6,
+  },
+  sensitivityLabel: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 14,
+    color: Colors.ink,
+  },
+  sensitivityPills: {
+    flexDirection: 'row',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  sensePill: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.card,
+  },
+  sensePillText: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: Colors.muted,
+  },
+  pillWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 8,
+  },
+  tagPill: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.card,
+  },
+  tagPillActive: {
+    backgroundColor: Colors.ink,
+    borderColor: Colors.ink,
+  },
+  tagPillText: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.muted,
+  },
+  tagPillTextActive: {
+    color: Colors.paper2,
+  },
+});
+
