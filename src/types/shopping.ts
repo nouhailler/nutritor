@@ -109,4 +109,18 @@ export interface ScanHistoryEntry {
   score: number;
   verdict: 'good' | 'caution' | 'bad';
   barcode: string;
+  issues: CompatibilityIssue[];
+  positives: string[];
+  ultraProcessed: boolean;
+}
+
+export interface ShoppingListItem {
+  id: string;
+  ts: number;
+  productName: string;
+  brand: string;
+  barcode: string;
+  score: number;
+  verdict: 'good' | 'caution' | 'bad';
+  addedToNutritor: boolean;
 }

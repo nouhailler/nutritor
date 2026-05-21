@@ -45,7 +45,8 @@ import { MealGeneratorScreen } from '../screens/MealGeneratorScreen';
 import { KnowledgeScreen } from '../screens/KnowledgeScreen';
 import { ShoppingAssistantScreen } from '../screens/ShoppingAssistantScreen';
 import { ShoppingScannerScreen } from '../screens/ShoppingScannerScreen';
-import { ScanHistoryEntry } from '../types/shopping';
+import { ScanHistoryEntry, ShoppingListItem } from '../types/shopping';
+import { getOFFByBarcode, offProductToFood } from '../services/openFoodFacts';
 import { AppSettings, DEFAULT_SETTINGS } from '../types/settings';
 import { FodmapProtocol, DEFAULT_FODMAP_PROTOCOL } from '../data/fodmapProtocol';
 import { refreshCiqualAllergens } from '../services/ciqual';
@@ -355,6 +356,10 @@ export function AppShell() {
   );
   const [scanHistory, setScanHistory] = usePersistedState<ScanHistoryEntry[]>(
     KEYS.scanHistory,
+    [],
+  );
+  const [shoppingList, setShoppingList] = usePersistedState<ShoppingListItem[]>(
+    KEYS.shoppingList,
     [],
   );
   const [viewingDate, setViewingDate] = useState<string | null>(null); // null = today
@@ -849,6 +854,41 @@ export function AppShell() {
     setTimeout(() => setToast(null), 2600);
   };
 
+  const handleToggleShoppingList = (entry: ScanHistoryEntry) => {
+    setShoppingList((prev) => {
+      const exists = prev.some((i) => i.id === entry.id);
+      if (exists) return prev.filter((i) => i.id !== entry.id);
+      const item: ShoppingListItem = {
+        id: entry.id,
+        ts: entry.ts,
+        productName: entry.productName,
+        brand: entry.brand,
+        barcode: entry.barcode,
+        score: entry.score,
+        verdict: entry.verdict,
+        addedToNutritor: false,
+      };
+      return [item, ...prev];
+    });
+  };
+
+  const handleAddToNutritor = async (item: ShoppingListItem) => {
+    const product = await getOFFByBarcode(item.barcode);
+    if (!product) return;
+    const food = offProductToFood(product);
+    setFoodList((prev) => {
+      if (prev.some((f) => f.id === food.id)) return prev;
+      return [...prev, food];
+    });
+    setShoppingList((prev) =>
+      prev.map((i) => (i.id === item.id ? { ...i, addedToNutritor: true } : i)),
+    );
+  };
+
+  const handleRemoveFromShoppingList = (itemId: string) => {
+    setShoppingList((prev) => prev.filter((i) => i.id !== itemId));
+  };
+
   const handleSaveGeneratedMeal = (meal: GeneratedMeal) => {
     const totalTime = (meal.prepTime ?? 0) + (meal.cookTime ?? 0);
     const plate: SavedPlate = {
@@ -1241,9 +1281,13 @@ export function AppShell() {
         screen = (
           <ShoppingAssistantScreen
             scanHistory={scanHistory}
+            shoppingList={shoppingList}
             onOpenMenu={() => setDrawerOpen(true)}
             onOpenScanner={() => setStack('shoppingScanner')}
             onClearHistory={() => setScanHistory([])}
+            onToggleShoppingList={handleToggleShoppingList}
+            onAddToNutritor={handleAddToNutritor}
+            onRemoveFromShoppingList={handleRemoveFromShoppingList}
           />
         );
         break;

@@ -23,6 +23,7 @@ export const KEYS = {
   recentFoodViews:        'nutritor:recent_food_views',
   dismissedTips:          'nutritor:dismissed_tips',
   scanHistory:            'nutritor:scan_history',
+  shoppingList:           'nutritor:shopping_list',
 };
 
 export async function load<T>(key: string): Promise<T | null> {

@@ -303,6 +303,9 @@ export function ShoppingScannerScreen({ profile, onBack, onScanComplete }: Props
           score: r.score,
           verdict: r.verdict,
           barcode: data,
+          issues: r.issues,
+          positives: r.positives,
+          ultraProcessed: r.ultraProcessed,
         },
         data,
       );
