@@ -27,6 +27,9 @@ import { Food } from '../types';
 import { AIProvider, AppSettings, OpenRouterModel } from '../types/settings';
 import { KEYS, save } from '../storage/store';
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const APP_VERSION: string = require('../../package.json').version;
+
 // ── Section header ─────────────────────────────────────────────
 
 function SectionHeader({ icon, label }: { icon: React.ComponentProps<typeof Icon>['name']; label: string }) {
@@ -454,6 +457,20 @@ export function SettingsScreen({
           />
         </Card>
 
+        {/* ── À propos ─────────────────────────────────────────── */}
+        <SectionHeader icon="info" label="À propos de Nutritor" />
+        <Card>
+          <View style={styles.aboutRow}>
+            <Text style={styles.aboutAppName}>Nutritor</Text>
+            <View style={styles.versionBadge}>
+              <Text style={styles.versionBadgeText}>v{APP_VERSION}</Text>
+            </View>
+          </View>
+          <View style={[styles.row, styles.rowNoBorder]}>
+            <Text style={styles.rowDesc}>Base de données locale · données stockées sur l'appareil</Text>
+          </View>
+        </Card>
+
         {/* ── Dev / Test ───────────────────────────────────────── */}
         <SectionHeader icon="alert" label="Développement" />
         <Card>
@@ -470,8 +487,6 @@ export function SettingsScreen({
             right={<Icon name="layers" size={18} color={Colors.muted} />}
           />
         </Card>
-
-        <Text style={styles.version}>Nutritor · Base de données locale</Text>
       </ScrollView>
     </View>
   );
@@ -640,13 +655,33 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 
-  version: {
+  aboutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 8,
+    gap: 10,
+  },
+  aboutAppName: {
+    fontFamily: Fonts.serif,
+    fontSize: 20,
+    color: Colors.ink,
+    letterSpacing: -0.3,
+    flex: 1,
+  },
+  versionBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 100,
+    backgroundColor: Colors.paper2,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+  },
+  versionBadgeText: {
     fontFamily: Fonts.mono,
-    fontSize: 9,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    color: Colors.muted2,
-    textAlign: 'center',
-    marginTop: 16,
+    fontSize: 12,
+    letterSpacing: 0.5,
+    color: Colors.ink,
   },
 });
