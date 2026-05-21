@@ -50,7 +50,7 @@ import { getOFFByBarcode, offProductToFood } from '../services/openFoodFacts';
 import { AppSettings, DEFAULT_SETTINGS } from '../types/settings';
 import { FodmapProtocol, DEFAULT_FODMAP_PROTOCOL } from '../data/fodmapProtocol';
 import { refreshCiqualAllergens } from '../services/ciqual';
-import { generateMeals, updateDigestiveMemory, DigestiveDayData, generateLabScores } from '../services/aiService';
+import { generateMeals, updateDigestiveMemory, DigestiveDayData, generateLabScores, enrichFoodWithAI, isAIReady } from '../services/aiService';
 import { LabScores } from '../types/labScores';
 import { UserTimelineEvent } from '../types/timeline';
 import { GeneratedMeal, MealGeneratorResult } from '../types/mealGenerator';
@@ -958,6 +958,14 @@ export function AppShell() {
         onBack={() => setStack(detailOrigin ?? null)}
         onAdd={handleAdd}
         onEdit={() => setStack('editFood')}
+        onEnrichAI={isAIReady(settings) ? () => {
+          const food = selectedFood;
+          aiQueue.add(`Enrichissement · ${food.name}`, async (signal, setStep) => {
+            const enriched = await enrichFoodWithAI(food, settings, signal, setStep);
+            setFoodList((prev) => prev.map((f) => (f.id === enriched.id ? enriched : f)));
+            setSelectedFood(enriched);
+          });
+        } : undefined}
         onUpdateFood={(updated) => {
           setFoodList((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
           setSelectedFood(updated);

@@ -818,6 +818,7 @@ interface DetailScreenProps {
   onBack?: () => void;
   onOpenMenu?: () => void;
   onEdit?: () => void;
+  onEnrichAI?: () => void;
   onUpdateFood?: (updated: Food) => void;
   onAdd?: (params: {
     food: Food;
@@ -834,6 +835,7 @@ export function DetailScreen({
   onBack,
   onOpenMenu,
   onEdit,
+  onEnrichAI,
   onUpdateFood,
   onAdd,
 }: DetailScreenProps) {
@@ -871,6 +873,11 @@ export function DetailScreen({
             <Icon name="back" size={22} />
           </TouchableOpacity>
           <View style={styles.topbarRight}>
+            {onEnrichAI && (
+              <TouchableOpacity style={styles.iconBtn} onPress={onEnrichAI} activeOpacity={0.7}>
+                <Icon name="zap" size={20} color={Colors.signal} />
+              </TouchableOpacity>
+            )}
             {onEdit && (
               <TouchableOpacity style={styles.iconBtn} onPress={onEdit} activeOpacity={0.7}>
                 <Icon name="edit" size={20} color={Colors.ink} />
