@@ -1,320 +1,295 @@
-# Nutritor
+<div align="center">
 
-> **Application mobile de suivi nutritionnel** pensée pour les utilisateurs ayant des contraintes alimentaires fortes — allergies, intolérances, régimes Low FODMAP, sans gluten, sans lactose.
+# 🥗 Nutritor
 
-![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Web-lightgrey?style=flat-square)
-![React Native](https://img.shields.io/badge/React%20Native-0.76-61DAFB?style=flat-square&logo=react)
-![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020?style=flat-square&logo=expo)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript)
+### Votre assistant nutritionnel intelligent & digestif
+
+*Comprendre ce que vous mangez. Manger ce qui vous convient.*
+
+[![Platform](https://img.shields.io/badge/📱%20Android%20%7C%20iOS%20%7C%20Web-lightgrey?style=for-the-badge)](.)
+[![Version](https://img.shields.io/badge/version-0.19.0-4CAF50?style=for-the-badge)](.)
+[![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020?style=for-the-badge&logo=expo)](.)
+
+</div>
 
 ---
 
-## Philosophie
+## 🌿 C'est quoi Nutritor ?
 
-Nutritor n'est **pas** une application de comptage de calories pour la perte de poids.
+Nutritor n'est **pas** une appli de régime ou de comptage de calories.
 
-Son objectif est la **transparence totale** sur la composition d'un aliment :
+C'est un **compagnon de connaissance nutritionnelle** — conçu pour les personnes qui veulent comprendre ce qu'elles mangent, gérer des intolérances alimentaires, et décoder les réactions de leur corps.
 
-- Profil d'acides aminés complet
+> *Pour les profils avec SII, FODMAP, sans gluten, sans lactose, ou simplement curieux de leur physiologie digestive.*
+
+---
+
+## 🎯 Pour qui ?
+
+| Profil | Ce que Nutritor apporte |
+|--------|------------------------|
+| 🤕 **Syndrome de l'intestin irritable** | Protocole FODMAP personnel, suivi des réintroductions, détection des aliments déclencheurs |
+| 🌾 **Intolérance au gluten / lactose** | 14 allergènes avec niveaux de sévérité, filtrage en temps réel |
+| 🏃 **Performance sportive** | Fenêtre anabolique sur la timeline, suivi protéines, générateur de repas adapté |
+| 🧬 **Curieux de nutrition** | Encyclopédie de 87 entrées (vitamines, acides aminés, bioactifs), laboratoire nutritionnel IA |
+| 🍽️ **Cuisine du quotidien** | Base CIQUAL 2020 (3 167 aliments), Open Food Facts (3 M+ produits), scanner code-barres |
+
+---
+
+## ✨ Fonctionnalités clés
+
+### 📊 Journal nutritionnel intelligent
+- **5 repas par jour** avec reset quotidien automatique
+- **Anneau kalories** animé avec répartition P/G/L en temps réel
+- **Timeline physiologique interactive** — chaque événement (pic glycémique, digestion lente, fermentation FODMAP…) est cliquable et ouvre une fiche détaillée avec mécanisme, durée, impact et recommandation personnalisée
+- **Avis nutritionnel IA** quotidien — analyse des équilibres P/G/L et conseils en 2–3 phrases
+- **Widget symptômes** — noter fatigue, ballonnements, énergie, transit en quelques secondes
+
+### 🤖 Intelligence artificielle intégrée
+- **Enrichissement de fiches nutritionnelles** — l'IA complète automatiquement acides aminés, FODMAP, vitamines, bioactifs depuis le nom de l'aliment
+- **Générateur de repas** — recettes IA adaptées à votre profil (allergènes, FODMAP, objectifs macro)
+- **Reconnaissance photo** — photographier un aliment pour l'identifier et créer sa fiche
+- **Mémoire digestive** — l'IA croise 21 jours de repas × symptômes pour révéler vos patterns d'intolérance personnels
+- **Laboratoire nutritionnel** — 7 scores experts (ratio ω-3/ω-6, densité micronutritionnelle, score inflammatoire, NOVA…)
+
+### 🔬 Fiches aliments ultra-détaillées
+- Profil d'acides aminés complet (18 acides aminés)
 - Types d'acides gras (saturés, insaturés, oméga-3/6)
-- Vitamines avec rôles physiologiques (13 essentielles)
+- 13 vitamines essentielles avec rôles physiologiques
 - Seuils FODMAP par phase (Monash)
 - Molécules bioactives et action métabolique
 - Profil sensoriel
+- **Bouton ⚡IA** pour enrichir n'importe quelle fiche en un tap
 
-Et plus largement, un compagnon de **connaissance nutritionnelle** :
+### 🛒 Assistant de courses
+- **Scanner de codes-barres** — analyse instantanée de compatibilité personnalisée
+- **Score de compatibilité** (0–100) basé sur vos sensibilités digestives
+- **Liste de courses** — sauvegarder les produits validés, les importer dans votre base Nutritor
+- Détection ultra-transformés, additifs, FODMAP
 
-- Encyclopédie statique hors-ligne de 80 entrées (vitamines, minéraux, acides aminés, bioactifs, concepts digestifs)
-- Protocole FODMAP personnel avec suivi des réintroductions
-- Générateur de repas IA tenant compte du profil complet
-- Corrélations symptômes / alimentation
-
----
-
-## Écrans
-
-| Écran | Accès | Description |
-|-------|-------|-------------|
-| **Journal** | tab `home` | Bilan du jour — anneau kcal SVG, 5 repas, macros, timeline physiologique 📊, vitamines, avis nutritionnel IA, widget symptômes, commentaire libre quotidien |
-| **Aliments** | tab `foods` | Bibliothèque personnelle + accès CIQUAL / OFF / scanner / IA / photo |
-| **Plats** | tab `saved` | Grille 2 colonnes de repas sauvegardés — filtres, tri, création |
-| **Statistiques** | tab `stats` | Bar chart 7 jours, sparklines macros, heatmap conformité régime, corrélations symptômes |
-| **Profil** | tab `profile` | 14 allergènes avec sévérité, 6 régimes actifs, objectif calorique, mémoire digestive IA, laboratoire nutritionnel IA (7 indicateurs) |
-| **Recherche** | stack `search` | Filtres régime, compatibilité allergènes temps réel, récents |
-| **Détail aliment** | stack `detail` | 12 sections — acides aminés, FODMAP, bioactifs, sensoriel, ajout journal |
-| **Détail plat** | stack `savedDetail` | Recette par ingrédient, macros, calcul IA des macros, commentaire IA, photo, ajout au journal |
-| **Créer / éditer plat** | stack `editSavedPlate` | Autocomplete ingrédients, photo galerie/caméra, pairing de plats |
-| **Éditer profil** | stack `editProfile` | Nom, kcal, macros cibles, allergènes, régimes |
-| **Paramètres** | stack `settings` | Config IA (OpenRouter / Ollama), import/export JSON |
-| **Ajouter via IA** | stack `addFood` | Génération d'une fiche aliment par nom libre + accès saisie libre |
-| **Saisie libre** | stack `manualFood` | Création 100 % manuelle — 12 sections, compatibilité temps réel |
-| **Éditer aliment** | stack `editFood` | Correction nom, marque, catégorie, portion, macros de base |
-| **Open Food Facts** | stack `openFoodFacts` | Recherche +3 M produits, scoring de pertinence, chips catégories, enrichissement IA |
-| **CIQUAL** | stack `ciqual` | 3 167 aliments français embarqués, enrichissement IA |
-| **Scanner** | stack `scanner` | Scan EAN-13/8/UPC → Open Food Facts |
-| **Photo IA** | stack `foodPhoto` | Reconnaissance d'aliments par photo (vision IA) |
-| **FODMAP** | stack `fodmap` | Protocole personnel — phase, réintroductions, réactions |
-| **Générateur de repas** | stack `mealGenerator` | Recettes IA profil-aware (allergènes, FODMAP, macros) |
-| **Encyclopédie** | stack `knowledge` | 87 entrées hors-ligne, mode simple / expert, catégorie Laboratoire nutritionnel (7 indicateurs) |
+### 📚 Encyclopédie nutritionnelle hors-ligne
+- 87 entrées : vitamines, minéraux, acides aminés, bioactifs, concepts digestifs
+- Mode **simple** (grand public) et mode **expert** (clinique)
+- **Aucune connexion requise** — 100 % hors-ligne
 
 ---
 
-## Sources de données
+## 📱 Écrans de l'application
 
-| Source | Volume | Intégration |
-|--------|--------|-------------|
-| **CIQUAL 2020** (ANSES) | 3 167 aliments | JSON embarqué, recherche locale |
-| **Open Food Facts** | +3 M produits | API REST, recherche + scan code-barres |
-| **IA (OpenRouter / Ollama)** | Modèles `:free` | Génération structurée (JSON schema) |
-| **Scanner code-barres** | EAN-13/8, UPC | expo-camera + Open Food Facts |
-| **Encyclopédie** | 80 entrées | Statique, 100 % hors-ligne, aucune IA |
+<table>
+<tr>
+<td>
+
+**Onglets principaux**
+- 🏠 **Journal** — bilan du jour
+- 🌿 **Aliments** — bibliothèque personnelle
+- 📖 **Plats** — repas sauvegardés
+- 📊 **Stats** — 7 jours, heatmap, corrélations
+- 👤 **Profil** — allergènes, régimes, mémoire IA
+- 🛒 **Courses** — scanner & liste d'achats
+
+</td>
+<td>
+
+**Fonctions avancées**
+- 🔍 Recherche multi-sources
+- 📷 Photo → aliment (IA vision)
+- 🧬 Protocole FODMAP personnel
+- 🍽️ Générateur de repas IA
+- 📚 Encyclopédie nutritionnelle
+- ⚙️ Config IA (OpenRouter / Ollama)
+
+</td>
+</tr>
+</table>
 
 ---
 
-## Stack technique
+## 🗄️ Sources de données
 
-```
-React Native + Expo SDK 54  (TypeScript, managed workflow)
-├── Navigation     → AppShell custom (tab + stack state, sans React Navigation)
-├── Persistance    → AsyncStorage via usePersistedState<T>
-├── Rendu SVG      → react-native-svg (anneau kcal, sparklines, hachures)
-├── Typographie    → Instrument Serif · Geist · JetBrains Mono
-├── Icônes         → @expo/vector-icons (Feather set)
-├── IA             → OpenRouter API + Ollama (modèles locaux)
-├── Caméra         → expo-camera v17 (CameraView + useCameraPermissions)
-└── Build          → EAS Build (APK Android sans Android Studio)
-```
+| Source | Volume | Usage |
+|--------|--------|-------|
+| 🇫🇷 **CIQUAL 2020** (ANSES) | 3 167 aliments | Base alimentaire française embarquée |
+| 🌍 **Open Food Facts** | +3 millions de produits | Recherche & scan code-barres |
+| 🤖 **IA** (OpenRouter / Ollama) | Modèles `:free` | Génération & enrichissement nutritionnel |
+| 📚 **Encyclopédie** | 87 entrées | Statique, 100 % hors-ligne, sans IA |
 
 ---
 
-## Lancer le projet
+## 🤖 Configurer l'IA
+
+L'IA est **optionnelle** — l'application est pleinement utilisable sans elle. Elle débloque l'enrichissement de fiches, le générateur de repas et la mémoire digestive.
+
+### ☁️ OpenRouter (cloud, recommandé pour débuter)
+1. Créer un compte sur [openrouter.ai](https://openrouter.ai)
+2. Dans l'app : **Paramètres → OpenRouter**
+3. Entrer votre clé API, cliquer **Actualiser** pour charger les modèles gratuits (`:free`)
+4. Sélectionner un modèle et enregistrer
+
+### 🏠 Ollama (local, 100 % privé)
+1. Installer [Ollama](https://ollama.ai) sur votre machine
+2. Lancer un modèle : `ollama run llama3.2`
+3. Dans l'app : **Paramètres → Ollama**, entrer l'URL locale (ex: `http://192.168.1.x:11434`)
+4. Cliquer **Tester la connexion**
+
+> 💡 L'encyclopédie et la base CIQUAL ne requièrent **aucune IA** et fonctionnent entièrement hors-ligne.
+
+---
+
+## 🚀 Lancer le projet (développeurs)
 
 ```bash
-# 1. Installer les dépendances
+# Installer les dépendances
 npm install
 
-# 2. Démarrer en mode développement (Expo Go)
+# Démarrer en mode développement
 npx expo start
 
-# 3. Scanner le QR code avec l'app Expo Go sur Android/iOS
+# Scanner le QR code avec Expo Go sur Android ou iOS
 ```
 
-> **Prérequis** : Node 18+, compte Expo (expo.dev), app Expo Go sur le téléphone.
+> **Prérequis :** Node 18+, compte [expo.dev](https://expo.dev), app Expo Go sur le téléphone.
 
-### Build APK Android (sans Android Studio)
+### 📦 Build APK Android
 
 ```bash
-# Installer EAS CLI
 npm install -g eas-cli
-
-# Connexion à ton compte Expo
 eas login
-
-# Lancer le build cloud
 eas build --platform android --profile preview
 ```
 
-Le build se fait sur les serveurs Expo — aucun outil natif requis en local.
-
 ---
 
-## Structure du projet
+## 🗂️ Architecture technique
 
 ```
-nutritor/
-├── assets/
-│   ├── icon.png                      # Icône app (1024×1024)
-│   ├── adaptive-icon.png             # Icône adaptative Android
-│   └── splash-icon.png               # Écran de démarrage
-├── scripts/
-│   └── gen_icon.py                   # Générateur d'icône (Python + Pillow)
-└── src/
-    ├── theme/tokens.ts               # Design tokens — Colors, Fonts
-    ├── types/
-    │   ├── index.ts                  # Food, Meal, Allergen, Fodmap…
-    │   ├── settings.ts               # AppSettings, AIProvider
-    │   ├── mealGenerator.ts          # GeneratedMeal, MealGeneratorResult
-    │   ├── knowledge.ts              # KnowledgeEntry, KnowledgeCategory, CATEGORY_META
-    │   └── symptoms.ts               # SymptomEntry, SymptomScores
-    ├── hooks/
-    │   └── useDebounce.ts            # Hook debounce générique (300ms)
-    ├── storage/
-    │   ├── store.ts                  # AsyncStorage service (load/save/remove)
-    │   └── usePersistedState.ts      # Hook persistance générique
-    ├── data/
-    │   ├── food.ts                   # Aliment exemple + repas initiaux
-    │   ├── user.ts                   # Profil utilisateur par défaut
-    │   ├── saved.ts                  # Plats sauvegardés (types + données)
-    │   ├── fodmapProtocol.ts         # Types et données protocole FODMAP
-    │   ├── knowledgeBase.ts          # 80 entrées encyclopédie nutritionnelle
-    │   ├── weeklyStats.ts            # JournalEntry, EMPTY_DAY_MEALS, computeDayLog
-    │   └── ciqual.json               # Base CIQUAL 2020 — 3 167 aliments (~1 MB)
-    ├── services/
-    │   ├── aiService.ts              # Génération IA (OpenRouter + Ollama) + generateMeals
-    │   ├── aiQueue.ts                # File d'attente IA avec pattern subscriber
-    │   ├── openFoodFacts.ts          # Client API Open Food Facts
-    │   └── ciqual.ts                 # Recherche et conversion CIQUAL
-    ├── components/
-    │   ├── Icon.tsx                  # Wrapper Feather avec mapping design
-    │   ├── DrawerMenu.tsx            # Menu hamburger animé (slide 300ms)
-    │   ├── AIQueueBanner.tsx         # Bandeau IA fixe, snooze 10 s, bouton "Voir" résultat
-    │   ├── CalendarModal.tsx         # Sélecteur de date (navigation journal)
-    │   ├── CompatibilityBadge.tsx    # Badge / carte compatibilité allergènes
-    │   ├── HelpModal.tsx             # Modales d'aide contextuelles
-    │   ├── PlateFilterSheet.tsx      # Bottom sheet filtres plats sauvegardés
-    │   └── SymptomWidget.tsx         # Widget saisie des symptômes quotidiens
-    ├── navigation/
-    │   └── AppShell.tsx              # Shell principal — navigation + état global
-    └── screens/
-        ├── HomeScreen.tsx            # tab 'home'    — journal du jour
-        ├── FoodListScreen.tsx        # tab 'foods'   — bibliothèque aliments
-        ├── SavedScreen.tsx           # tab 'saved'   — plats sauvegardés
-        ├── StatsScreen.tsx           # tab 'stats'   — statistiques hebdo
-        ├── ProfileScreen.tsx         # tab 'profile' — profil & allergènes
-        ├── SearchScreen.tsx          # stack 'search'
-        ├── DetailScreen.tsx          # stack 'detail'
-        ├── SavedDetailScreen.tsx     # stack 'savedDetail'
-        ├── EditSavedPlateScreen.tsx  # stack 'editSavedPlate'
-        ├── EditProfileScreen.tsx     # stack 'editProfile'
-        ├── SettingsScreen.tsx        # stack 'settings'
-        ├── AddFoodScreen.tsx         # stack 'addFood'
-        ├── ManualFoodScreen.tsx      # stack 'manualFood'
-        ├── EditFoodScreen.tsx        # stack 'editFood'
-        ├── OpenFoodFactsScreen.tsx   # stack 'openFoodFacts'
-        ├── CIQUALScreen.tsx          # stack 'ciqual'
-        ├── BarcodeScannerScreen.tsx  # stack 'scanner'
-        ├── FoodPhotoScreen.tsx       # stack 'foodPhoto'
-        ├── FodmapScreen.tsx          # stack 'fodmap'
-        ├── MealGeneratorScreen.tsx   # stack 'mealGenerator'
-        └── KnowledgeScreen.tsx       # stack 'knowledge'
+React Native + Expo SDK 54  ·  TypeScript strict
+├── Navigation     AppShell custom (tab + stack, sans React Navigation)
+├── Persistance    AsyncStorage via usePersistedState<T>
+├── Rendu SVG      react-native-svg (anneau kcal, sparklines)
+├── Typographie    Instrument Serif · Geist · JetBrains Mono
+├── Icônes         @expo/vector-icons (Feather)
+├── IA             OpenRouter API + Ollama (modèles locaux)
+├── Caméra         expo-camera v17 (scan + photo IA)
+└── Build          EAS Build (APK Android)
 ```
 
----
+### 🎨 Palette de couleurs
 
-## Design system
-
-### Palette
-
-| Token | Hex | Usage |
-|-------|-----|-------|
-| `paper` | `#F2EDE2` | Fond général |
-| `ink` | `#1A1814` | Texte principal, éléments actifs |
-| `ok` | `#3F5A3A` | Compatible, succès, vert |
-| `warn` | `#8B3A2E` | Incompatible, alerte, rouge |
-| `signal` | `#6B5A2E` | CIQUAL, ambre, neutre |
-| `muted` | `#8A8068` | Texte secondaire |
-
-### Typographie
-
-| Variable | Police | Usage |
-|----------|--------|-------|
-| `Fonts.serif` | Instrument Serif | Titres, chiffres clés |
-| `Fonts.sans` | Geist | Corps de texte |
-| `Fonts.sansSemiBold` | Geist 600 | Labels boutons |
-| `Fonts.mono` | JetBrains Mono | Métadonnées, caps, codes |
+| Token | Couleur | Usage |
+|-------|---------|-------|
+| `paper` | `#F2EDE2` 🟤 | Fond général (parchemin chaud) |
+| `ink` | `#1A1814` ⚫ | Texte principal |
+| `ok` | `#3F5A3A` 🟢 | Compatible, succès |
+| `warn` | `#8B3A2E` 🔴 | Incompatible, alerte |
+| `signal` | `#6B5A2E` 🟡 | Ambre, neutre, CIQUAL |
 
 ---
 
-## Configuration IA
+## 📋 Fonctionnalités disponibles
 
-Nutritor supporte deux fournisseurs d'IA pour la génération de fiches nutritionnelles et de repas :
+<details>
+<summary><strong>📊 Journal & suivi quotidien</strong></summary>
 
-### OpenRouter (cloud)
-1. Ouvrir **Paramètres** → sélectionner **OpenRouter**
-2. Entrer ta clé API ([openrouter.ai](https://openrouter.ai))
-3. Cliquer **Actualiser** pour charger les modèles gratuits (`:free`)
-4. Sélectionner un modèle et enregistrer
+- ✅ Journal avec 5 repas et reset quotidien automatique
+- ✅ Duplication automatique de la journée précédente au démarrage
+- ✅ Commentaire libre par journée (2 000 caractères max)
+- ✅ Avis nutritionnel IA quotidien (P/G/L, conseils persistés par date)
+- ✅ Widget symptômes quotidiens (fatigue, ballonnements, énergie…)
+- ✅ Journal historique 365 jours avec navigation par calendrier
+- ✅ Modification des portions dans le journal (+/− 10g, estimation kcal temps réel)
 
-### Ollama (local)
-1. Installer [Ollama](https://ollama.ai) sur ta machine
-2. Lancer un modèle : `ollama run llama3.2`
-3. Dans **Paramètres** → **Ollama**, entrer l'URL (ex: `http://192.168.1.x:11434`)
-4. Cliquer **Tester la connexion**
+</details>
 
-> L'encyclopédie nutritionnelle ne requiert **aucune IA** — elle fonctionne entièrement hors-ligne.
+<details>
+<summary><strong>🤖 Intelligence artificielle</strong></summary>
 
----
+- ✅ Enrichissement IA des fiches aliments (champs manquants uniquement)
+- ✅ Bandeau IA avec messages rotatifs contextuels, décompte en secondes, étapes en temps réel
+- ✅ Timeout automatique 90s + diagnostic des logs d'enrichissement dans Paramètres
+- ✅ Générateur de repas IA profil-aware (allergènes, FODMAP, macros)
+- ✅ Reconnaissance photo d'aliments via IA vision
+- ✅ Mémoire digestive intelligente (21 jours × symptômes → patterns personnalisés)
+- ✅ Laboratoire nutritionnel IA (7 scores experts avec valeur quantitative)
+- ✅ Calcul IA des macros sur les plats sauvegardés
+- ✅ Commentaire IA sur l'équilibre nutritionnel des plats
 
-## Format d'import / export JSON
+</details>
 
-```json
-{
-  "id": "unique-id",
-  "name": "Quinoa rouge bio",
-  "brand": "Mon marché",
-  "category": "Céréales",
-  "unit": "g",
-  "defaultPortion": 80,
-  "per100": {
-    "kcal": 368,
-    "protein": 14.1,
-    "carbs": 64.2,
-    "fat": 6.1
-  },
-  "allergens": [],
-  "compat": []
-}
-```
+<details>
+<summary><strong>🛒 Assistant de courses</strong></summary>
 
----
+- ✅ Scanner code-barres (EAN-13, EAN-8, UPC) avec analyse de compatibilité instantanée
+- ✅ Score de compatibilité 0–100 basé sur les sensibilités digestives du profil
+- ✅ Fiche produit : verdict, problèmes, points positifs, badge ultra-transformé
+- ✅ Historique des scans avec filtres par verdict (compatible / à vérifier / déconseillé)
+- ✅ Liste de courses : sauvegarde des produits validés, import dans la base Nutritor
 
-## Fonctionnalités implémentées
+</details>
 
-- [x] Journal nutritionnel avec 5 repas et reset quotidien automatique
-- [x] **Duplication automatique de la journée précédente** au démarrage si des repas existaient, avec bandeau de confirmation 4 s
-- [x] **Commentaire libre par journée** — zone texte max 2 000 caractères sous le widget Bien-être, sauvegardée par date
-- [x] **Avis Nutritionnel IA dans le Journal** — analyse des répartitions P/G/L (% énergétiques), commentaire en 2–3 phrases persisté par date, régénérable à volonté
-- [x] **Mémoire digestive intelligente** — section dans le Profil : l'IA croise 21 jours de repas × symptômes pour générer jusqu'à 30 observations cliniques personnalisées (patterns de tolérance/intolérance, associations alimentaires, effets de la cuisson…). Cumulative et auto-affinée à chaque analyse.
-- [x] **Laboratoire nutritionnel** — 7 entrées expertes dans l'Encyclopédie (Ratio ω-3/ω-6, Densité micronutritionnelle, Score inflammatoire, Diversité, NOVA, Charge FODMAP, Équilibre acides aminés) + évaluation IA de la journée dans le Profil (7 scores avec status ok/moyen/à corriger, valeur quantitative et observation clinique)
-- [x] **Calcul IA des macros sur les plats** — bouton « Calculer IA » estime kcal + P/G/L de chaque ingrédient depuis son nom et sa quantité
-- [x] **Commentaire IA sur les plats** — analyse de l'équilibre nutritionnel (trop glucidique ? trop lipidique ? bien équilibré ?)
-- [x] **Barre macros P/G/L sur les cartes de plats** — micro-barre colorée proportionnelle visible dès que les macros sont renseignées
-- [x] Persistance locale (AsyncStorage) — profil, aliments, repas, plats, journal, symptômes, commentaires
-- [x] Recherche avec debounce 300ms, filtres de compatibilité et section **Récemment ajoutés** dynamique (aliments récents en premier, sans doublon)
-- [x] Base CIQUAL 2020 embarquée (3 167 aliments français)
-- [x] Open Food Facts — recherche avec **scoring de pertinence** (exact > marque > préfixe > inclusion) et import
-- [x] Scanner code-barres (EAN-13, EAN-8, UPC)
-- [x] **Saisie libre d'aliment** (`ManualFoodScreen`) — création manuelle complète sans IA : sections 01-06 (infos, macros, protéines, glucides, lipides, micronutriments), 10 (sensoriel), 11 (allergènes, grille 14 standards avec cycle 3 états), 12 (composition). Compatibilité personnalisée calculée en temps réel ; affiche "Données manquantes" si aucun macro n'est renseigné.
-- [x] Génération IA de fiches nutritionnelles (OpenRouter + Ollama) avec **robustesse aux données mal formées**
-- [x] **Bannière IA — Messages rotatifs** : pendant l'attente de la réponse IA, le bandeau affiche des messages contextuels cyclant toutes les 8 s (macros, FODMAP, vitamines, allergènes…). Pour l'enrichissement, les messages reflètent exactement les champs manquants calculés (ex: "FODMAP — données Monash…", "Minéraux (Mg, Ca, Fe…)…").
-- [x] **Bannière IA** avec bouton "Voir" pour ouvrir la fiche enrichie, bouton "Annuler" pour interrompre, décompte en secondes et étapes en temps réel
-- [x] **Import rapide depuis le Journal** : après import CIQUAL / OFF / Scanner, le retour ouvre directement la fiche détail de l'aliment importé pour un ajout immédiat au repas (sans passer par l'onglet Aliments)
-- [x] **Journal — Modifier les proportions** : icône crayon sur chaque ligne d'aliment (aliments ajoutés depuis la version 0.12) — modal +/− par 10 g avec estimation kcal temps réel et recalcul complet des macros
-- [x] **Journal — Timeline mini-métriques cliquables** : Énergie / Digestion / FODMAP / Glycémie ouvrent un modal de détail avec événements, intensités et conseils contextuels
-- [x] **Fiche aliment — Éditer** : icône crayon en haut à droite ouvre `EditFoodScreen` pour corriger nom, marque, catégorie, portion et valeurs nutritionnelles de base
-- [x] Enrichissement IA des fiches CIQUAL / Open Food Facts (champs manquants uniquement)
-- [x] Générateur de repas IA profil-aware (allergènes, FODMAP, macros)
-- [x] Reconnaissance photo d'aliments via IA vision
-- [x] Encyclopédie nutritionnelle statique hors-ligne (80 entrées, mode simple/expert)
-- [x] Protocole FODMAP personnel (phases, réintroductions, réactions)
-- [x] Journal historique (365 jours) avec calendrier de navigation
-- [x] Widget symptômes quotidiens + corrélations alimentation
-- [x] Statistiques hebdomadaires (bar chart, sparklines, heatmap) avec documentation contextuelle complète
-- [x] Paramètres — config IA, import/export JSON
-- [x] Création et édition de plats sauvegardés (photo, autocomplete, pairing)
-- [x] Menu drawer animé avec accès IA et encyclopédie
-- [x] Animations de transition (fade-enter 350ms)
-- [x] Profil allergènes (14) et régimes (6) avec niveaux de sévérité
-- [x] Icône app personnalisée (Instrument Serif + feuille verte)
+<details>
+<summary><strong>🌿 Aliments & base de données</strong></summary>
 
-## Prochaines étapes
+- ✅ Bibliothèque personnelle + accès CIQUAL / Open Food Facts / scanner / IA / photo
+- ✅ Base CIQUAL 2020 embarquée (3 167 aliments français)
+- ✅ Open Food Facts avec scoring de pertinence (exact > marque > préfixe)
+- ✅ Saisie libre d'aliment (création manuelle complète sans IA)
+- ✅ Bouton ⚡IA dans la fiche aliment pour enrichissement à la demande
+- ✅ Import rapide depuis le journal (retour direct sur la fiche détail)
 
-- [ ] Thème dark / thème sage
-- [ ] Notifications de rappels de repas
-- [ ] Synchronisation cloud / export complet
-- [ ] Build iOS (TestFlight)
-- [ ] Données Monash FODMAP officielles (licence commerciale)
-- [ ] Retirer les `console.log` de débogage avant la production
+</details>
+
+<details>
+<summary><strong>📊 Timeline physiologique interactive</strong></summary>
+
+- ✅ Événements auto-calculés : pic glycémique, digestion lipidique, fermentation FODMAP, caféine, vigilance, satiété, creux post-prandial, fenêtre anabolique
+- ✅ Tap sur chaque événement → fiche détaillée (mécanisme, durée, impact, données utilisées)
+- ✅ Personnalisation : note adaptée selon le profil (SII, sensibilités, objectifs)
+- ✅ Section "Et si…" — simulation nutritionnelle
+- ✅ Mini-métriques cliquables : Énergie / Digestion / FODMAP / Glycémie
+- ✅ Saisie de ressentis utilisateur (symptômes horodatés)
+
+</details>
+
+<details>
+<summary><strong>👤 Profil & santé digestive</strong></summary>
+
+- ✅ 14 allergènes avec 4 niveaux de sévérité
+- ✅ Sensibilités digestives (fructanes, polyols, lactose, histamine, gluten, caféine…)
+- ✅ Objectifs santé (digestion, énergie, glycémie, sport, anti-inflammatoire)
+- ✅ Tolérances alimentaires (légumineuses, crucifères, alliacées…)
+- ✅ Pathologies (SII, reflux, Crohn, RCH, migraine alimentaire)
+- ✅ Protocole FODMAP personnel (phases, réintroductions, réactions)
+
+</details>
 
 ---
 
-## Sources & Licences
+## 🗺️ Prochaines étapes
+
+- [ ] 🌙 Thème sombre
+- [ ] 🔔 Rappels de repas (notifications)
+- [ ] ☁️ Synchronisation cloud
+- [ ] 🍎 Build iOS (TestFlight)
+- [ ] 🌿 Données Monash FODMAP officielles
+
+---
+
+## 📜 Sources & licences
 
 | Donnée | Source | Licence |
 |--------|--------|---------|
-| Composition nutritionnelle FR | [CIQUAL — ANSES](https://ciqual.anses.fr/) | Open data |
-| Codes-barres & produits | [Open Food Facts](https://world.openfoodfacts.org/) | ODbL |
-| Seuils FODMAP | [Monash University](https://www.monashfodmap.com/) | Licence commerciale |
-| ANR vitamines & minéraux | EFSA / ANSES | Réglementation UE |
+| 🇫🇷 Composition nutritionnelle | [CIQUAL — ANSES](https://ciqual.anses.fr/) | Open data |
+| 🌍 Codes-barres & produits | [Open Food Facts](https://world.openfoodfacts.org/) | ODbL |
+| 🌿 Seuils FODMAP | [Monash University](https://www.monashfodmap.com/) | Licence commerciale |
+| 🧪 ANR vitamines & minéraux | EFSA / ANSES | Réglementation UE |
 
-> Les valeurs nutritionnelles sont **indicatives à des fins de prototype**.
+> Les valeurs nutritionnelles sont **indicatives à des fins de prototype**. Consultez un professionnel de santé pour tout suivi médical.
+
+---
+
+<div align="center">
+
+*Fait avec 🌿 pour les estomacs sensibles*
+
+</div>
