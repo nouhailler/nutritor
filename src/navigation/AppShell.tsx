@@ -1040,6 +1040,7 @@ export function AppShell() {
         }}
         onBack={handleImportScreenBack}
         onOpenMenu={openMenu}
+        onStartDemo={() => setDemoScenario('ciqual')}
       />
     );
   } else if (stack === 'openFoodFacts') {

@@ -131,9 +131,10 @@ interface Props {
   onOpenMenu: () => void;
   settings?: AppSettings;
   initialQuery?: string;
+  onStartDemo?: () => void;
 }
 
-export function CIQUALScreen({ existingIds, onImport, onUpdateFood, onBack, onOpenMenu, settings, initialQuery = '' }: Props) {
+export function CIQUALScreen({ existingIds, onImport, onUpdateFood, onBack, onOpenMenu, settings, initialQuery = '', onStartDemo }: Props) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
 
@@ -190,6 +191,11 @@ export function CIQUALScreen({ existingIds, onImport, onUpdateFood, onBack, onOp
         <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
           <Icon name="menu" size={22} color={Colors.ink} />
         </TouchableOpacity>
+        {onStartDemo && (
+          <TouchableOpacity style={styles.iconBtn} onPress={onStartDemo} activeOpacity={0.7}>
+            <Icon name="activity" size={17} color={Colors.signal} />
+          </TouchableOpacity>
+        )}
         <HelpButton onPress={() => setHelpVisible(true)} />
       </View>
       <HelpModal visible={helpVisible} content={HELP.ciqual} onClose={() => setHelpVisible(false)} />
