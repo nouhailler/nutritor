@@ -1022,6 +1022,7 @@ export function AppShell() {
         }}
         onBack={handleImportScreenBack}
         onOpenMenu={openMenu}
+        onStartDemo={() => setDemoScenario('scanner')}
       />
     );
   } else if (stack === 'ciqual') {

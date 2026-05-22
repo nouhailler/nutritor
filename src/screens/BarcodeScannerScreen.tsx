@@ -213,9 +213,10 @@ interface Props {
   onImport: (food: Food) => void;
   onBack: () => void;
   onOpenMenu: () => void;
+  onStartDemo?: () => void;
 }
 
-export function BarcodeScannerScreen({ existingIds, onImport, onBack, onOpenMenu }: Props) {
+export function BarcodeScannerScreen({ existingIds, onImport, onBack, onOpenMenu, onStartDemo }: Props) {
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [phase, setPhase] = useState<Phase>('scanning');
@@ -310,6 +311,11 @@ export function BarcodeScannerScreen({ existingIds, onImport, onBack, onOpenMenu
         <TouchableOpacity style={styles.backBtn} onPress={onOpenMenu} activeOpacity={0.7}>
           <Icon name="menu" size={22} color={Colors.paper2} />
         </TouchableOpacity>
+        {onStartDemo && (
+          <TouchableOpacity style={styles.backBtn} onPress={onStartDemo} activeOpacity={0.7}>
+            <Icon name="activity" size={18} color={Colors.signal} />
+          </TouchableOpacity>
+        )}
         <HelpButton onPress={() => setHelpVisible(true)} />
       </View>
       <HelpModal visible={helpVisible} content={HELP.scanner} onClose={() => setHelpVisible(false)} />
