@@ -372,6 +372,7 @@ interface Props {
   onToggleShoppingList: (entry: ScanHistoryEntry) => void;
   onAddToNutritor: (item: ShoppingListItem) => Promise<void>;
   onRemoveFromShoppingList: (itemId: string) => void;
+  onStartDemo?: () => void;
 }
 
 export function ShoppingAssistantScreen({
@@ -383,6 +384,7 @@ export function ShoppingAssistantScreen({
   onToggleShoppingList,
   onAddToNutritor,
   onRemoveFromShoppingList,
+  onStartDemo,
 }: Props) {
   const insets = useSafeAreaInsets();
   const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>(null);
@@ -410,9 +412,16 @@ export function ShoppingAssistantScreen({
           <Text style={styles.eyebrow}>Assistant</Text>
           <Text style={styles.title}>Courses</Text>
         </View>
-        <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
-          <Icon name="menu" size={22} color={Colors.ink} />
-        </TouchableOpacity>
+        <View style={styles.topbarActions}>
+          {onStartDemo && (
+            <TouchableOpacity style={styles.iconBtnSignal} onPress={onStartDemo} activeOpacity={0.7}>
+              <Icon name="activity" size={18} color={Colors.signal} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+            <Icon name="menu" size={22} color={Colors.ink} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
@@ -525,7 +534,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12,
     justifyContent: 'space-between',
   },
+  topbarActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  iconBtnSignal: {
+    width: 40, height: 40, borderRadius: 20,
+    borderWidth: 1, borderColor: Colors.signal + '55',
+    backgroundColor: Colors.signal + '12',
+    alignItems: 'center', justifyContent: 'center',
+  },
   eyebrow: {
     fontFamily: Fonts.mono, fontSize: 9,
     letterSpacing: 2, textTransform: 'uppercase', color: Colors.muted,

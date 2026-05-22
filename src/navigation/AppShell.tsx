@@ -1307,6 +1307,7 @@ export function AppShell() {
             onToggleShoppingList={handleToggleShoppingList}
             onAddToNutritor={handleAddToNutritor}
             onRemoveFromShoppingList={handleRemoveFromShoppingList}
+            onStartDemo={() => setDemoScenario('shopping')}
           />
         );
         break;
