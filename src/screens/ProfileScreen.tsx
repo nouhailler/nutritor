@@ -79,6 +79,7 @@ interface ProfileScreenProps {
   onOpenFodmap: () => void;
   onUpdateMemory: () => void;
   onGenerateLab: () => void;
+  onStartDemo?: () => void;
 }
 
 export function ProfileScreen({
@@ -97,6 +98,7 @@ export function ProfileScreen({
   onOpenFodmap,
   onUpdateMemory,
   onGenerateLab,
+  onStartDemo,
 }: ProfileScreenProps) {
   const insets = useSafeAreaInsets();
   const [helpVisible, setHelpVisible] = useState(false);
@@ -115,6 +117,11 @@ export function ProfileScreen({
             <Icon name="menu" size={22} />
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
+          {onStartDemo && (
+            <TouchableOpacity style={styles.iconBtnSignal} onPress={onStartDemo} activeOpacity={0.7}>
+              <Icon name="activity" size={18} color={Colors.signal} />
+            </TouchableOpacity>
+          )}
           <HelpButton onPress={() => setHelpVisible(true)} />
           <TouchableOpacity style={styles.iconBtn} onPress={onEdit} activeOpacity={0.7}>
             <Icon name="sliders" size={20} />
@@ -380,6 +387,15 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 40, height: 40,
     borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBtnSignal: {
+    width: 40, height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.signal + '55',
+    backgroundColor: Colors.signal + '12',
     alignItems: 'center',
     justifyContent: 'center',
   },

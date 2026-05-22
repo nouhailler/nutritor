@@ -1292,6 +1292,7 @@ export function AppShell() {
             onOpenFodmap={() => setStack('fodmap')}
             onUpdateMemory={handleUpdateMemory}
             onGenerateLab={handleGenerateLab}
+            onStartDemo={() => setDemoScenario('profile')}
           />
         );
         break;
