@@ -58,6 +58,7 @@ import { JournalEntry, EMPTY_DAY_MEALS, computeDayLog } from '../data/weeklyStat
 import { SymptomEntry, SymptomScores } from '../types/symptoms';
 import { computeDayTips } from '../services/tipsEngine';
 import { DayTip } from '../types/tips';
+import { DemoOverlay, DemoScenario } from '../components/DemoOverlay';
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -257,6 +258,7 @@ export function AppShell() {
   // ── All hooks must be declared before any conditional return ──
   const [tab, setTab] = useState<Tab>('home');
   const [stack, setStack] = useState<StackScreen>(null);
+  const [demoScenario, setDemoScenario] = useState<DemoScenario | null>(null);
   const [selectedFood, setSelectedFood] = useState<Food>(DETAIL_FOOD);
   const [toast, setToast] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -1057,6 +1059,7 @@ export function AppShell() {
         }}
         onBack={handleImportScreenBack}
         onOpenMenu={openMenu}
+        onStartDemo={() => setDemoScenario('off')}
       />
     );
   } else if (stack === 'addFood') {
@@ -1197,6 +1200,7 @@ export function AppShell() {
             onOpenMenu={() => setDrawerOpen(true)}
             onOpenSearch={openSearch}
             onOpenFoods={() => showTab('foods')}
+            onStartDemo={() => setDemoScenario('home')}
             dayTips={dayTips}
             dismissedTipIds={dismissedTips[effectiveDate] ?? []}
             onDismissTip={(id) =>
@@ -1232,6 +1236,7 @@ export function AppShell() {
             onOpenCIQUAL={(q) => { setPendingQuery(q); setLastImportedFood(null); setImportScreenOrigin(null); setStack('ciqual'); }}
             onOpenScanner={() => { setLastImportedFood(null); setImportScreenOrigin(null); setStack('scanner'); }}
             onOpenPhotoAI={() => setStack('foodPhoto')}
+            onStartDemo={() => setDemoScenario('foods')}
           />
         );
         break;
@@ -1372,6 +1377,7 @@ export function AppShell() {
           setOnboardingDone(true);
         }}
       />
+      <DemoOverlay scenario={demoScenario} onClose={() => setDemoScenario(null)} />
     </View>
   );
 }

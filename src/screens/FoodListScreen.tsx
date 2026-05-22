@@ -401,6 +401,7 @@ interface Props {
   onOpenCIQUAL: (query: string) => void;
   onOpenScanner: () => void;
   onOpenPhotoAI: () => void;
+  onStartDemo:   () => void;
 }
 
 export function FoodListScreen({
@@ -420,6 +421,7 @@ export function FoodListScreen({
   onOpenCIQUAL,
   onOpenScanner,
   onOpenPhotoAI,
+  onStartDemo,
 }: Props) {
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
@@ -508,6 +510,9 @@ export function FoodListScreen({
         <View style={styles.countBadge}>
           <Text style={styles.countBadgeText}>{foodList.length}</Text>
         </View>
+        <TouchableOpacity style={styles.iconBtn} onPress={onStartDemo} activeOpacity={0.7}>
+          <Icon name="activity" size={17} color={Colors.signal} />
+        </TouchableOpacity>
       </View>
 
       {/* Search input */}

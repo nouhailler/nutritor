@@ -441,6 +441,7 @@ interface HomeScreenProps {
   onOpenMenu: () => void;
   onOpenSearch: () => void;
   onOpenFoods: () => void;
+  onStartDemo: () => void;
   dayTips: DayTip[];
   dismissedTipIds: string[];
   onDismissTip: (id: string) => void;
@@ -467,6 +468,7 @@ export function HomeScreen({
   onOpenMenu,
   onOpenSearch,
   onOpenFoods,
+  onStartDemo,
   dayTips,
   dismissedTipIds,
   onDismissTip,
@@ -561,10 +563,15 @@ export function HomeScreen({
           <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
             <Icon name="menu" size={22} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => setCalendarVisible(true)} activeOpacity={0.7}>
-            <Icon name="calendar" size={18} color={!isToday ? Colors.signal : Colors.ink} />
-          </TouchableOpacity>
-          <HelpButton onPress={() => setHelpVisible(true)} />
+          <View style={styles.topbarRight}>
+            <TouchableOpacity style={styles.iconBtn} onPress={onStartDemo} activeOpacity={0.7}>
+              <Icon name="activity" size={17} color={Colors.signal} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconBtn} onPress={() => setCalendarVisible(true)} activeOpacity={0.7}>
+              <Icon name="calendar" size={18} color={!isToday ? Colors.signal : Colors.ink} />
+            </TouchableOpacity>
+            <HelpButton onPress={() => setHelpVisible(true)} />
+          </View>
         </View>
         <HelpModal visible={helpVisible} content={HELP.home} onClose={() => setHelpVisible(false)} />
         <CalendarModal
@@ -828,6 +835,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 6,
     paddingBottom: 14,
+  },
+  topbarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   iconBtn: {
     width: 40, height: 40,
