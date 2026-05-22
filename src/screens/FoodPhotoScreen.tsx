@@ -152,9 +152,10 @@ interface Props {
   onImport: (food: Food) => void;
   onBack: () => void;
   onOpenMenu: () => void;
+  onStartDemo?: () => void;
 }
 
-export function FoodPhotoScreen({ existingIds, settings, onImport, onBack, onOpenMenu }: Props) {
+export function FoodPhotoScreen({ existingIds, settings, onImport, onBack, onOpenMenu, onStartDemo }: Props) {
   const insets = useSafeAreaInsets();
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [photoAspect, setPhotoAspect] = useState<number>(4 / 3);
@@ -235,6 +236,11 @@ export function FoodPhotoScreen({ existingIds, settings, onImport, onBack, onOpe
         <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
             <Icon name="menu" size={22} color={Colors.ink} />
           </TouchableOpacity>
+          {onStartDemo && (
+            <TouchableOpacity style={styles.iconBtn} onPress={onStartDemo} activeOpacity={0.7}>
+              <Icon name="activity" size={18} color={Colors.signal} />
+            </TouchableOpacity>
+          )}
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>

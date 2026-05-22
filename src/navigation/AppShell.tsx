@@ -1102,6 +1102,7 @@ export function AppShell() {
         }}
         onBack={() => setStack('search')}
         onOpenMenu={openMenu}
+        onStartDemo={() => setDemoScenario('photo')}
       />
     );
   } else if (stack === 'editSavedPlate') {
