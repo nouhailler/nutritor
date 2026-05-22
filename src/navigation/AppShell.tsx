@@ -1142,6 +1142,7 @@ export function AppShell() {
           }
         }}
         onOpenMenu={openMenu}
+        onStartDemo={() => setDemoScenario('mealGenerator')}
       />
     );
   } else if (stack === 'knowledge') {

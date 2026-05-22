@@ -8,9 +8,10 @@ import { DemoFoodPhoto } from './demo/DemoFoodPhoto';
 import { DemoSaved }     from './demo/DemoSaved';
 import { DemoStats }     from './demo/DemoStats';
 import { DemoProfile }   from './demo/DemoProfile';
-import { DemoShopping }  from './demo/DemoShopping';
+import { DemoShopping }       from './demo/DemoShopping';
+import { DemoMealGenerator }  from './demo/DemoMealGenerator';
 
-export type DemoScenario = 'home' | 'foods' | 'off' | 'ciqual' | 'scanner' | 'photo' | 'saved' | 'stats' | 'profile' | 'shopping';
+export type DemoScenario = 'home' | 'foods' | 'off' | 'ciqual' | 'scanner' | 'photo' | 'saved' | 'stats' | 'profile' | 'shopping' | 'mealGenerator';
 
 interface Props {
   scenario: DemoScenario | null;
@@ -29,7 +30,8 @@ export function DemoOverlay({ scenario, onClose }: Props) {
       <DemoSaved     visible={scenario === 'saved'}   onClose={onClose} />
       <DemoStats     visible={scenario === 'stats'}   onClose={onClose} />
       <DemoProfile   visible={scenario === 'profile'}  onClose={onClose} />
-      <DemoShopping  visible={scenario === 'shopping'} onClose={onClose} />
+      <DemoShopping      visible={scenario === 'shopping'}      onClose={onClose} />
+      <DemoMealGenerator visible={scenario === 'mealGenerator'} onClose={onClose} />
     </>
   );
 }
