@@ -1257,6 +1257,7 @@ export function AppShell() {
               setStack('editSavedPlate');
             }}
             onOpenMenu={() => setDrawerOpen(true)}
+            onStartDemo={() => setDemoScenario('saved')}
           />
         );
         break;

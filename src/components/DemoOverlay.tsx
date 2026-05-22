@@ -5,8 +5,9 @@ import { DemoOFF }       from './demo/DemoOFF';
 import { DemoCIQUAL }    from './demo/DemoCIQUAL';
 import { DemoScanner }   from './demo/DemoScanner';
 import { DemoFoodPhoto } from './demo/DemoFoodPhoto';
+import { DemoSaved }     from './demo/DemoSaved';
 
-export type DemoScenario = 'home' | 'foods' | 'off' | 'ciqual' | 'scanner' | 'photo';
+export type DemoScenario = 'home' | 'foods' | 'off' | 'ciqual' | 'scanner' | 'photo' | 'saved';
 
 interface Props {
   scenario: DemoScenario | null;
@@ -22,6 +23,7 @@ export function DemoOverlay({ scenario, onClose }: Props) {
       <DemoCIQUAL    visible={scenario === 'ciqual'}  onClose={onClose} />
       <DemoScanner   visible={scenario === 'scanner'} onClose={onClose} />
       <DemoFoodPhoto visible={scenario === 'photo'}   onClose={onClose} />
+      <DemoSaved     visible={scenario === 'saved'}   onClose={onClose} />
     </>
   );
 }

@@ -111,9 +111,10 @@ interface SavedScreenProps {
   onCreatePlate: () => void;
   onEditPlate: (plate: SavedPlate) => void;
   onOpenMenu: () => void;
+  onStartDemo?: () => void;
 }
 
-export function SavedScreen({ plates, onOpenPlate, onCreatePlate, onEditPlate, onOpenMenu }: SavedScreenProps) {
+export function SavedScreen({ plates, onOpenPlate, onCreatePlate, onEditPlate, onOpenMenu, onStartDemo }: SavedScreenProps) {
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<PlateFilterState>(DEFAULT_FILTER);
   const [filterVisible, setFilterVisible] = useState(false);
@@ -141,6 +142,11 @@ export function SavedScreen({ plates, onOpenPlate, onCreatePlate, onEditPlate, o
         <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={onCreatePlate}>
           <Icon name="plus" size={20} color={Colors.ink} />
         </TouchableOpacity>
+        {onStartDemo && (
+          <TouchableOpacity style={styles.iconBtn} onPress={onStartDemo} activeOpacity={0.7}>
+            <Icon name="activity" size={18} color={Colors.signal} />
+          </TouchableOpacity>
+        )}
         <HelpButton onPress={() => setHelpVisible(true)} />
       </View>
       <HelpModal visible={helpVisible} content={HELP.saved} onClose={() => setHelpVisible(false)} />
