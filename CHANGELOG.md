@@ -9,6 +9,135 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [0.26.0] — 2026-05-22
+
+### Ajouté
+- **Démo interactive — Générateur de repas** (`DemoMealGenerator`) : 3 phases, ~18 s/boucle
+  - Phase `input` : champ de requête avec placeholder animé, chips de suggestions profil-aware, bouton Générer
+  - Phase `result` : 3 cartes collapsées (Buddha Bowl 🥗, Saumon 🐟, Porridge 🌾) avec kcal, tags régime et badge Low FODMAP
+  - Phase `detail` : Buddha Bowl expandé — pills macros P/C/L/F, ingrédients avec notes FODMAP (✓ / ⚠ max), 3 micronutriments, score anti-inflammatoire 78/100, explication "pourquoi c'est adapté", bouton Sauvegarder avec état saved
+- Bouton `iconBtnSignal` dans la topbar de `MealGeneratorScreen` → déclenche la démo
+
+---
+
+## [0.25.0] — 2026-05-22
+
+### Ajouté
+- **Démo interactive — Assistant de courses** (`DemoShopping`) : 3 phases, ~16 s/boucle
+  - Phase `history` : stats historique (total scans, compatibles, déconseillés) avec toggle filtre Compatible, bouton CTA scan, 3 items historique avec badges de score
+  - Phase `detail` : fiche "Chips Lay's" — badge ultra-transformé, 3 problèmes avec niveaux de sévérité (point coloré), bouton "Ajouter à la liste" avec état toggle
+  - Phase `list` : 2 items dans la liste de courses, bouton "Ajouter à Nutritor" avec état toggle nutriAdded
+- Bouton `iconBtnSignal` dans la topbar de `ShoppingAssistantScreen` → déclenche la démo
+
+---
+
+## [0.24.0] — 2026-05-22
+
+### Ajouté
+- **Démo interactive — Profil** (`DemoProfile`) : 3 phases, ~16 s/boucle
+  - Phase `hero` : avatar "M", nom "Marie D.", stats âge/poids/taille en ligne, carte FODMAP verte (compatible), objectifs kcal et macros
+  - Phase `allergens` : 4 allergènes avec LevelPill (sévère/modéré/trace/aucun) et notes, 3 régimes avec Switch fake
+  - Phase `lab` : 5 métriques labo avec emoji, nom, badge de statut coloré (ok/warn/signal), valeur quantitative et observation clinique, bouton "Ré-analyser"
+- Bouton `iconBtnSignal` dans la topbar de `ProfileScreen` → déclenche la démo
+
+---
+
+## [0.23.0] — 2026-05-22
+
+### Ajouté
+- **Démo interactive — Statistiques** (`DemoStats`) : 3 phases, ~15 s/boucle
+  - Phase `week` : anneau de score 74/100 coloré signal, bar chart 7 jours (P/C/L empilés), 3 rings macro (protéines 68 %, glucides 82 %, lipides 54 %)
+  - Phase `month` : heatmap calendrier mai 2026 (cellules ok/signal/warn/today/future), légende de score
+  - Phase `wellness` : 4 sparklines de symptômes (Digestion/Énergie/Humeur/Douleur) sous forme de barres colorées, 2 insights de corrélation
+- Bouton `iconBtnSignal` dans la topbar de `StatsScreen` → déclenche la démo
+
+---
+
+## [0.22.0] — 2026-05-22
+
+### Ajouté
+- **Démo interactive — Plats sauvegardés** (`DemoSaved`) : 3 phases, ~12 s/boucle — grille 2 colonnes, panneau détail slide-up avec macro bars, bouton "Ajouter au journal" avec feedback
+- Bouton `iconBtnSignal` dans la topbar de `SavedScreen` → déclenche la démo
+
+---
+
+## [0.21.0] — 2026-05-22
+
+### Ajouté
+- **Démo interactive — Photo IA** (`DemoFoodPhoto`) : 3 phases, ~16 s/boucle — spinner analyse IA, 2 cartes résultat avec scores de confiance, import séquentiel animé
+- **Démo interactive — CIQUAL** (`DemoCIQUAL`) : 3 phases, ~14 s/boucle — recherche "tomate", liste résultats, import + bannière IA + fiche détail
+- Boutons `iconBtnSignal` dans `FoodPhotoScreen` et `CIQUALScreen`
+
+---
+
+## [0.20.0] — 2026-05-22
+
+### Ajouté
+- **Système de démos interactives** — infrastructure complète :
+  - `useDemoEngine` : moteur partagé — curseur doigt animé, effet ripple, gestion de phases, boucle automatique, ref `isRunning`
+  - `DemoShell` : modal plein-écran — légendes fade-in/out, dots de phase, bouton fermeture
+  - `DemoOverlay` : dispatcher central — reçoit `DemoScenario | null` et affiche le bon composant
+  - `DemoScenario` union type : `'home' | 'foods' | 'off' | 'ciqual' | 'scanner' | 'photo' | 'saved' | 'stats' | 'profile' | 'shopping' | 'mealGenerator'`
+- **Démo interactive — Scanner** (`DemoScanner`) : animation scan EAN-13 (~12 s) — laser, résultat slide-up
+- **Démo interactive — Home** (`DemoHome`) : Journal → recherche banane → fiche → ajout → timeline → insight IA (~14 s)
+- **Démo interactive — Aliments** (`DemoFoods`) : CIQUAL poivron → import → bannière IA → portion → repas (~14 s)
+- **Démo interactive — Open Food Facts** (`DemoOFF`) : catégorie légumes → score Carotte → import → édition (~14 s)
+- Boutons `iconBtnSignal` (cercle ambre) dans les topbars de `HomeScreen`, `FoodListScreen`, `OpenFoodFactsScreen`, `BarcodeScannerScreen`
+
+---
+
+## [0.19.0] — 2026-05-21
+
+### Ajouté
+- **Timeline physiologique interactive — fiches détaillées** : chaque événement auto de la timeline est désormais cliquable (chevron visible). Tap → fiche complète slide-up : déclencheurs identifiés, mécanisme physiologique, durée, impact, note personnalisée, simulation "Et si…" nutritionnelle, recommandation
+- `timelineService.ts` étendu avec fiches détaillées pour tous les types d'événements (caféine, glycémie, digestion lipidique, FODMAP, anabolique, satiété, creux post-prandial)
+- `src/types/timeline.ts` : types `PhysioDetail`, `TimelineEvent` étendu avec champ `detail?`
+- `PhysioTimeline` mis à jour — tap handler, slide-up modal, chevron conditionnel
+
+---
+
+## [0.18.0] — 2026-05-21
+
+### Ajouté
+- **Enrichissement IA depuis la fiche aliment** : bouton ⚡ en haut à droite de `DetailScreen` (visible si `isAIReady(settings)`). Lance `enrichFoodWithAI` via `aiQueue`, met à jour l'aliment en temps réel. Badge "IA" affiché sous le bouton
+
+---
+
+## [0.17.0] — 2026-05-21
+
+### Ajouté
+- **Liste de courses persistée** : `AppShell` state `shoppingList` via `KEYS.shoppingList`
+- `ShoppingAssistantScreen` : section liste de courses, items expandables, boutons stats filtrables (compatible / à vérifier / déconseillé)
+- `ShoppingScannerScreen` : transmet `issues`, `positives`, `ultraProcessed` dans le callback `onScanComplete`
+- Handlers dans `AppShell` : `toggleShoppingItem`, `addShoppingItemToNutritor`, `removeShoppingItem`
+
+---
+
+## [0.16.0] — 2026-05-21
+
+### Ajouté
+- **Onglet Courses** : nouvel onglet `shopping` dans la tabbar → `ShoppingAssistantScreen`
+- `ShoppingScannerScreen` : scan code-barres → Open Food Facts → analyse de compatibilité instantanée
+- `compatibilityEngine.ts` : scoring pondéré par intensité de sensibilité, détection allergènes croisée, détection ultra-transformé (NOVA 4 heuristic), problèmes classés par sévérité (critical/strong/medium/low)
+- `src/types/shopping.ts` : types partagés — sensitivities, compatibilité, historique, liste
+- `EditProfileScreen` : 4 nouvelles sections — sensibilités digestives, objectifs, tolérances, pathologies
+- `src/data/user.ts` : données de référence pour profil étendu
+- Icônes ajoutées : `shopping-cart`, `heart`, `x-circle`
+- Clé store ajoutée : `nutritor:scan_history`
+
+---
+
+## [0.15.0] — 2026-05-20
+
+### Ajouté
+- **Diagnostic IA** : `aiLogger.ts` — singleton qui capture chaque étape, durée et erreur des appels IA
+- Timeout automatique 90 s sur chaque job de la file IA (abort + log)
+- Logs détaillés dans `callOpenRouter` / `callOllama` : durée fetch, statut HTTP, taille réponse
+- Section "Diagnostic enrichissement IA" dans `SettingsScreen` : zone monospace scrollable + boutons Copier/Effacer
+- Dépendance ajoutée : `expo-clipboard`
+
+---
+
 ## [0.14.0] — 2026-05-20
 
 ### Ajouté

@@ -7,7 +7,7 @@
 *Comprendre ce que vous mangez. Manger ce qui vous convient.*
 
 [![Platform](https://img.shields.io/badge/📱%20Android%20%7C%20iOS%20%7C%20Web-lightgrey?style=for-the-badge)](.)
-[![Version](https://img.shields.io/badge/version-0.19.0-4CAF50?style=for-the-badge)](.)
+[![Version](https://img.shields.io/badge/version-0.26.0-4CAF50?style=for-the-badge)](.)
 [![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020?style=for-the-badge&logo=expo)](.)
 
 </div>
@@ -262,6 +262,26 @@ React Native + Expo SDK 54  ·  TypeScript strict
 - ✅ Protocole FODMAP personnel (phases, réintroductions, réactions)
 
 </details>
+
+---
+
+## 🎬 Démos interactives
+
+Chaque écran principal dispose d'un bouton **◉** (ambre, topbar) qui lance une démo cinématique en boucle — curseur animé, légendes, phases.
+
+| Écran | Scénario | Durée |
+|-------|----------|-------|
+| Journal | Recherche → fiche → ajout → timeline → insight IA | ~14 s |
+| Aliments | CIQUAL → import → bannière IA → portion → repas | ~14 s |
+| Open Food Facts | Catégorie → score → import → édition | ~14 s |
+| CIQUAL | Recherche "tomate" → import → fiche détail | ~14 s |
+| Scanner | Animation scan EAN-13 → fiche résultat | ~12 s |
+| Photo IA | Analyse → 2 cartes résultats → import | ~16 s |
+| Plats sauvegardés | Grille → détail → ajout journal | ~12 s |
+| Statistiques | Semaine / heatmap mois / corrélations symptômes | ~15 s |
+| Profil | Hero / allergènes / laboratoire IA | ~16 s |
+| Courses | Historique / fiche produit / liste | ~16 s |
+| Générateur de repas | Requête → résultats → détail FODMAP | ~18 s |
 
 ---
 

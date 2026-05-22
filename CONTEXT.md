@@ -7,13 +7,13 @@
 ## État actuel (2026-05-22)
 
 ### Derniers commits
+- `455cb67` — feat: démo interactive pour le Générateur de repas (v0.26.0)
+- `ec88ff5` — feat: démo interactive pour l'écran Assistant de courses (v0.25.0)
+- `753a4d9` — feat: démo interactive pour l'écran Profil (v0.24.0)
+- `880f25d` — feat: démo interactive pour l'écran Statistiques (v0.23.0)
 - `69aafaa` — feat: démo interactive pour l'écran Plats sauvegardés (v0.22.0)
-- `ce430f4` — feat: démo interactive pour l'écran Photo IA (v0.21.0)
-- `5146c19` — feat: démo interactive pour l'écran Scanner (v0.20.0)
-- `9beb146` — feat: démo interactive écran CIQUAL (v0.21.0)
-- `b074f9e` — feat: interactive product walkthrough — démo cinématique sur 3 écrans (v0.20.0)
 
-### Version courante : 0.22.0 (app.json : 0.17.0 — non mis à jour automatiquement)
+### Version courante : 0.26.0 (app.json : 0.17.0 — non mis à jour automatiquement)
 
 Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été ajoutées :
 
@@ -51,10 +51,10 @@ Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été
 - `src/types/timeline.ts` : types `PhysioDetail`, `TimelineEvent` étendu
 - `PhysioTimeline` composant mis à jour
 
-**v0.20.0–v0.22.0 — Système de démos interactives**
+**v0.20.0–v0.22.0 — Système de démos interactives (1ère vague)**
 - Moteur partagé : `useDemoEngine` (curseur doigt, ripple, phases, boucle), `DemoShell` (modal plein-écran, légendes animées, dots de phase)
-- `DemoOverlay` : wrapper commun pour injecter le bouton `activity` (couleur `signal`) dans n'importe quel écran
-- Démos disponibles (bouton activity dans la topbar de chaque écran) :
+- `DemoOverlay` : dispatcher central ; `DemoScenario` union type
+- Démos disponibles :
   - `DemoHome` : Journal → recherche banane → fiche → ajout → timeline 24h → insight IA (~14 s)
   - `DemoFoods` : Aliments → CIQUAL poivron → import → bannière IA → portion → repas (~14 s)
   - `DemoOFF` : Open Food Facts → catégorie légumes → score Carotte → import → édition (~14 s)
@@ -62,6 +62,18 @@ Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été
   - `DemoScanner` : animation scan EAN-13 → loading → fiche résultat slide-up (~12 s)
   - `DemoFoodPhoto` : photo → analyse IA → 2 cartes résultats → import séquentiel (~16 s)
   - `DemoSaved` : grille 2 plats → panneau détail slide-up → macro bars → ajout journal (~12 s)
+
+**v0.23.0 — Démo Stats**
+- `DemoStats` (3 phases, ~15 s) : anneau score 74/100, bar chart 7 jours, rings P/C/L → heatmap calendrier mai 2026 (ok/signal/warn/today) → 4 sparklines symptômes, 2 insights de corrélation
+
+**v0.24.0 — Démo Profil**
+- `DemoProfile` (3 phases, ~16 s) : hero avatar "Marie D." avec stats âge/poids/taille, carte FODMAP verte → 4 allergènes avec LevelPill + 3 régimes avec Switch → 5 métriques labo avec badge statut et bouton "Ré-analyser"
+
+**v0.25.0 — Démo Assistant de courses**
+- `DemoShopping` (3 phases, ~16 s) : stats historique + toggle filtre Compatible → fiche "Chips Lay's" ultra badge + issues + add-to-list toggle → liste courses avec toggle "Ajouter à Nutritor"
+
+**v0.26.0 — Démo Générateur de repas**
+- `DemoMealGenerator` (3 phases, ~18 s) : champ requête + chips suggestions + bouton Générer → 3 cartes repas collapées (Buddha Bowl 🥗, Saumon 🐟, Porridge 🌾) → détail expandé macros/ingrédients FODMAP/micronutriments/score anti-inflammatoire/bouton sauvegarder
 
 ### Dernier build APK
 - **Build ID** : `8fc6725c-7e2b-484a-9e06-1ddb494e4840`
@@ -376,6 +388,10 @@ type KView =
 | `DemoScanner` | `components/demo/DemoScanner.tsx` | Scénario scan EAN-13 (~12 s/boucle) |
 | `DemoFoodPhoto` | `components/demo/DemoFoodPhoto.tsx` | Scénario Photo IA — spinner + 2 cartes (~16 s/boucle) |
 | `DemoSaved` | `components/demo/DemoSaved.tsx` | Scénario Plats sauvegardés — grille + détail (~12 s/boucle) |
+| `DemoStats` | `components/demo/DemoStats.tsx` | Scénario Statistiques — semaine/mois/bien-être (~15 s/boucle) |
+| `DemoProfile` | `components/demo/DemoProfile.tsx` | Scénario Profil — hero/allergènes/labo (~16 s/boucle) |
+| `DemoShopping` | `components/demo/DemoShopping.tsx` | Scénario Assistant de courses — historique/détail/liste (~16 s/boucle) |
+| `DemoMealGenerator` | `components/demo/DemoMealGenerator.tsx` | Scénario Générateur de repas — input/résultats/détail (~18 s/boucle) |
 
 ---
 
@@ -470,5 +486,5 @@ python3 scripts/gen_icon.py
 - [ ] Données Monash FODMAP officielles (licence commerciale)
 - [ ] Retirer les `console.log` de débogage avant la production
 - [ ] `ManualFoodScreen` — aide contextuelle intégrée (bouton `?` → HELP.manualFood)
-- [ ] Démos sur les écrans restants (HomeScreen stats, MealGenerator, Knowledge…)
-- [ ] Mettre à jour `app.json` version pour refléter v0.22.0
+- [ ] Démo `KnowledgeScreen` (encyclopédie — recherche, catégorie, fiche expert)
+- [ ] Mettre à jour `app.json` version pour refléter v0.26.0
