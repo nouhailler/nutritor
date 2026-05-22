@@ -4,18 +4,64 @@
 
 ---
 
-## État actuel (2026-05-20)
+## État actuel (2026-05-22)
 
 ### Derniers commits
-- `d43feae` — docs: documentation 0.13.0 — bandeau IA, import rapide, fix web
-- `c5317f2` — fix: bandeau IA — animations compatibles web (useNativeDriver désactivé)
-- `137c93a` — feat: bandeau IA — étape courante affichée pendant l'enrichissement
-- `ae3f330` — feat: bandeau IA — décompte en secondes pendant l'enrichissement
-- `4d2cfa0` — fix: bandeau IA — bouton Voir ouvre la fiche aliment après enrichissement
+- `69aafaa` — feat: démo interactive pour l'écran Plats sauvegardés (v0.22.0)
+- `ce430f4` — feat: démo interactive pour l'écran Photo IA (v0.21.0)
+- `5146c19` — feat: démo interactive pour l'écran Scanner (v0.20.0)
+- `9beb146` — feat: démo interactive écran CIQUAL (v0.21.0)
+- `b074f9e` — feat: interactive product walkthrough — démo cinématique sur 3 écrans (v0.20.0)
 
-### Version courante : 0.14.0
-- **Bandeau IA — messages rotatifs** : `setInterval` 8 s dans `generateFoodWithAI` et `enrichFoodWithAI` (nettoyé dans `finally`) — messages contextuels tirés du tableau `missing` pour l'enrichissement.
-- **`ManualFoodScreen`** (stack `manualFood`) : saisie manuelle complète, sections 01-12, compatibilité `useMemo` temps réel, grille allergènes 3 états.
+### Version courante : 0.22.0 (app.json : 0.17.0 — non mis à jour automatiquement)
+
+Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été ajoutées :
+
+**v0.15.0 — Diagnostic IA**
+- `aiLogger.ts` : singleton qui capture chaque étape, durée et erreur des appels IA
+- Timeout automatique 90 s sur chaque job de la file IA (abort + log)
+- Logs détaillés dans `callOpenRouter` / `callOllama` : durée fetch, statut HTTP, taille réponse
+- Section "Diagnostic enrichissement IA" dans `SettingsScreen` : zone monospace + boutons Copier/Effacer
+- Dépendance ajoutée : `expo-clipboard`
+
+**v0.16.0 — Assistant de courses**
+- Nouvel onglet **Courses** (`shopping`) dans la tabbar → `ShoppingAssistantScreen`
+- `ShoppingScannerScreen` : scan code-barres → Open Food Facts → analyse de compatibilité instantanée
+- `compatibilityEngine.ts` : moteur local personnalisé — scoring pondéré par intensité de sensibilité, détection allergènes croisée, détection ultra-transformé (NOVA 4 heuristic), problèmes classés par sévérité (critical/strong/medium/low)
+- `src/types/shopping.ts` : types partagés (sensitivities, compatibilité, historique, liste)
+- `EditProfileScreen` : 4 nouvelles sections — sensibilités digestives, objectifs, tolérances, pathologies
+- `src/data/user.ts` : données de référence pour profil étendu
+- Icônes ajoutées : `shopping-cart`, `heart`, `x-circle`
+
+**v0.17.0 — Liste de courses**
+- `AppShell` : state `shoppingList` persisté (`KEYS.shoppingList`)
+- `ShoppingAssistantScreen` : section liste de courses, items expandables, boutons stats filtrables
+- `ShoppingScannerScreen` : issues/positives/ultraProcessed transmis dans `onScanComplete`
+- Handlers : `toggleShoppingItem`, `addShoppingItemToNutritor`, `removeShoppingItem`
+
+**v0.18.0 — Enrichissement IA depuis la fiche aliment**
+- Bouton zap en haut à droite de `DetailScreen` (visible si `isAIReady`)
+- Lance `enrichFoodWithAI` via `aiQueue`, met à jour l'aliment en temps réel
+- Label "IA" (badge) affiché sous le bouton zap
+
+**v0.19.0 — Timeline physiologique interactive**
+- Chaque événement auto de la timeline est cliquable (chevron visible)
+- Tap → fiche complète : déclencheurs, mécanisme physiologique, durée, impact, note personnalisée, simulation nutritionnelle, recommandation
+- `timelineService.ts` étendu avec fiches détaillées pour tous les types d'événements
+- `src/types/timeline.ts` : types `PhysioDetail`, `TimelineEvent` étendu
+- `PhysioTimeline` composant mis à jour
+
+**v0.20.0–v0.22.0 — Système de démos interactives**
+- Moteur partagé : `useDemoEngine` (curseur doigt, ripple, phases, boucle), `DemoShell` (modal plein-écran, légendes animées, dots de phase)
+- `DemoOverlay` : wrapper commun pour injecter le bouton `activity` (couleur `signal`) dans n'importe quel écran
+- Démos disponibles (bouton activity dans la topbar de chaque écran) :
+  - `DemoHome` : Journal → recherche banane → fiche → ajout → timeline 24h → insight IA (~14 s)
+  - `DemoFoods` : Aliments → CIQUAL poivron → import → bannière IA → portion → repas (~14 s)
+  - `DemoOFF` : Open Food Facts → catégorie légumes → score Carotte → import → édition (~14 s)
+  - `DemoCIQUAL` : recherche "tomate" → résultats → import → bannière IA → fiche détail (~14 s)
+  - `DemoScanner` : animation scan EAN-13 → loading → fiche résultat slide-up (~12 s)
+  - `DemoFoodPhoto` : photo → analyse IA → 2 cartes résultats → import séquentiel (~16 s)
+  - `DemoSaved` : grille 2 plats → panneau détail slide-up → macro bars → ajout journal (~12 s)
 
 ### Dernier build APK
 - **Build ID** : `8fc6725c-7e2b-484a-9e06-1ddb494e4840`
@@ -63,12 +109,13 @@
 ## Architecture navigation (`AppShell.tsx`)
 
 ```typescript
-type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile';
+type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile' | 'shopping';
 type StackScreen =
   | 'search' | 'detail' | 'savedDetail' | 'editProfile'
   | 'settings' | 'addFood' | 'manualFood' | 'editFood'
   | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate'
-  | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge' | null;
+  | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge'
+  | 'shoppingScanner' | null;
 ```
 
 - `stack === null` → écran de l'onglet actif, tabbar visible
@@ -85,6 +132,7 @@ type StackScreen =
 | `saved` | Plats | `book` | `SavedScreen` |
 | `stats` | Stats | `chart` | `StatsScreen` |
 | `profile` | Profil | `user` | `ProfileScreen` |
+| `shopping` | Courses | `shopping-cart` | `ShoppingAssistantScreen` |
 
 ### DrawerMenu
 
@@ -110,6 +158,8 @@ KEYS = {
   symptoms:       'nutritor:symptoms',
   fodmapProtocol: 'nutritor:fodmap_protocol',
   migrationV1:    'nutritor:migration_v1',
+  scanHistory:    'nutritor:scan_history',     // historique scans assistant courses
+  shoppingList:   'nutritor:shopping_list',    // liste de courses persistée
 }
 ```
 
@@ -278,6 +328,8 @@ interface KnowledgeEntry {
 | Protocole FODMAP | `FodmapScreen.tsx` | stack `'fodmap'` |
 | Générateur repas | `MealGeneratorScreen.tsx` | stack `'mealGenerator'` (drawer) |
 | Encyclopédie | `KnowledgeScreen.tsx` | stack `'knowledge'` (drawer) |
+| Assistant courses | `ShoppingAssistantScreen.tsx` | tab `shopping` |
+| Scanner courses | `ShoppingScannerScreen.tsx` | stack `'shoppingScanner'` |
 
 ---
 
@@ -313,6 +365,17 @@ type KView =
 | `PlateFilterSheet` | `components/PlateFilterSheet.tsx` | Bottom sheet filtres plats |
 | `SymptomWidget` | `components/SymptomWidget.tsx` | Widget saisie symptômes quotidiens |
 | `AIGenIcon` | inline dans `AppShell.tsx` | Icône flottante ✦ (haut-droite) — clignote pendant génération repas, verte quand terminé |
+| `PhysioTimeline` | `components/PhysioTimeline.tsx` | Timeline 24 h — événements cliquables, fiche physiologique slide-up |
+| `DemoOverlay` | `components/DemoOverlay.tsx` | Wrapper générique qui injecte un bouton `activity` (couleur signal) dans une topbar |
+| `DemoShell` | `components/demo/DemoShell.tsx` | Modal de démo — curseur doigt, ripple, dots de phase, légendes fade |
+| `useDemoEngine` | `components/demo/useDemoEngine.ts` | Moteur partagé : positions animées, phases, boucle, isRunning ref |
+| `DemoHome` | `components/demo/DemoHome.tsx` | Scénario Journal (6 phases, ~14 s/boucle) |
+| `DemoFoods` | `components/demo/DemoFoods.tsx` | Scénario Aliments / CIQUAL (6 phases, ~14 s/boucle) |
+| `DemoOFF` | `components/demo/DemoOFF.tsx` | Scénario Open Food Facts (6 phases, ~14 s/boucle) |
+| `DemoCIQUAL` | `components/demo/DemoCIQUAL.tsx` | Scénario CIQUAL recherche tomate (~14 s/boucle) |
+| `DemoScanner` | `components/demo/DemoScanner.tsx` | Scénario scan EAN-13 (~12 s/boucle) |
+| `DemoFoodPhoto` | `components/demo/DemoFoodPhoto.tsx` | Scénario Photo IA — spinner + 2 cartes (~16 s/boucle) |
+| `DemoSaved` | `components/demo/DemoSaved.tsx` | Scénario Plats sauvegardés — grille + détail (~12 s/boucle) |
 
 ---
 
@@ -407,3 +470,5 @@ python3 scripts/gen_icon.py
 - [ ] Données Monash FODMAP officielles (licence commerciale)
 - [ ] Retirer les `console.log` de débogage avant la production
 - [ ] `ManualFoodScreen` — aide contextuelle intégrée (bouton `?` → HELP.manualFood)
+- [ ] Démos sur les écrans restants (HomeScreen stats, MealGenerator, Knowledge…)
+- [ ] Mettre à jour `app.json` version pour refléter v0.22.0

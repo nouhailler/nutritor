@@ -898,9 +898,10 @@ interface Props {
   symptoms: SymptomEntry[];
   foodList: Food[];
   onOpenMenu: () => void;
+  onStartDemo?: () => void;
 }
 
-export function StatsScreen({ journal, todayMeals, profile, symptoms, foodList, onOpenMenu }: Props) {
+export function StatsScreen({ journal, todayMeals, profile, symptoms, foodList, onOpenMenu, onStartDemo }: Props) {
   const insets = useSafeAreaInsets();
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [weekOffset, setWeekOffset] = useState(0);
@@ -927,6 +928,11 @@ export function StatsScreen({ journal, todayMeals, profile, symptoms, foodList, 
             </Text>
             <Text style={styles.title}>Statistiques</Text>
           </View>
+          {onStartDemo && (
+            <TouchableOpacity style={styles.iconBtn} onPress={onStartDemo} activeOpacity={0.7}>
+              <Icon name="activity" size={18} color={Colors.signal} />
+            </TouchableOpacity>
+          )}
           <HelpButton onPress={() => setHelpVisible(true)} />
         </View>
         <HelpModal visible={helpVisible} content={HELP.stats} onClose={() => setHelpVisible(false)} />
@@ -1156,6 +1162,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
+    marginBottom: 2,
+  },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.signal + '55',
+    backgroundColor: Colors.signal + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 2,
   },
   topbarLeft: { flex: 1 },

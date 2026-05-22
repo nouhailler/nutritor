@@ -1270,6 +1270,7 @@ export function AppShell() {
             symptoms={symptoms}
             foodList={foodList}
             onOpenMenu={() => setDrawerOpen(true)}
+            onStartDemo={() => setDemoScenario('stats')}
           />
         );
         break;
