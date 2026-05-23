@@ -25,7 +25,10 @@ import { HelpButton, HelpModal } from '../components/HelpModal';
 import { HELP } from '../data/helpContent';
 import { Colors, Fonts } from '../theme/tokens';
 import { Food } from '../types';
-import { AIProvider, AppSettings, OpenRouterModel } from '../types/settings';
+import {
+  AIProvider, AppSettings, OpenRouterModel,
+  ANTHROPIC_MODELS, OPENAI_MODELS,
+} from '../types/settings';
 import { KEYS, save } from '../storage/store';
 import { aiLogger } from '../services/aiLogger';
 
@@ -192,6 +195,12 @@ export function SettingsScreen({
   const updateOpenRouter = (patch: Partial<AppSettings['openrouter']>) =>
     update({ openrouter: { ...local.openrouter, ...patch } });
 
+  const updateAnthropic = (patch: Partial<AppSettings['anthropic']>) =>
+    update({ anthropic: { ...local.anthropic, ...patch } });
+
+  const updateOpenAI = (patch: Partial<AppSettings['openai']>) =>
+    update({ openai: { ...local.openai, ...patch } });
+
   const setProvider = (p: AIProvider) => update({ aiProvider: p });
 
   // ── Fetch OpenRouter free models ───────────────────────────
@@ -300,8 +309,10 @@ export function SettingsScreen({
     }
   };
 
-  const isOllama = local.aiProvider === 'ollama';
-  const isOpenRouter = local.aiProvider === 'openrouter';
+  const isOllama      = local.aiProvider === 'ollama';
+  const isOpenRouter  = local.aiProvider === 'openrouter';
+  const isAnthropic   = local.aiProvider === 'anthropic';
+  const isOpenAI      = local.aiProvider === 'openai';
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -340,8 +351,10 @@ export function SettingsScreen({
             borderBottom={true}
             right={
               <View style={styles.pillGroup}>
-                <ProviderPill label="OpenRouter" active={isOpenRouter} onPress={() => setProvider('openrouter')} />
-                <ProviderPill label="Ollama" active={isOllama} onPress={() => setProvider('ollama')} />
+                <ProviderPill label="OpenRouter" active={isOpenRouter}  onPress={() => setProvider('openrouter')} />
+                <ProviderPill label="Anthropic"  active={isAnthropic}   onPress={() => setProvider('anthropic')} />
+                <ProviderPill label="OpenAI"     active={isOpenAI}      onPress={() => setProvider('openai')} />
+                <ProviderPill label="Ollama"     active={isOllama}      onPress={() => setProvider('ollama')} />
               </View>
             }
           />
@@ -398,6 +411,76 @@ export function SettingsScreen({
                   ))}
                 </View>
               )}
+            </>
+          )}
+
+          {/* Anthropic */}
+          {isAnthropic && (
+            <>
+              <View style={styles.inputRow}>
+                <Icon name="key" size={15} color={Colors.muted} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="sk-ant-…"
+                  placeholderTextColor={Colors.muted2}
+                  value={local.anthropic.apiKey}
+                  onChangeText={(v) => updateAnthropic({ apiKey: v })}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  secureTextEntry
+                />
+              </View>
+              <View style={styles.rowDivider} />
+              <Row
+                label="Modèle Claude"
+                description="Sélectionne le modèle à utiliser"
+                borderBottom={true}
+              />
+              <View style={styles.modelList}>
+                {ANTHROPIC_MODELS.map((m) => (
+                  <ModelItem
+                    key={m.id}
+                    model={m}
+                    selected={local.anthropic.model === m.id}
+                    onPress={() => updateAnthropic({ model: m.id })}
+                  />
+                ))}
+              </View>
+            </>
+          )}
+
+          {/* OpenAI */}
+          {isOpenAI && (
+            <>
+              <View style={styles.inputRow}>
+                <Icon name="key" size={15} color={Colors.muted} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="sk-…"
+                  placeholderTextColor={Colors.muted2}
+                  value={local.openai.apiKey}
+                  onChangeText={(v) => updateOpenAI({ apiKey: v })}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  secureTextEntry
+                />
+              </View>
+              <View style={styles.rowDivider} />
+              <Row
+                label="Modèle GPT"
+                description="Sélectionne le modèle à utiliser"
+                borderBottom={true}
+              />
+              <View style={styles.modelList}>
+                {OPENAI_MODELS.map((m) => (
+                  <ModelItem
+                    key={m.id}
+                    model={m}
+                    selected={local.openai.model === m.id}
+                    onPress={() => updateOpenAI({ model: m.id })}
+                  />
+                ))}
+              </View>
             </>
           )}
 
@@ -639,7 +722,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
 
-  pillGroup: { flexDirection: 'row', gap: 6 },
+  pillGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   pill: {
     paddingVertical: 5,
     paddingHorizontal: 12,

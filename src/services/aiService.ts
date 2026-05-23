@@ -184,6 +184,107 @@ async function callOllama(
   return content;
 }
 
+async function callAnthropic(
+  settings: AppSettings['anthropic'],
+  messages: { role: string; content: string }[],
+  signal?: AbortSignal,
+): Promise<string> {
+  const system = messages.find((m) => m.role === 'system')?.content ?? '';
+  const userMessages = messages
+    .filter((m) => m.role !== 'system')
+    .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
+  aiLogger.info(`→ Anthropic fetch (modèle: ${settings.model})`);
+  const t0 = Date.now();
+  let res: Response;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': settings.apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: settings.model,
+        max_tokens: 8192,
+        ...(system ? { system } : {}),
+        messages: userMessages,
+        temperature: 1,
+      }),
+      signal,
+    });
+  } catch (e: unknown) {
+    const ms = Date.now() - t0;
+    aiLogger.error(`Anthropic fetch échoué après ${ms}ms : ${(e as Error).message}`);
+    throw e;
+  }
+  const ms = Date.now() - t0;
+  if (!res.ok) {
+    const body = await res.text();
+    aiLogger.error(`Anthropic HTTP ${res.status} après ${ms}ms : ${body.slice(0, 300)}`);
+    throw new Error(`Anthropic ${res.status}: ${body.slice(0, 200)}`);
+  }
+  const json = await res.json();
+  const content: string = (json.content as Array<{ type: string; text: string }>)?.[0]?.text ?? '';
+  aiLogger.info(`Anthropic OK (${ms}ms) — réponse ${content.length} chars`);
+  if (!content) aiLogger.warn('Anthropic a retourné une réponse vide');
+  return content;
+}
+
+async function callOpenAI(
+  settings: AppSettings['openai'],
+  messages: { role: string; content: string }[],
+  signal?: AbortSignal,
+): Promise<string> {
+  aiLogger.info(`→ OpenAI fetch (modèle: ${settings.model})`);
+  const t0 = Date.now();
+  let res: Response;
+  try {
+    res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${settings.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: settings.model,
+        messages,
+        temperature: 0.2,
+      }),
+      signal,
+    });
+  } catch (e: unknown) {
+    const ms = Date.now() - t0;
+    aiLogger.error(`OpenAI fetch échoué après ${ms}ms : ${(e as Error).message}`);
+    throw e;
+  }
+  const ms = Date.now() - t0;
+  if (!res.ok) {
+    const body = await res.text();
+    aiLogger.error(`OpenAI HTTP ${res.status} après ${ms}ms : ${body.slice(0, 300)}`);
+    throw new Error(`OpenAI ${res.status}: ${body.slice(0, 200)}`);
+  }
+  const json = await res.json();
+  const content: string = json.choices?.[0]?.message?.content ?? '';
+  aiLogger.info(`OpenAI OK (${ms}ms) — réponse ${content.length} chars`);
+  if (!content) aiLogger.warn('OpenAI a retourné une réponse vide');
+  return content;
+}
+
+function callAI(
+  settings: AppSettings,
+  messages: { role: string; content: string }[],
+  signal?: AbortSignal,
+): Promise<string> {
+  switch (settings.aiProvider) {
+    case 'anthropic': return callAnthropic(settings.anthropic, messages, signal);
+    case 'openai':    return callOpenAI(settings.openai, messages, signal);
+    case 'ollama':    return callOllama(settings.ollama, messages, signal);
+    default:          return callOpenRouter(settings.openrouter, messages, signal);
+  }
+}
+
 export async function generateFoodWithAI(
   foodName: string,
   brand: string,
@@ -192,7 +293,7 @@ export async function generateFoodWithAI(
   signal?: AbortSignal,
   onStep?: (step: string) => void,
 ): Promise<Food> {
-  const { aiProvider, ollama, openrouter } = appSettings;
+  const { aiProvider, ollama, openrouter, anthropic, openai } = appSettings;
 
   if (aiProvider === 'openrouter' && !openrouter.apiKey) {
     throw new Error('Clé API OpenRouter manquante. Configure-la dans les Paramètres.');
@@ -202,6 +303,12 @@ export async function generateFoodWithAI(
   }
   if (aiProvider === 'ollama' && !ollama.model) {
     throw new Error('Aucun modèle Ollama configuré. Teste la connexion dans les Paramètres.');
+  }
+  if (aiProvider === 'anthropic' && !anthropic.apiKey) {
+    throw new Error('Clé API Anthropic manquante. Configure-la dans les Paramètres.');
+  }
+  if (aiProvider === 'openai' && !openai.apiKey) {
+    throw new Error('Clé API OpenAI manquante. Configure-la dans les Paramètres.');
   }
 
   onStep?.('Préparation de la requête…');
@@ -228,10 +335,7 @@ export async function generateFoodWithAI(
   }, 8000);
   let raw: string;
   try {
-    raw =
-      aiProvider === 'openrouter'
-        ? await callOpenRouter(openrouter, messages, signal)
-        : await callOllama(ollama, messages, signal);
+    raw = await callAI(appSettings, messages, signal);
   } finally {
     clearInterval(foodMsgInterval);
   }
@@ -258,10 +362,12 @@ export async function generateFoodWithAI(
 // ── AI readiness check ────────────────────────────────────────
 
 export function isAIReady(settings: AppSettings): boolean {
-  if (settings.aiProvider === 'openrouter') {
-    return !!(settings.openrouter.apiKey && settings.openrouter.model);
+  switch (settings.aiProvider) {
+    case 'openrouter': return !!(settings.openrouter.apiKey && settings.openrouter.model);
+    case 'anthropic':  return !!(settings.anthropic?.apiKey && settings.anthropic?.model);
+    case 'openai':     return !!(settings.openai?.apiKey && settings.openai?.model);
+    case 'ollama':     return !!settings.ollama.model;
   }
-  return !!(settings.ollama.model);
 }
 
 // ── Enrichment schema ─────────────────────────────────────────
@@ -441,9 +547,7 @@ ${ENRICH_SCHEMA}`;
   let raw: string;
   try {
     raw =
-      settings.aiProvider === 'openrouter'
-        ? await callOpenRouter(settings.openrouter, messages, signal)
-        : await callOllama(settings.ollama, messages, signal);
+      await callAI(settings, messages, signal);
   } finally {
     clearInterval(enrichMsgInterval);
   }
@@ -594,9 +698,7 @@ Lipides : ${Math.round(totals.fat)} g (${pctF} %) / objectif ${profile.macroTarg
   ];
 
   const raw =
-    settings.aiProvider === 'openrouter'
-      ? await callOpenRouter(settings.openrouter, messages, signal)
-      : await callOllama(settings.ollama, messages, signal);
+    await callAI(settings, messages, signal);
 
   const text = raw?.trim() ?? '';
   // Certains modèles renvoient un message d'erreur technique comme contenu texte (ex: "The provided text is empty")
@@ -652,9 +754,7 @@ Ingrédients : ${plate.recipe.map((r) => `${r.name} ${r.qty}`).join(', ')}`;
   ];
 
   const raw =
-    settings.aiProvider === 'openrouter'
-      ? await callOpenRouter(settings.openrouter, messages)
-      : await callOllama(settings.ollama, messages);
+    await callAI(settings, messages);
 
   if (!raw) throw new Error('Réponse IA vide.');
   return raw.trim();
@@ -717,9 +817,7 @@ ${foodLines}`;
   ];
 
   const raw =
-    settings.aiProvider === 'openrouter'
-      ? await callOpenRouter(settings.openrouter, messages)
-      : await callOllama(settings.ollama, messages);
+    await callAI(settings, messages);
 
   if (!raw) throw new Error('Réponse IA vide.');
 
@@ -807,9 +905,7 @@ Génère la mémoire digestive mise à jour (max 30 lignes numérotées) :`;
   ];
 
   const raw =
-    settings.aiProvider === 'openrouter'
-      ? await callOpenRouter(settings.openrouter, messages)
-      : await callOllama(settings.ollama, messages);
+    await callAI(settings, messages);
 
   if (!raw) throw new Error('Réponse IA vide.');
   return raw.trim();
@@ -826,9 +922,7 @@ export async function estimatePlateMacros(
   ];
 
   const raw =
-    settings.aiProvider === 'openrouter'
-      ? await callOpenRouter(settings.openrouter, messages)
-      : await callOllama(settings.ollama, messages);
+    await callAI(settings, messages);
 
   if (!raw) throw new Error('Réponse IA vide.');
 
@@ -872,6 +966,12 @@ export async function generateMeals(
   if (appSettings.aiProvider === 'ollama' && !appSettings.ollama.model) {
     throw new Error('Aucun modèle Ollama configuré. Teste la connexion dans les Paramètres.');
   }
+  if (appSettings.aiProvider === 'anthropic' && !appSettings.anthropic?.apiKey) {
+    throw new Error('Clé API Anthropic manquante. Configure-la dans les Paramètres.');
+  }
+  if (appSettings.aiProvider === 'openai' && !appSettings.openai?.apiKey) {
+    throw new Error('Clé API OpenAI manquante. Configure-la dans les Paramètres.');
+  }
 
   const messages = [
     { role: 'system', content: MEAL_SYSTEM_PROMPT },
@@ -879,9 +979,7 @@ export async function generateMeals(
   ];
 
   const raw =
-    appSettings.aiProvider === 'openrouter'
-      ? await callOpenRouter(appSettings.openrouter, messages, signal)
-      : await callOllama(appSettings.ollama, messages, signal);
+    await callAI(appSettings, messages, signal);
 
   if (!raw) throw new Error('L\'IA n\'a retourné aucune réponse.');
 

@@ -284,10 +284,23 @@ export function AppShell() {
     KEYS.foods,
     [DETAIL_FOOD],
   );
-  const [settings, setSettings] = usePersistedState<AppSettings>(
+  const [settings, setSettings, settingsLoading] = usePersistedState<AppSettings>(
     KEYS.settings,
     DEFAULT_SETTINGS,
   );
+
+  // Migration : garantit que les nouveaux champs (anthropic, openai) existent
+  // sur les settings sauvegardés avant leur ajout.
+  useEffect(() => {
+    if (!settingsLoading && (!settings.anthropic || !settings.openai)) {
+      setSettings({
+        ...DEFAULT_SETTINGS,
+        ...settings,
+        anthropic: { ...DEFAULT_SETTINGS.anthropic, ...settings.anthropic },
+        openai: { ...DEFAULT_SETTINGS.openai, ...settings.openai },
+      });
+    }
+  }, [settingsLoading]);
   const [meals, setMeals, mealsLoading] = usePersistedState<Meal[]>(
     KEYS.meals,
     INITIAL_MEALS,
