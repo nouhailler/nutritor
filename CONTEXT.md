@@ -7,13 +7,13 @@
 ## État actuel (2026-05-23)
 
 ### Derniers commits
+- `b992be3` — feat: photo de profil + menu hamburger cliquable vers Profil (v0.32.0)
+- `08d12aa` — feat: export professionnel HTML pour médecins et diététiciens (v0.31.0)
+- `cd4256d` — fix: badge Compatible sur plusieurs lignes + bandeau erreur IA (v0.30.1)
+- `105edcf` — feat: catégories de requêtes dans le Générateur de repas (v0.30.0)
 - `a9085af` — feat: Cuisine IA — générateur de recettes personnalisées (v0.30.0)
-- `4e5f673` — feat: support Anthropic (Claude) et OpenAI (ChatGPT) comme fournisseurs IA
-- `adddb96` — feat: ajout de 7 catégories digestives/nutritionnelles pour les plats
-- `c7f65cc` — feat: catégories optionnelles pour les plats sauvegardés
-- `202d1aa` — feat: démo interactive pour l'écran Encyclopédie (v0.28.0)
 
-### Version courante : 0.30.0 (app.json : 0.17.0 — non mis à jour automatiquement)
+### Version courante : 0.32.0 (app.json : 0.30.0)
 
 Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été ajoutées (voir CHANGELOG.md pour le détail complet) :
 
@@ -94,6 +94,22 @@ Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été
 - `SmartRecipe` avec analyse FODMAP/glycémie/digestion/satiété + timeline physiologique
 - `generateSmartRecipes()` dans `aiService.ts` — routé via `callAI()` vers les 4 providers
 - Bouton sparkle ✦ dans la topbar de `SavedScreen`
+
+**v0.30.1 — Correctifs visuels + UX**
+- `CompatibilityBadge` : `numberOfLines={1}` sur le label — empêche le badge de s'étaler sur 2-3 lignes selon la largeur kcal
+- `FoodListScreen` : `minWidth: 64` + `textAlign: 'right'` sur la zone kcal — largeur cohérente quel que soit le nombre de chiffres
+- `AppShell` : bandeau rouge persistent en bas lors d'un échec IA — chaque job n'est affiché qu'une fois (`Set<string>` de tracking), dismiss manuel
+
+**v0.31.0 — Export professionnel**
+- `src/services/professionalReport.ts` : génère un rapport HTML auto-contenu (anthropométrie, allergènes, pathologies, sensibilités/tolérances digestives, protocole FODMAP complet, bilan 30 jours, corrélations aliment→symptôme)
+- Partagé via `expo-sharing` (`.html` → Safari → Imprimer → PDF)
+- Bouton "👨‍⚕️ Export professionnel" dans `ProfileScreen`
+
+**v0.32.0 — Photo de profil + menu hamburger interactif**
+- `UserProfile.photoUri?: string` — URI persistée dans AsyncStorage
+- `ProfileScreen` : avatar cliquable avec badge caméra → `expo-image-picker` (galerie, crop 1:1)
+- `DrawerMenu` : section profil (avatar + nom + régime + objectif) cliquable → navigue vers l'onglet Profil
+- Photo affichée dans le drawer et dans le hero de `ProfileScreen` (fallback initiale si absent)
 
 ### Dernier build APK
 - **Build ID** : `8fc6725c-7e2b-484a-9e06-1ddb494e4840`
@@ -273,6 +289,18 @@ Au premier démarrage après mise à jour, recompute les allergènes CIQUAL pour
 ## Types principaux (`src/types/`)
 
 ```typescript
+// UserProfile (src/data/user.ts)
+interface UserProfile {
+  name: string; initial: string; photoUri?: string;  // photo galerie (expo-image-picker)
+  kcalTarget: number; macroTargets: { protein: number; carbs: number; fat: number };
+  age: number; weight: number; height: number; goal: string; activity: string;
+  diets: Diet[]; allergens: AllergenEntry[];
+  digestiveSensitivities?: DigestiveSensitivity[];  // fructanes, lactose, histamine…
+  digestiveTolerances?: DigestiveTolerances;         // légumineuses, fruits, crucifères…
+  pathologies?: string[];                            // 'ibs' | 'reflux' | 'crohn' | 'uc' | 'foodMigraine'
+  objectives?: string[];
+}
+
 interface Food {
   id: string; name: string; brand: string; category: string;
   unit: string; defaultPortion: number;
@@ -451,6 +479,7 @@ type KView =
 | `DemoCalendar` | `components/demo/DemoCalendar.tsx` | Scénario Calendrier — navigation mois, points repas (~14 s/boucle) |
 | `DemoDrawer` | `components/demo/DemoDrawer.tsx` | Scénario Menu tiroir — navigation onglets + section IA (~14 s/boucle) |
 | `DemoKnowledge` | `components/demo/DemoKnowledge.tsx` | Scénario Encyclopédie — home/liste/fiche expert (~16 s/boucle) |
+| `generateProfessionalReport` | `services/professionalReport.ts` | Génère un HTML de rapport professionnel (partage via `expo-sharing`) |
 
 ---
 

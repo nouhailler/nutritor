@@ -7,7 +7,7 @@
 *Comprendre ce que vous mangez. Manger ce qui vous convient.*
 
 [![Platform](https://img.shields.io/badge/📱%20Android%20%7C%20iOS%20%7C%20Web-lightgrey?style=for-the-badge)](.)
-[![Version](https://img.shields.io/badge/version-0.30.0-4CAF50?style=for-the-badge)](.)
+[![Version](https://img.shields.io/badge/version-0.32.0-4CAF50?style=for-the-badge)](.)
 [![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020?style=for-the-badge&logo=expo)](.)
 
 </div>
@@ -52,6 +52,7 @@ C'est un **compagnon de connaissance nutritionnelle** — conçu pour les person
 - **Reconnaissance photo** — photographier un aliment pour l'identifier et créer sa fiche
 - **Mémoire digestive** — l'IA croise 21 jours de repas × symptômes pour révéler vos patterns d'intolérance personnels
 - **Laboratoire nutritionnel** — 7 scores experts (ratio ω-3/ω-6, densité micronutritionnelle, score inflammatoire, NOVA…)
+- **Export professionnel** — rapport HTML partageable (nutritionniste, gastro-entérologue, diététicien) avec anthropométrie, allergènes, protocole FODMAP, bilan 30 jours et corrélations aliment→symptôme
 
 ### 🔬 Fiches aliments ultra-détaillées
 - Profil d'acides aminés complet (18 acides aminés)
@@ -99,6 +100,7 @@ C'est un **compagnon de connaissance nutritionnelle** — conçu pour les person
 - 🍽️ Générateur de repas IA
 - ✦ Cuisine IA (génération de recettes)
 - 📚 Encyclopédie nutritionnelle
+- 👨‍⚕️ Export rapport professionnel (HTML/PDF)
 - ⚙️ Config IA (OpenRouter / Ollama / Anthropic / OpenAI)
 
 </td>

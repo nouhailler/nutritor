@@ -9,6 +9,38 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [0.32.0] — 2026-05-23
+
+### Ajouté
+- **Photo de profil** : l'avatar circulaire de la page Profil est maintenant cliquable (badge caméra en bas à droite) — ouvre la galerie via `expo-image-picker`, recadrage carré, URI sauvegardée dans `UserProfile.photoUri`
+- Photo affichée dans la page Profil et dans le menu hamburger si définie, sinon l'initiale reste affichée
+- `UserProfile` : nouveau champ `photoUri?: string`
+
+### Modifié
+- **Menu hamburger** : toute la section profil (avatar + nom + régime + objectif) est désormais un bouton cliquable qui ferme le drawer et navigue directement vers l'onglet Profil
+
+---
+
+## [0.31.0] — 2026-05-23
+
+### Ajouté
+- **Export professionnel** (`src/services/professionalReport.ts`) : génère un rapport HTML auto-contenu partageable pour nutritionnistes, gastro-entérologues et diététiciens
+  - Sections : anthropométrie + IMC, cibles nutritionnelles, allergènes avec sévérité, pathologies, sensibilités digestives, tolérances alimentaires, protocole FODMAP complet (aliments testés, journal de réactions, corrélations aliment→symptôme), bilan nutritionnel 30 jours (moyennes kcal/macros, top 10 aliments), disclaimer légal
+  - Partagé via `expo-sharing` comme fichier `.html` (ouvrable dans Safari/Chrome, imprimable en PDF via la fonction impression native)
+- Bouton "👨‍⚕️ Export professionnel" dans la page Profil (au-dessus de la carte FODMAP)
+
+---
+
+## [0.30.1] — 2026-05-23
+
+### Corrigé
+- **Badge Compatible sur plusieurs lignes** (`FoodListScreen`, `CompatibilityBadge`) : le badge pouvait s'étaler sur 2 ou 3 lignes selon le nombre de chiffres dans la valeur kcal adjacente
+  - `CompatibilityBadge` : `numberOfLines={1}` ajouté sur le label pour empêcher le retour à la ligne
+  - `FoodListScreen` : `minWidth: 64` + `textAlign: 'right'` sur la zone kcal pour que `bodyContent` ait toujours la même largeur disponible
+- **Bandeau erreur IA** (`AppShell`) : lorsqu'une génération IA échoue, un bandeau rouge persistant apparaît en bas de l'écran (au-dessus de la tabbar) avec l'icône alerte, le label du job et un bouton ✕ pour le fermer manuellement — chaque job n'est affiché qu'une seule fois (tracking par `Set<string>`)
+
+---
+
 ## [0.30.0] — 2026-05-23
 
 ### Ajouté
