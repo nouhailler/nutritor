@@ -317,11 +317,13 @@ function HomeView({
   onOpenSearch,
   onBack,
   onOpenMenu,
+  onStartDemo,
 }: {
   onOpenCategory: (c: KnowledgeCategory) => void;
   onOpenSearch: (q: string) => void;
   onBack: () => void;
   onOpenMenu: () => void;
+  onStartDemo?: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const counts = useMemo(() => getCategoryCounts(), []);
@@ -345,9 +347,16 @@ function HomeView({
           <Text style={styles.topbarTitle}>Base de connaissances</Text>
           <Text style={styles.topbarSub}>{KNOWLEDGE_BASE.length} entrées · 100 % hors-ligne</Text>
         </View>
-        <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
-          <Icon name="menu" size={22} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {onStartDemo && (
+            <TouchableOpacity style={styles.iconBtnSignal} onPress={onStartDemo} activeOpacity={0.7}>
+              <Icon name="activity" size={18} color={Colors.signal} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+            <Icon name="menu" size={22} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -442,9 +451,10 @@ function HomeView({
 interface KnowledgeScreenProps {
   onBack: () => void;
   onOpenMenu: () => void;
+  onStartDemo?: () => void;
 }
 
-export function KnowledgeScreen({ onBack, onOpenMenu }: KnowledgeScreenProps) {
+export function KnowledgeScreen({ onBack, onOpenMenu, onStartDemo }: KnowledgeScreenProps) {
   const [view, setView] = useState<KView>({ type: 'home' });
 
   const goBack = () => {
@@ -476,6 +486,7 @@ export function KnowledgeScreen({ onBack, onOpenMenu }: KnowledgeScreenProps) {
         onOpenSearch={openSearch}
         onBack={onBack}
         onOpenMenu={onOpenMenu}
+        onStartDemo={onStartDemo}
       />
     );
   }
@@ -537,6 +548,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+  },
+  iconBtnSignal: {
+    width: 40, height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.signal + '55',
+    backgroundColor: Colors.signal + '12',
   },
   topbarCenter: { flex: 1, alignItems: 'center' },
   topbarTitle: {

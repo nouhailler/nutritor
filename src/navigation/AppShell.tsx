@@ -1147,7 +1147,7 @@ export function AppShell() {
     );
   } else if (stack === 'knowledge') {
     screen = (
-      <KnowledgeScreen onBack={() => setStack(null)} onOpenMenu={openMenu} />
+      <KnowledgeScreen onBack={() => setStack(null)} onOpenMenu={openMenu} onStartDemo={() => setDemoScenario('knowledge')} />
     );
   } else if (stack === 'shoppingScanner') {
     screen = (
