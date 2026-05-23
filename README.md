@@ -7,7 +7,7 @@
 *Comprendre ce que vous mangez. Manger ce qui vous convient.*
 
 [![Platform](https://img.shields.io/badge/📱%20Android%20%7C%20iOS%20%7C%20Web-lightgrey?style=for-the-badge)](.)
-[![Version](https://img.shields.io/badge/version-0.32.0-4CAF50?style=for-the-badge)](.)
+[![Version](https://img.shields.io/badge/version-0.33.1-4CAF50?style=for-the-badge)](.)
 [![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020?style=for-the-badge&logo=expo)](.)
 
 </div>
@@ -52,7 +52,8 @@ C'est un **compagnon de connaissance nutritionnelle** — conçu pour les person
 - **Reconnaissance photo** — photographier un aliment pour l'identifier et créer sa fiche
 - **Mémoire digestive** — l'IA croise 21 jours de repas × symptômes pour révéler vos patterns d'intolérance personnels
 - **Laboratoire nutritionnel** — 7 scores experts (ratio ω-3/ω-6, densité micronutritionnelle, score inflammatoire, NOVA…)
-- **Export professionnel** — rapport HTML partageable (nutritionniste, gastro-entérologue, diététicien) avec anthropométrie, allergènes, protocole FODMAP, bilan 30 jours et corrélations aliment→symptôme
+- **Export professionnel** — rapport HTML partageable (nutritionniste, gastro-entérologue, diététicien) avec anthropométrie, allergènes, protocole FODMAP, bilan 30 jours, corrélations aliment→symptôme (moteur automatique), résultats biologiques et médicaments
+- **Corrélations aliment → symptômes** — moteur automatique sur 30 jours : 10 facteurs alimentaires (Polyols, Fructanes, Lactose, Gluten, Histamine…) × 6 métriques (douleurs, ballonnements, énergie, transit, sommeil, inflammation), avec détection de l'effet retard (J+1)
 
 ### 🔬 Fiches aliments ultra-détaillées
 - Profil d'acides aminés complet (18 acides aminés)
@@ -101,7 +102,9 @@ C'est un **compagnon de connaissance nutritionnelle** — conçu pour les person
 - ✦ Cuisine IA (génération de recettes)
 - 📚 Encyclopédie nutritionnelle
 - 👨‍⚕️ Export rapport professionnel (HTML/PDF)
+- 🔗 Corrélations aliment → symptômes (automatique)
 - ⚙️ Config IA (OpenRouter / Ollama / Anthropic / OpenAI)
+- 📤 Import / export bibliothèque de plats (JSON)
 
 </td>
 </tr>
@@ -276,6 +279,8 @@ React Native + Expo SDK 54  ·  TypeScript strict
 - ✅ Tolérances alimentaires (légumineuses, crucifères, alliacées…)
 - ✅ Pathologies (SII, reflux, Crohn, RCH, migraine alimentaire)
 - ✅ Protocole FODMAP personnel (phases, réintroductions, réactions)
+- ✅ Résultats biologiques : saisie manuelle (ferritine, vitamine D, CRP…) avec statut Bas/Normal/Élevé
+- ✅ Médicaments en cours (liste texte libre, intégrée dans le rapport professionnel)
 
 </details>
 

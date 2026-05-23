@@ -7,13 +7,13 @@
 ## État actuel (2026-05-23)
 
 ### Derniers commits
+- `188804b` — feat: import/export de la bibliothèque de plats dans les paramètres (v0.33.1)
+- `e73bf4a` — feat: journal symptômes, moteur corrélation et formulaire bio/médicaments (v0.33.0)
 - `b992be3` — feat: photo de profil + menu hamburger cliquable vers Profil (v0.32.0)
 - `08d12aa` — feat: export professionnel HTML pour médecins et diététiciens (v0.31.0)
 - `cd4256d` — fix: badge Compatible sur plusieurs lignes + bandeau erreur IA (v0.30.1)
-- `105edcf` — feat: catégories de requêtes dans le Générateur de repas (v0.30.0)
-- `a9085af` — feat: Cuisine IA — générateur de recettes personnalisées (v0.30.0)
 
-### Version courante : 0.32.0 (app.json : 0.30.0)
+### Version courante : 0.33.1 (app.json : 0.30.0)
 
 Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été ajoutées (voir CHANGELOG.md pour le détail complet) :
 
@@ -110,6 +110,18 @@ Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été
 - `ProfileScreen` : avatar cliquable avec badge caméra → `expo-image-picker` (galerie, crop 1:1)
 - `DrawerMenu` : section profil (avatar + nom + régime + objectif) cliquable → navigue vers l'onglet Profil
 - Photo affichée dans le drawer et dans le hero de `ProfileScreen` (fallback initiale si absent)
+
+**v0.33.0 — Journal symptômes enrichi + moteur corrélation + bio/médicaments**
+- `SymptomScores` : 6 métriques — `abdominal`, `bloating`, `energy`, `transit`, `sleep`, `inflammation` (0–4, -1 = non renseigné)
+- `src/services/symptomCorrelation.ts` (nouveau) : moteur de corrélation aliment→symptômes — 10 facteurs alimentaires (Polyols, Fructanes, Lactose, GOS, Gluten, Histamine, Aliments gras, Caféine, Alcool, Fructose en excès) × 6 métriques, détection par mot-clé, lag J+1, score de badness normalisé, top 10 corrélations triées par force
+- `UserProfile.bioResults?: BioResult[]` + `UserProfile.medications?: string[]` — nouveaux champs
+- `BioResult` : { name, value, unit, date?, status?: 'low'|'normal'|'high', note? }
+- `EditProfileScreen` : formulaire résultats biologiques (pills statut colorés) + liste médicaments
+- `professionalReport.ts` enrichi : stats symptômes 30j (barres visuelles), corrélations auto (table), biologie (table), médicaments (pills)
+
+**v0.33.1 — Import/export bibliothèque de plats**
+- `SettingsScreen` : nouvelle section "Bibliothèque de plats" avec export JSON (`nutritor_plats.json`) et import avec fusion (déduplication par `id`)
+- `AppShell` : câblage `savedPlates` + handler `onImportPlates`
 
 ### Dernier build APK
 - **Build ID** : `8fc6725c-7e2b-484a-9e06-1ddb494e4840`
@@ -224,7 +236,8 @@ Au démarrage (après chargement), `AppShell` compare `KEYS.mealsDate` à `today
 
 ### Symptômes
 `symptoms: SymptomEntry[]` — chaque entrée : `{ date: string; scores: SymptomScores }`.
-`SymptomScores = { digestion, energie, humeur, douleur: number (0-4) }`.
+`SymptomScores = { abdominal, bloating, energy, transit, sleep, inflammation: number (0–4, -1 = non renseigné) }`.
+Corrélations calculées par `computeCorrelations()` dans `src/services/symptomCorrelation.ts`.
 
 ### Migration V1
 Au premier démarrage après mise à jour, recompute les allergènes CIQUAL pour tous les aliments `ciqual-*` existants via `refreshCiqualAllergens`.
@@ -299,6 +312,16 @@ interface UserProfile {
   digestiveTolerances?: DigestiveTolerances;         // légumineuses, fruits, crucifères…
   pathologies?: string[];                            // 'ibs' | 'reflux' | 'crohn' | 'uc' | 'foodMigraine'
   objectives?: string[];
+  bioResults?: BioResult[];     // résultats biologiques (ferritine, vit. D…)
+  medications?: string[];       // médicaments en cours (texte libre)
+}
+
+// BioResult (src/data/user.ts)
+interface BioResult {
+  name: string; value: string; unit: string;
+  date?: string;                           // YYYY-MM-DD
+  status?: 'low' | 'normal' | 'high';
+  note?: string;
 }
 
 interface Food {

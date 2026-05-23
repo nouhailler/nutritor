@@ -9,6 +9,41 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [0.33.1] — 2026-05-23
+
+### Ajouté
+- **Import / Export de la bibliothèque de plats** (`SettingsScreen`) : nouvelle section "Bibliothèque de plats"
+  - **Export** : sérialise tous les `SavedPlate[]` en JSON (`nutritor_plats.json`) et partage via le système (AirDrop, email, Google Drive…)
+  - **Import** : sélectionne un fichier JSON, valide la structure (`id`, `name`, `kcal`), fusionne les nouveaux plats sans écraser les existants (déduplication par `id`)
+  - `SettingsScreen` : nouveaux props `savedPlates`, `onImportPlates` ; deux lignes dédiées avec indicateurs de chargement
+  - `AppShell` : handler `onImportPlates` câblé (filtre par `Set<id>`)
+
+---
+
+## [0.33.0] — 2026-05-23
+
+### Ajouté
+- **Journal de symptômes enrichi** : 6 métriques remplacent les 4 anciennes — `abdominal` (douleurs), `bloating` (ballonnements), `energy` (énergie), `transit`, `sleep` (sommeil), `inflammation` (inflammation perçue) — scores 0–4, -1 = non renseigné
+- **Moteur de corrélation aliment → symptômes** (`src/services/symptomCorrelation.ts`, nouveau fichier)
+  - 10 facteurs alimentaires : Polyols, Fructanes, Lactose, Fructose en excès, GOS (légumineuses), Gluten, Histamine, Aliments gras, Caféine, Alcool
+  - Détection mot-clé (insensible aux accents) sur les noms d'ingrédients des repas
+  - Comparaison des scores de symptômes les jours avec vs sans chaque facteur (minimum 3 jours par groupe)
+  - Effet retard : même jour + lendemain (J+1) pour les facteurs alimentaires
+  - Score de "badness" normalisé selon `cfg.inverse` (nul, croissant ou décroissant)
+  - Retourne le top 10 corrélations, déduplicatées par paire facteur × symptôme, triées par force (forte > modérée > faible)
+- **Résultats biologiques dans le profil** : interface `BioResult` { name, value, unit, date?, status?: 'low'|'normal'|'high', note? } dans `src/data/user.ts`
+  - Nouveau champ `UserProfile.bioResults?: BioResult[]`
+  - Nouveau champ `UserProfile.medications?: string[]`
+  - Formulaire complet dans `EditProfileScreen` : saisie nom/valeur/unité, sélection statut avec pills colorés (Bas/Normal/Élevé), suppression, ajout dynamique
+  - Section médicaments : pill list + champ saisie + touche "Ajouter"
+- **Rapport professionnel enrichi** (`src/services/professionalReport.ts`) : 4 nouvelles sections
+  - **Bien-être & Symptômes 30j** : barres visuelles colorées (vert < 30 %, ambre < 60 %, rouge ≥ 60 %) pour chaque métrique sur les 30 derniers jours renseignés
+  - **Corrélations aliment → symptômes** : table facteur / symptôme / direction (↑ Aggravé / ↓ Amélioré) / force (badges) / scores moyens avec vs sans
+  - **Résultats biologiques** : table avec marqueur, valeur+unité, badge statut (Bas/Normal/Élevé), date, note
+  - **Médicaments en cours** : liste en pills
+
+---
+
 ## [0.32.0] — 2026-05-23
 
 ### Ajouté
