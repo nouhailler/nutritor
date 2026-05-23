@@ -29,6 +29,7 @@ import {
   AIProvider, AppSettings, OpenRouterModel,
   ANTHROPIC_MODELS, OPENAI_MODELS,
 } from '../types/settings';
+import { SavedPlate } from '../data/saved';
 import { KEYS, save } from '../storage/store';
 import { aiLogger } from '../services/aiLogger';
 
@@ -139,8 +140,10 @@ function ModelItem({
 interface Props {
   settings: AppSettings;
   foodList: Food[];
+  savedPlates: SavedPlate[];
   onSave: (settings: AppSettings) => void;
   onImportFoods: (foods: Food[]) => void;
+  onImportPlates: (plates: SavedPlate[]) => void;
   onBack: () => void;
   onOpenMenu: () => void;
   onResetOnboarding: () => Promise<void>;
@@ -151,8 +154,10 @@ interface Props {
 export function SettingsScreen({
   settings,
   foodList,
+  savedPlates,
   onSave,
   onImportFoods,
+  onImportPlates,
   onBack,
   onOpenMenu,
   onResetOnboarding,
@@ -164,6 +169,8 @@ export function SettingsScreen({
   const [loadingModels, setLoadingModels] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [importPlatesLoading, setImportPlatesLoading] = useState(false);
+  const [exportPlatesLoading, setExportPlatesLoading] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
   const [logText, setLogText] = useState(() => aiLogger.export());
 
@@ -306,6 +313,56 @@ export function SettingsScreen({
       Alert.alert('Erreur import', (e as Error).message);
     } finally {
       setImportLoading(false);
+    }
+  };
+
+  // ── Export plats ───────────────────────────────────────────
+
+  const handleExportPlates = async () => {
+    setExportPlatesLoading(true);
+    try {
+      const json = JSON.stringify(savedPlates, null, 2);
+      const path = FileSystem.cacheDirectory + 'nutritor_plats.json';
+      await FileSystem.writeAsStringAsync(path, json, { encoding: FileSystem.EncodingType.UTF8 });
+      const available = await Sharing.isAvailableAsync();
+      if (!available) {
+        Alert.alert('Partage non disponible', 'Le partage de fichiers n\'est pas supporté sur cet appareil.');
+        return;
+      }
+      await Sharing.shareAsync(path, { mimeType: 'application/json', dialogTitle: 'Exporter les plats Nutritor' });
+    } catch (e: unknown) {
+      Alert.alert('Erreur export', (e as Error).message);
+    } finally {
+      setExportPlatesLoading(false);
+    }
+  };
+
+  // ── Import plats ───────────────────────────────────────────
+
+  const handleImportPlates = async () => {
+    setImportPlatesLoading(true);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/json',
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+      const file = result.assets[0];
+      const content = await FileSystem.readAsStringAsync(file.uri, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      const parsed = JSON.parse(content);
+      const plates: SavedPlate[] = Array.isArray(parsed) ? parsed : [parsed];
+      if (!plates.every((p) => p.id && p.name && typeof p.kcal === 'number')) {
+        Alert.alert('Format invalide', 'Le fichier JSON ne contient pas des plats valides.');
+        return;
+      }
+      onImportPlates(plates);
+      showToast(`${plates.length} plat${plates.length > 1 ? 's' : ''} importé${plates.length > 1 ? 's' : ''}`);
+    } catch (e: unknown) {
+      Alert.alert('Erreur import', (e as Error).message);
+    } finally {
+      setImportPlatesLoading(false);
     }
   };
 
@@ -542,6 +599,37 @@ export function SettingsScreen({
             onPress={handleExport}
             right={
               exportLoading ? (
+                <ActivityIndicator size="small" color={Colors.ink} />
+              ) : (
+                <Icon name="download" size={18} color={Colors.muted} />
+              )
+            }
+          />
+        </Card>
+
+        {/* ── Bibliothèque de plats ───────────────────────────── */}
+        <SectionHeader icon="layers" label="Bibliothèque de plats" />
+        <Card>
+          <Row
+            label="Importer des plats"
+            description="Fichier JSON — fusionne avec ta bibliothèque existante"
+            borderBottom={true}
+            onPress={handleImportPlates}
+            right={
+              importPlatesLoading ? (
+                <ActivityIndicator size="small" color={Colors.ink} />
+              ) : (
+                <Icon name="upload" size={18} color={Colors.muted} />
+              )
+            }
+          />
+          <Row
+            label="Exporter les plats"
+            description={`${savedPlates.length} plat${savedPlates.length > 1 ? 's' : ''} dans ta bibliothèque`}
+            borderBottom={false}
+            onPress={handleExportPlates}
+            right={
+              exportPlatesLoading ? (
                 <ActivityIndicator size="small" color={Colors.ink} />
               ) : (
                 <Icon name="download" size={18} color={Colors.muted} />

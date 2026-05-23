@@ -1244,11 +1244,17 @@ export function AppShell() {
       <SettingsScreen
         settings={settings}
         foodList={foodList}
+        savedPlates={savedPlates}
         onSave={setSettings}
         onImportFoods={(foods) => {
           const existing = new Set(foodList.map((f) => f.id));
           const newFoods = foods.filter((f) => !existing.has(f.id));
           setFoodList([...foodList, ...newFoods]);
+        }}
+        onImportPlates={(plates) => {
+          const existing = new Set(savedPlates.map((p) => p.id));
+          const newPlates = plates.filter((p) => !existing.has(p.id));
+          setSavedPlates([...savedPlates, ...newPlates]);
         }}
         onBack={() => setStack(null)}
         onOpenMenu={openMenu}
