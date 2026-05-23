@@ -64,6 +64,7 @@ import { DemoOverlay, DemoScenario } from '../components/DemoOverlay';
 import { generateProfessionalReport } from '../services/professionalReport';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import * as ImagePicker from 'expo-image-picker';
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -454,6 +455,20 @@ export function AppShell() {
     });
     setMealJobId(jobId);
     setStack(null); // back to main app immediately
+  };
+
+  const handleChangePhoto = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { setToast('Accès à la galerie refusé'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setProfile({ ...profile, photoUri: result.assets[0].uri });
+    }
   };
 
   const handleExportReport = async () => {
@@ -1361,6 +1376,7 @@ export function AppShell() {
             onUpdateMemory={handleUpdateMemory}
             onGenerateLab={handleGenerateLab}
             onExportReport={handleExportReport}
+            onChangePhoto={handleChangePhoto}
             onStartDemo={() => setDemoScenario('profile')}
           />
         );
@@ -1390,6 +1406,7 @@ export function AppShell() {
     name: profile.name,
     diet: computeDietLabel(profile.diets),
     goal: profile.goal,
+    photoUri: profile.photoUri,
   };
 
   const screenKey = stack ?? tab;

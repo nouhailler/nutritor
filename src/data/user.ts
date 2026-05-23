@@ -34,6 +34,7 @@ export interface AllergenEntry {
 export interface UserProfile {
   name: string;
   initial: string;
+  photoUri?: string;
   kcalTarget: number;
   macroTargets: { protein: number; carbs: number; fat: number };
   vitamins: Vitamin[];

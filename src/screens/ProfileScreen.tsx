@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   ScrollView,
   StyleSheet,
   Switch,
@@ -80,6 +81,7 @@ interface ProfileScreenProps {
   onUpdateMemory: () => void;
   onGenerateLab: () => void;
   onExportReport: () => void;
+  onChangePhoto: () => void;
   onStartDemo?: () => void;
 }
 
@@ -100,6 +102,7 @@ export function ProfileScreen({
   onUpdateMemory,
   onGenerateLab,
   onExportReport,
+  onChangePhoto,
   onStartDemo,
 }: ProfileScreenProps) {
   const insets = useSafeAreaInsets();
@@ -133,9 +136,18 @@ export function ProfileScreen({
 
         {/* Hero */}
         <View style={styles.hero}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{profile.initial}</Text>
-          </View>
+          <TouchableOpacity style={styles.avatarWrap} onPress={onChangePhoto} activeOpacity={0.85}>
+            <View style={styles.avatar}>
+              {profile.photoUri ? (
+                <Image source={{ uri: profile.photoUri }} style={styles.avatarPhoto} />
+              ) : (
+                <Text style={styles.avatarText}>{profile.initial}</Text>
+              )}
+            </View>
+            <View style={styles.avatarCameraBtn}>
+              <Icon name="camera" size={13} color={Colors.paper2} />
+            </View>
+          </TouchableOpacity>
           <Text style={styles.eyebrow}>Profil nutritionnel</Text>
           <Text style={styles.name}>{profile.name}</Text>
           <Text style={styles.goal}>{profile.goal}</Text>
@@ -417,13 +429,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 20,
   },
+  avatarWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
   avatar: {
     width: 72, height: 72,
     borderRadius: 36,
     backgroundColor: Colors.ink,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  avatarPhoto: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+  },
+  avatarCameraBtn: {
+    position: 'absolute',
+    bottom: 0,
+    right: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: Colors.ink2,
+    borderWidth: 2,
+    borderColor: Colors.paper,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarText: {
     fontFamily: Fonts.serif,

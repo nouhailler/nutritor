@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import {
   Animated,
   Dimensions,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -36,7 +37,7 @@ const NAV_ITEMS: NavItem[] = [
 interface DrawerMenuProps {
   visible: boolean;
   activeTab: Tab;
-  profile: { initial: string; name: string; diet: string; goal: string };
+  profile: { initial: string; name: string; diet: string; goal: string; photoUri?: string };
   onNavigate: (tab: Tab) => void;
   onOpenSettings: () => void;
   onOpenMealGenerator: () => void;
@@ -117,17 +118,25 @@ export function DrawerMenu({
           <Icon name="close" size={20} />
         </TouchableOpacity>
 
-        {/* Profile header */}
-        <View style={styles.profileSection}>
+        {/* Profile header — cliquable → onglet Profil */}
+        <TouchableOpacity
+          style={styles.profileSection}
+          onPress={() => { onNavigate('profile'); onClose(); }}
+          activeOpacity={0.75}
+        >
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{profile.initial}</Text>
+            {profile.photoUri ? (
+              <Image source={{ uri: profile.photoUri }} style={styles.avatarPhoto} />
+            ) : (
+              <Text style={styles.avatarText}>{profile.initial}</Text>
+            )}
           </View>
           <Text style={styles.profileName}>{profile.name}</Text>
           <Text style={styles.profileDiet}>{profile.diet}</Text>
           <View style={styles.goalPill}>
             <Text style={styles.goalText}>{profile.goal}</Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Separator */}
         <View style={styles.separator} />
@@ -276,6 +285,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
+    overflow: 'hidden',
+  },
+  avatarPhoto: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
   avatarText: {
     fontFamily: Fonts.serif,
