@@ -79,6 +79,7 @@ interface ProfileScreenProps {
   onOpenFodmap: () => void;
   onUpdateMemory: () => void;
   onGenerateLab: () => void;
+  onExportReport: () => void;
   onStartDemo?: () => void;
 }
 
@@ -98,6 +99,7 @@ export function ProfileScreen({
   onOpenFodmap,
   onUpdateMemory,
   onGenerateLab,
+  onExportReport,
   onStartDemo,
 }: ProfileScreenProps) {
   const insets = useSafeAreaInsets();
@@ -165,6 +167,16 @@ export function ProfileScreen({
 
           <Text style={styles.activity}>{profile.activity}</Text>
         </View>
+
+        {/* Export professionnel */}
+        <TouchableOpacity style={styles.exportBtn} onPress={onExportReport} activeOpacity={0.8}>
+          <Text style={styles.exportEmoji}>👨‍⚕️</Text>
+          <View style={styles.exportText}>
+            <Text style={styles.exportTitle}>Export professionnel</Text>
+            <Text style={styles.exportDesc}>PDF partageable — nutritionniste, gastro-entérologue, diététicien</Text>
+          </View>
+          <Icon name="upload" size={16} color={Colors.ok} />
+        </TouchableOpacity>
 
         {/* Section: Mode Low FODMAP */}
         <TouchableOpacity style={styles.fodmapCard} onPress={onOpenFodmap} activeOpacity={0.85}>
@@ -483,6 +495,35 @@ const styles = StyleSheet.create({
   },
 
   // FODMAP card
+  exportBtn: {
+    marginHorizontal: 24,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(63,90,58,0.25)',
+    borderRadius: 16,
+    backgroundColor: 'rgba(63,90,58,0.04)',
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  exportEmoji: { fontSize: 22 },
+  exportText: { flex: 1, gap: 2 },
+  exportTitle: {
+    fontFamily: Fonts.sansSemiBold,
+    fontSize: 14,
+    color: Colors.ink,
+    letterSpacing: -0.1,
+  },
+  exportDesc: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    color: Colors.muted,
+    letterSpacing: 0.3,
+    lineHeight: 14,
+  },
+
   fodmapCard: {
     marginHorizontal: 24,
     marginBottom: 8,

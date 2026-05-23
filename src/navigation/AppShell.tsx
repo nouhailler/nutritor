@@ -61,6 +61,9 @@ import { SymptomEntry, SymptomScores } from '../types/symptoms';
 import { computeDayTips } from '../services/tipsEngine';
 import { DayTip } from '../types/tips';
 import { DemoOverlay, DemoScenario } from '../components/DemoOverlay';
+import { generateProfessionalReport } from '../services/professionalReport';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -451,6 +454,23 @@ export function AppShell() {
     });
     setMealJobId(jobId);
     setStack(null); // back to main app immediately
+  };
+
+  const handleExportReport = async () => {
+    try {
+      const html = generateProfessionalReport(profile, journal, meals, fodmapProtocol);
+      const fileName = `nutritor-rapport-${profile.name.replace(/\s+/g, '-').toLowerCase()}-${todayStr()}.html`;
+      const fileUri = FileSystem.cacheDirectory + fileName;
+      await FileSystem.writeAsStringAsync(fileUri, html, { encoding: FileSystem.EncodingType.UTF8 });
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'text/html',
+        dialogTitle: 'Partager le rapport professionnel',
+        UTI: 'public.html',
+      });
+    } catch (e) {
+      console.error('[Export] failed', e);
+      setToast('Impossible de générer le rapport');
+    }
   };
 
   // One-time migration: recompute CIQUAL allergens for stored foods
@@ -1340,6 +1360,7 @@ export function AppShell() {
             onOpenFodmap={() => setStack('fodmap')}
             onUpdateMemory={handleUpdateMemory}
             onGenerateLab={handleGenerateLab}
+            onExportReport={handleExportReport}
             onStartDemo={() => setDemoScenario('profile')}
           />
         );
