@@ -1182,6 +1182,7 @@ export function AppShell() {
           setToast(msg);
           setTimeout(() => setToast(null), 2600);
         }}
+        onStartDemo={() => setDemoScenario('settings')}
       />
     );
   } else {
@@ -1205,6 +1206,7 @@ export function AppShell() {
             onOpenSearch={openSearch}
             onOpenFoods={() => showTab('foods')}
             onStartDemo={() => setDemoScenario('home')}
+            onStartCalendarDemo={() => setDemoScenario('calendar')}
             dayTips={dayTips}
             dismissedTipIds={dismissedTips[effectiveDate] ?? []}
             onDismissTip={(id) =>

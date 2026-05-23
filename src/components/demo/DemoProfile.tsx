@@ -4,7 +4,7 @@ import { Colors, Fonts } from '../../theme/tokens';
 import { useDemoEngine, SW, SH } from './useDemoEngine';
 import { DemoShell } from './DemoShell';
 
-const PHASES = ['hero', 'allergens', 'lab'] as const;
+const PHASES = ['hero', 'allergens', 'memory', 'lab'] as const;
 type Phase = typeof PHASES[number];
 
 // ── Fake data ──────────────────────────────────────────────────
@@ -32,12 +32,21 @@ const DIETS = [
   { label: 'Méditerranéen', rule: 'Privilégie huile olive, légumes',     on: true  },
 ];
 
+const MEMORY_LINES = [
+  'Légumineuses bien tolérées · aucun symptôme depuis 3 semaines',
+  'Lactose > 20 g déclenche des ballonnements modérés · préférer les fromages affinés',
+  'Repas riches en FODMAPs le soir corrèlent avec un sommeil moins réparateur',
+  'Activité physique le matin réduit la charge digestive perçue après le repas',
+];
+
 const LAB = [
   { emoji: '🐟', name: 'Ratio ω-3 / ω-6',        status: 'mid',  label: 'À améliorer', value: '1:10',    comment: 'Augmenter les sources oméga-3' },
   { emoji: '🌿', name: 'Densité micronutrit.',     status: 'ok',   label: 'Bon',         value: '78/100',  comment: 'Bonne variété végétale' },
   { emoji: '🔥', name: 'Score inflammatoire',      status: 'ok',   label: 'Faible',      value: '24/100',  comment: 'Alimentation anti-inflammatoire' },
   { emoji: '🎨', name: 'Diversité alimentaire',    status: 'mid',  label: 'Moyen',       value: '12 fam.', comment: 'Objectif 20+ familles / semaine' },
+  { emoji: '🏭', name: 'Ultra-transformé',         status: 'ok',   label: 'Faible',      value: '8 %',     comment: 'Bien en dessous des 20 % recommandés' },
   { emoji: '🪣', name: 'Charge FODMAP',            status: 'ok',   label: 'Faible',      value: 'Basse',   comment: 'Phase de réintroduction envisageable' },
+  { emoji: '🧬', name: 'Équilibre acides aminés',  status: 'mid',  label: 'Incomplet',   value: '6/9 AA',  comment: 'Ajouter des protéines complètes' },
 ];
 
 const STATUS_COLOR: Record<string, string> = {
@@ -89,7 +98,7 @@ export function DemoProfile({ visible, onClose }: Props) {
         setCaption('Profil nutritionnel personnalisé');
       });
 
-      // t=2.4s : doigt → stats row (poids)
+      // t=2.4s : doigt → stats row
       at(2400, () => {
         move(SW * 0.5, SH * 0.295, 500);
         setCaption('Données biométriques et objectif calorique');
@@ -117,43 +126,65 @@ export function DemoProfile({ visible, onClose }: Props) {
         setCaption('Les aliments concernés sont filtrés partout');
       });
 
-      // t=9.0s : doigt → toggle régime "Sans lactose"
+      // t=9.0s : doigt → toggle régime
       at(9000, () => {
         move(SW * 0.82, SH * 0.535, 500);
-        setCaption('Active ou désactive chaque régime');
+        setCaption('Active ou désactive chaque régime alimentaire');
       });
 
-      // t=10.2s : tap → laboratoire
+      // t=10.2s : tap → mémoire digestive
       at(10200, () => {
+        tap();
+        setPhase('memory');
+        setCaption('Mémoire digestive — IA analyse tes 21 derniers jours');
+      });
+
+      // t=11.2s : doigt → première ligne
+      at(11200, () => move(SW * 0.5, SH * 0.315, 500));
+
+      // t=12.6s : doigt → troisième ligne
+      at(12600, () => {
+        move(SW * 0.5, SH * 0.435, 400);
+        setCaption('Croise tes repas, tes symptômes et ton bien-être');
+      });
+
+      // t=14.0s : doigt → bouton analyser
+      at(14000, () => {
+        move(SW * 0.5, SH * 0.62, 500);
+        setCaption('');
+      });
+
+      // t=14.8s : tap → laboratoire
+      at(14800, () => {
         tap();
         setPhase('lab');
         setCaption('Laboratoire nutritionnel IA — 7 indicateurs');
       });
 
-      // t=11.2s : doigt → première métrique
-      at(11200, () => move(SW * 0.5, SH * 0.285, 500));
+      // t=15.8s : doigt → première métrique
+      at(15800, () => move(SW * 0.5, SH * 0.27, 500));
 
-      // t=12.5s : doigt → 3e métrique
-      at(12500, () => {
-        move(SW * 0.5, SH * 0.415, 400);
+      // t=17.1s : doigt → 4e métrique
+      at(17100, () => {
+        move(SW * 0.5, SH * 0.42, 400);
         setCaption('Analyse IA basée sur tes repas du jour');
       });
 
-      // t=13.8s : doigt → bouton analyser
-      at(13800, () => {
-        move(SW * 0.5, SH * 0.62, 500);
+      // t=18.6s : doigt → bouton ré-analyser
+      at(18600, () => {
+        move(SW * 0.5, SH * 0.72, 500);
         setCaption('');
       });
 
-      // t=14.6s : tap → retour hero
-      at(14600, () => {
+      // t=19.4s : tap → retour hero
+      at(19400, () => {
         tap();
         setPhase('hero');
-        setCaption('Suivi complet · allergènes · régimes · labo IA');
+        setCaption('Allergènes · régimes · mémoire digestive · labo IA');
       });
 
-      // t=16.5s : boucle
-      at(16500, () => { if (isRunning.current) run(); });
+      // t=21.2s : boucle
+      at(21200, () => { if (isRunning.current) run(); });
     };
 
     run();
@@ -282,6 +313,42 @@ export function DemoProfile({ visible, onClose }: Props) {
           </View>
         )}
 
+        {/* ══ MÉMOIRE DIGESTIVE ══════════════════════════════════ */}
+        {phase === 'memory' && (
+          <View style={s.content}>
+
+            <View style={s.section}>
+              <Text style={s.sectionEyebrow}>Mémoire digestive</Text>
+              <Text style={s.sectionDesc}>
+                L'IA analyse tes repas des 21 derniers jours croisés avec tes symptômes pour construire ta tolérance digestive.
+              </Text>
+
+              <View style={s.memoryCard}>
+                <View style={s.memoryHeader}>
+                  <View style={s.sparkleDot} />
+                  <Text style={s.memoryHeaderText}>Observations personnalisées</Text>
+                  <Text style={s.memoryDate}>mis à jour le 21 mai 2026</Text>
+                </View>
+                <View style={s.memoryLines}>
+                  {MEMORY_LINES.map((line, i) => (
+                    <View key={i} style={s.memoryLine}>
+                      <View style={s.memoryDot} />
+                      <Text style={s.memoryLineText}>{line}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
+
+            {/* Bouton analyser */}
+            <View style={s.analyzeBtn}>
+              <View style={s.sparkleIcon} />
+              <Text style={s.analyzeBtnText}>Mettre à jour la mémoire</Text>
+            </View>
+
+          </View>
+        )}
+
         {/* ══ LABORATOIRE ════════════════════════════════════════ */}
         {phase === 'lab' && (
           <View style={s.content}>
@@ -316,7 +383,7 @@ export function DemoProfile({ visible, onClose }: Props) {
               </View>
             </View>
 
-            {/* Bouton analyser */}
+            {/* Bouton ré-analyser */}
             <View style={s.analyzeBtn}>
               <View style={s.sparkleIcon} />
               <Text style={s.analyzeBtnText}>Ré-analyser la journée</Text>
@@ -370,7 +437,6 @@ const s = StyleSheet.create({
   statUnit:    { fontFamily: Fonts.sans, fontSize: 11, color: Colors.muted },
   activity:    { fontFamily: Fonts.mono, fontSize: 10, color: Colors.muted2, letterSpacing: 0.3, marginTop: 8 },
 
-  // FODMAP card
   fodmapCard: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: Colors.ok + '12', borderWidth: 1, borderColor: Colors.ok + '40',
@@ -380,7 +446,6 @@ const s = StyleSheet.create({
   fodmapDesc:  { fontFamily: Fonts.mono, fontSize: 9.5, color: Colors.muted, letterSpacing: 0.3, marginTop: 3 },
   fodmapIcon:  { width: 18, height: 18, borderRadius: 9, backgroundColor: Colors.ok + '40' },
 
-  // Objectifs
   objectifsCard: {
     backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.hairline2,
     borderRadius: 14, padding: 16, gap: 6,
@@ -429,23 +494,49 @@ const s = StyleSheet.create({
   },
   fakeThumbOn: { alignSelf: 'flex-end' },
 
+  // ── Mémoire digestive ───────────────────────────────────────
+  memoryCard: {
+    borderWidth: 1, borderColor: Colors.ok + '40',
+    borderRadius: 14, backgroundColor: Colors.ok + '08',
+    padding: 14, gap: 4,
+  },
+  memoryHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10, flexWrap: 'wrap',
+  },
+  sparkleDot: {
+    width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.ok,
+  },
+  memoryHeaderText: {
+    fontFamily: Fonts.sansMedium, fontSize: 12, color: Colors.ok, flex: 1,
+  },
+  memoryDate: {
+    fontFamily: Fonts.mono, fontSize: 9, color: Colors.muted2, letterSpacing: 0.3,
+  },
+  memoryLines: { gap: 8 },
+  memoryLine:  { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  memoryDot:   { width: 5, height: 5, borderRadius: 3, backgroundColor: Colors.ok, marginTop: 6, flexShrink: 0 },
+  memoryLineText: {
+    flex: 1, fontFamily: Fonts.sans, fontSize: 12, color: Colors.ink2, lineHeight: 18,
+  },
+
   // ── Laboratoire ─────────────────────────────────────────────
   labCard: {
     backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.hairline2,
     borderRadius: 14, padding: 14, gap: 2,
   },
   labDate: { fontFamily: Fonts.mono, fontSize: 9, color: Colors.muted2, letterSpacing: 0.3, marginBottom: 6 },
-  labRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: Colors.hairline2 },
-  labEmoji: { fontSize: 16, width: 24, textAlign: 'center', marginTop: 1 },
+  labRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: Colors.hairline2 },
+  labEmoji: { fontSize: 14, width: 22, textAlign: 'center', marginTop: 1 },
   labRowCenter: { flex: 1, gap: 1 },
   labRowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  labName: { fontFamily: Fonts.sansMedium, fontSize: 12, color: Colors.ink, letterSpacing: -0.1 },
-  labBadge: { borderWidth: 1, borderRadius: 100, paddingVertical: 1, paddingHorizontal: 7 },
-  labBadgeText: { fontFamily: Fonts.sansMedium, fontSize: 10 },
-  labValue:   { fontFamily: Fonts.serif, fontSize: 13, letterSpacing: -0.2, color: Colors.ink2 },
-  labComment: { fontFamily: Fonts.mono, fontSize: 8.5, color: Colors.muted, letterSpacing: 0.2, lineHeight: 13 },
-  labDot: { width: 7, height: 7, borderRadius: 4, marginTop: 6 },
+  labName: { fontFamily: Fonts.sansMedium, fontSize: 11, color: Colors.ink, letterSpacing: -0.1 },
+  labBadge: { borderWidth: 1, borderRadius: 100, paddingVertical: 1, paddingHorizontal: 6 },
+  labBadgeText: { fontFamily: Fonts.sansMedium, fontSize: 9 },
+  labValue:   { fontFamily: Fonts.serif, fontSize: 12, letterSpacing: -0.2, color: Colors.ink2 },
+  labComment: { fontFamily: Fonts.mono, fontSize: 8, color: Colors.muted, letterSpacing: 0.2, lineHeight: 12 },
+  labDot: { width: 6, height: 6, borderRadius: 3, marginTop: 5 },
 
+  // ── Bouton partagé ─────────────────────────────────────────
   analyzeBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: Colors.ink, borderRadius: 100,

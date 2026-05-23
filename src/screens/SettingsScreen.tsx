@@ -142,6 +142,7 @@ interface Props {
   onOpenMenu: () => void;
   onResetOnboarding: () => Promise<void>;
   showToast: (msg: string) => void;
+  onStartDemo?: () => void;
 }
 
 export function SettingsScreen({
@@ -153,6 +154,7 @@ export function SettingsScreen({
   onOpenMenu,
   onResetOnboarding,
   showToast,
+  onStartDemo,
 }: Props) {
   const insets = useSafeAreaInsets();
   const [local, setLocal] = useState<AppSettings>(settings);
@@ -315,6 +317,11 @@ export function SettingsScreen({
         <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
           <Icon name="menu" size={22} color={Colors.ink} />
         </TouchableOpacity>
+        {onStartDemo && (
+          <TouchableOpacity style={styles.iconBtnSignal} onPress={onStartDemo} activeOpacity={0.7}>
+            <Icon name="activity" size={18} color={Colors.signal} />
+          </TouchableOpacity>
+        )}
         <HelpButton onPress={() => setHelpVisible(true)} />
       </View>
       <HelpModal visible={helpVisible} content={HELP.settings} onClose={() => setHelpVisible(false)} />
@@ -547,6 +554,16 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 40,
     height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBtnSignal: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.signal + '55',
+    backgroundColor: Colors.signal + '12',
     alignItems: 'center',
     justifyContent: 'center',
   },

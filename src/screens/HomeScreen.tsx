@@ -442,6 +442,7 @@ interface HomeScreenProps {
   onOpenSearch: () => void;
   onOpenFoods: () => void;
   onStartDemo: () => void;
+  onStartCalendarDemo?: () => void;
   dayTips: DayTip[];
   dismissedTipIds: string[];
   onDismissTip: (id: string) => void;
@@ -469,6 +470,7 @@ export function HomeScreen({
   onOpenSearch,
   onOpenFoods,
   onStartDemo,
+  onStartCalendarDemo,
   dayTips,
   dismissedTipIds,
   onDismissTip,
@@ -567,7 +569,12 @@ export function HomeScreen({
             <TouchableOpacity style={styles.iconBtn} onPress={onStartDemo} activeOpacity={0.7}>
               <Icon name="activity" size={17} color={Colors.signal} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn} onPress={() => setCalendarVisible(true)} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => setCalendarVisible(true)}
+              onLongPress={onStartCalendarDemo}
+              activeOpacity={0.7}
+            >
               <Icon name="calendar" size={18} color={!isToday ? Colors.signal : Colors.ink} />
             </TouchableOpacity>
             <HelpButton onPress={() => setHelpVisible(true)} />
