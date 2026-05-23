@@ -1147,6 +1147,7 @@ export function AppShell() {
         externalResult={mealResult}
         onGenerateInBackground={handleGenerateMeals}
         onSaveMeal={handleSaveGeneratedMeal}
+        onClearResult={() => { setMealResult(null); setMealJobId(null); }}
         onBack={() => {
           setStack(null);
           // Clear icon once user has seen the result

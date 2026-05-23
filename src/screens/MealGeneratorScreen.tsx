@@ -70,7 +70,13 @@ function MacroPill({ label, value, unit, color }: {
 
 // ── Meal card ─────────────────────────────────────────────────
 
-function MealCard({ meal, onSave }: { meal: GeneratedMeal; onSave?: (meal: GeneratedMeal) => void }) {
+function MealCard({
+  meal, onSave, saved,
+}: {
+  meal: GeneratedMeal;
+  onSave?: (meal: GeneratedMeal) => void;
+  saved?: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
 
   const totalTime = (meal.prepTime ?? 0) + (meal.cookTime ?? 0);
@@ -212,12 +218,14 @@ function MealCard({ meal, onSave }: { meal: GeneratedMeal; onSave?: (meal: Gener
           {/* Save button */}
           {onSave && (
             <TouchableOpacity
-              style={styles.saveBtn}
-              onPress={() => onSave(meal)}
-              activeOpacity={0.8}
+              style={[styles.saveBtn, saved && styles.saveBtnSaved]}
+              onPress={() => !saved && onSave(meal)}
+              activeOpacity={saved ? 1 : 0.8}
             >
-              <Icon name="bookmark" size={14} color={Colors.paper2} />
-              <Text style={styles.saveBtnText}>Sauvegarder ce repas</Text>
+              <Icon name={saved ? 'check' : 'bookmark'} size={14} color={saved ? Colors.ok : Colors.paper2} />
+              <Text style={[styles.saveBtnText, saved && styles.saveBtnTextSaved]}>
+                {saved ? 'Sauvegardé' : 'Sauvegarder ce repas'}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -235,6 +243,7 @@ interface MealGeneratorScreenProps {
   externalResult?: MealGeneratorResult | null;
   onGenerateInBackground?: (query: string) => void;
   onSaveMeal?: (meal: GeneratedMeal) => void;
+  onClearResult?: () => void;
   onBack: () => void;
   onOpenMenu: () => void;
   onStartDemo?: () => void;
@@ -247,6 +256,7 @@ export function MealGeneratorScreen({
   externalResult,
   onGenerateInBackground,
   onSaveMeal,
+  onClearResult,
   onBack,
   onOpenMenu,
   onStartDemo,
@@ -257,11 +267,28 @@ export function MealGeneratorScreen({
   const [result, setResult] = useState<MealGeneratorResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sentToBackground, setSentToBackground] = useState(false);
+  const [savedIndices, setSavedIndices] = useState<Set<number>>(new Set());
   const aiReady = isAIReady(settings);
   const suggestions = buildSuggestions(profile);
 
   // Show externally generated result when it arrives
   const displayResult = externalResult ?? result;
+
+  const handleSaveMeal = (meal: GeneratedMeal, index: number) => {
+    onSaveMeal?.(meal);
+    setSavedIndices((prev) => {
+      const next = new Set(prev);
+      next.add(index);
+      if (displayResult && next.size >= displayResult.meals.length) {
+        setTimeout(() => {
+          setResult(null);
+          setSavedIndices(new Set());
+          onClearResult?.();
+        }, 900);
+      }
+      return next;
+    });
+  };
 
   const handleGenerate = async (q: string) => {
     const trimmed = q.trim();
@@ -270,6 +297,7 @@ export function MealGeneratorScreen({
     setError(null);
     setResult(null);
     setSentToBackground(false);
+    setSavedIndices(new Set());
 
     if (onGenerateInBackground) {
       // Launch in background and let user navigate freely
@@ -434,7 +462,12 @@ export function MealGeneratorScreen({
               <Text style={styles.contextNote}>{displayResult.contextNote}</Text>
             )}
             {displayResult.meals.map((meal, i) => (
-              <MealCard key={i} meal={meal} onSave={onSaveMeal} />
+              <MealCard
+                key={i}
+                meal={meal}
+                saved={savedIndices.has(i)}
+                onSave={(m) => handleSaveMeal(m, i)}
+              />
             ))}
           </View>
         )}
@@ -1028,9 +1061,17 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.ink,
     borderRadius: 12,
   },
+  saveBtnSaved: {
+    backgroundColor: 'rgba(63,90,58,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(63,90,58,0.3)',
+  },
   saveBtnText: {
     fontFamily: Fonts.sansSemiBold,
     fontSize: 13,
     color: Colors.paper2,
+  },
+  saveBtnTextSaved: {
+    color: Colors.ok,
   },
 });
