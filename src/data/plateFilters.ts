@@ -1,4 +1,4 @@
-import { SavedPlate } from './saved';
+import { SavedPlate, PlateCategory } from './saved';
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -37,6 +37,9 @@ export interface PlateFilterState {
   requireBioactives: string[];
   metabolic: Partial<Record<MetabolicKey, MetabolicLevel[]>>;
 
+  // ── Catégories ────────────────────────────────────
+  categories: PlateCategory[];
+
   // ── Pairing ───────────────────────────────────
   pairedWithId: string | null;
 }
@@ -56,6 +59,7 @@ export const DEFAULT_FILTER: PlateFilterState = {
   requireTrace: [],
   requireBioactives: [],
   metabolic: {},
+  categories: [],
   pairedWithId: null,
 };
 
@@ -188,6 +192,7 @@ export function countActiveFilters(f: PlateFilterState): number {
   n += f.requireTrace.length;
   n += f.requireBioactives.length;
   n += Object.keys(f.metabolic).length;
+  n += (f.categories ?? []).length;
   if (f.pairedWithId !== null) n++;
   return n;
 }
@@ -203,6 +208,9 @@ export function applyPlateFilters(plates: SavedPlate[], f: PlateFilterState): Sa
     if (f.maxFat !== null && p.macros.fat > f.maxFat) return false;
     if (f.minKcal !== null && p.kcal < f.minKcal) return false;
     if (f.maxKcal !== null && p.kcal > f.maxKcal) return false;
+
+    // Catégories (le plat doit appartenir à l'une des catégories sélectionnées)
+    if ((f.categories ?? []).length > 0 && !f.categories.includes(p.category as PlateCategory)) return false;
 
     // Tags requis (le plat doit avoir TOUS)
     if (f.requireTags.some((t) => !p.tags.includes(t))) return false;

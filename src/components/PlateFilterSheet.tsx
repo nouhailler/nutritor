@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from './Icon';
-import { SavedPlate } from '../data/saved';
+import { SavedPlate, PlateCategory, PLATE_CATEGORIES } from '../data/saved';
 import {
   PlateFilterState,
   DEFAULT_FILTER,
@@ -182,7 +182,7 @@ export function PlateFilterSheet({ visible, filter, plates, onApply, onClose }: 
   const set = <K extends keyof PlateFilterState>(key: K, val: PlateFilterState[K]) =>
     setDraft((d) => ({ ...d, [key]: val }));
 
-  const toggleArr = <K extends 'requireTags' | 'excludeAllergens' | 'requireMinerals' | 'requireVitamins' | 'requireTrace' | 'requireBioactives'>(
+  const toggleArr = <K extends 'requireTags' | 'excludeAllergens' | 'requireMinerals' | 'requireVitamins' | 'requireTrace' | 'requireBioactives' | 'categories'>(
     key: K,
     item: string
   ) => {
@@ -245,6 +245,19 @@ export function PlateFilterSheet({ visible, filter, plates, onApply, onClose }: 
                 label={opt.label}
                 active={draft.sortBy === opt.value}
                 onPress={() => set('sortBy', opt.value as SortBy)}
+              />
+            ))}
+          </View>
+
+          {/* ── Catégories ──────────────────────────────────── */}
+          <SectionTitle label="Catégorie" />
+          <View style={styles.chips}>
+            {PLATE_CATEGORIES.map((cat) => (
+              <Chip
+                key={cat.id}
+                label={`${cat.emoji} ${cat.label}`}
+                active={(draft.categories ?? []).includes(cat.id as PlateCategory)}
+                onPress={() => toggleArr('categories', cat.id)}
               />
             ))}
           </View>

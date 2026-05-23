@@ -21,7 +21,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
-import { SavedPlate, SavedPlateItem } from '../data/saved';
+import { SavedPlate, SavedPlateItem, PlateCategory, PLATE_CATEGORIES } from '../data/saved';
 import { Food } from '../types';
 import { Colors, Fonts } from '../theme/tokens';
 
@@ -251,6 +251,7 @@ export function EditSavedPlateScreen({ plate, allPlates, foodList = [], onSave, 
   const [tags, setTags] = useState<string[]>(plate?.tags ?? []);
   const [photo, setPhoto] = useState<string | undefined>(plate?.photo);
   const [pendingPhoto, setPendingPhoto] = useState<string | undefined>();
+  const [category, setCategory] = useState<PlateCategory | undefined>(plate?.category);
   const [pairedWith, setPairedWith] = useState<string[]>(plate?.pairedWith ?? []);
   const [pairingQuery, setPairingQuery] = useState('');
   const [pairingSugOpen, setPairingSugOpen] = useState(false);
@@ -372,6 +373,7 @@ export function EditSavedPlateScreen({ plate, allPlates, foodList = [], onSave, 
       },
       recipe,
       photo,
+      category,
       pairedWith: pairedWith.length > 0 ? pairedWith : undefined,
     };
 
@@ -529,6 +531,33 @@ export function EditSavedPlateScreen({ plate, allPlates, foodList = [], onSave, 
                   >
                     {active && <Icon name="check" size={11} color={Colors.paper2} />}
                     <Text style={[styles.tagText, active && styles.tagTextActive]}>{tag}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Category */}
+          <View style={styles.section}>
+            <View style={styles.sectionLabelRow}>
+              <Text style={styles.sectionLabel}>Catégorie</Text>
+              <Text style={styles.sectionOptional}>Optionnel</Text>
+            </View>
+            <Text style={styles.sectionHint}>Permet de filtrer et retrouver facilement tes plats.</Text>
+            <View style={styles.tagsWrap}>
+              {PLATE_CATEGORIES.map((cat) => {
+                const active = category === cat.id;
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[styles.tagPill, active && styles.tagPillActive]}
+                    onPress={() => setCategory(active ? undefined : cat.id)}
+                    activeOpacity={0.7}
+                  >
+                    {active && <Icon name="check" size={11} color={Colors.paper2} />}
+                    <Text style={[styles.tagText, active && styles.tagTextActive]}>
+                      {cat.emoji} {cat.label}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -718,6 +747,30 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: Colors.muted,
     marginBottom: 10,
+  },
+  sectionLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  sectionOptional: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    color: Colors.muted2,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    borderRadius: 100,
+    paddingVertical: 2,
+    paddingHorizontal: 7,
+  },
+  sectionHint: {
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    color: Colors.muted,
+    marginBottom: 12,
   },
   sectionCount: {
     fontFamily: Fonts.mono,

@@ -1,3 +1,39 @@
+// ── Catégories de plats ───────────────────────────────────────
+
+export type PlateCategory =
+  | 'salads' | 'soups' | 'pasta' | 'stews' | 'meats'
+  | 'vegetarian' | 'fastfood' | 'sandwiches' | 'pizzas'
+  | 'worldcuisine' | 'bowls' | 'sides' | 'dairy'
+  | 'desserts' | 'fruits' | 'snacks' | 'breakfast' | 'drinks' | 'other';
+
+export interface PlateCategoryMeta {
+  id: PlateCategory;
+  emoji: string;
+  label: string;
+}
+
+export const PLATE_CATEGORIES: PlateCategoryMeta[] = [
+  { id: 'salads',       emoji: '🥗', label: 'Salades' },
+  { id: 'soups',        emoji: '🍲', label: 'Soupes & potages' },
+  { id: 'pasta',        emoji: '🍝', label: 'Pâtes & féculents' },
+  { id: 'stews',        emoji: '🍛', label: 'Plats mijotés' },
+  { id: 'meats',        emoji: '🍗', label: 'Viandes & protéines' },
+  { id: 'vegetarian',   emoji: '🌱', label: 'Végétarien / Vegan' },
+  { id: 'fastfood',     emoji: '🍔', label: 'Fast-food & street food' },
+  { id: 'sandwiches',   emoji: '🥪', label: 'Sandwichs & wraps' },
+  { id: 'pizzas',       emoji: '🍕', label: 'Pizzas & tartes salées' },
+  { id: 'worldcuisine', emoji: '🥘', label: 'Cuisine du monde' },
+  { id: 'bowls',        emoji: '🍚', label: 'Bowls & repas composés' },
+  { id: 'sides',        emoji: '🍟', label: 'Accompagnements' },
+  { id: 'dairy',        emoji: '🧀', label: 'Produits laitiers' },
+  { id: 'desserts',     emoji: '🍰', label: 'Desserts' },
+  { id: 'fruits',       emoji: '🍉', label: 'Fruits & snacks légers' },
+  { id: 'snacks',       emoji: '🥜', label: 'Snacks & grignotage' },
+  { id: 'breakfast',    emoji: '☕', label: 'Petit-déjeuner' },
+  { id: 'drinks',       emoji: '🧃', label: 'Boissons' },
+  { id: 'other',        emoji: '📦', label: 'Autre' },
+];
+
 export interface SavedPlateItem {
   name: string;
   qty: string;
@@ -36,6 +72,7 @@ export interface SavedPlate {
   pairedWith?: string[];
   nutrition?: PlateNutrition;
   aiComment?: string;
+  category?: PlateCategory;
 }
 
 export const SAVED_PLATES: SavedPlate[] = [

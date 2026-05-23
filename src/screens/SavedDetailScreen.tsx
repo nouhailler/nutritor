@@ -18,7 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, Line, Pattern, Rect } from 'react-native-svg';
 import { Icon } from '../components/Icon';
-import { SavedPlate } from '../data/saved';
+import { SavedPlate, PLATE_CATEGORIES } from '../data/saved';
 import { Meal } from '../types';
 import { Colors, Fonts } from '../theme/tokens';
 import { HelpButton, HelpModal } from '../components/HelpModal';
@@ -300,6 +300,14 @@ export function SavedDetailScreen({ plate, meals, settings, onBack, onAdd, onDel
 
         {/* Tags */}
         <View style={styles.tagsRow}>
+          {plate.category && (() => {
+            const meta = PLATE_CATEGORIES.find((c) => c.id === plate.category);
+            return meta ? (
+              <View style={styles.catPill}>
+                <Text style={styles.catPillText}>{meta.emoji} {meta.label}</Text>
+              </View>
+            ) : null;
+          })()}
           {plate.tags.map((t) => (
             <View key={t} style={styles.tagPill}>
               <Text style={styles.tagText}>{t}</Text>
@@ -560,6 +568,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 14,
     paddingBottom: 4,
+  },
+  catPill: {
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    borderRadius: 100,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    backgroundColor: Colors.paper2,
+  },
+  catPillText: {
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    color: Colors.muted,
   },
   tagPill: {
     borderWidth: 1,

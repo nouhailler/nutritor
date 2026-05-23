@@ -18,7 +18,7 @@ import { Icon } from '../components/Icon';
 import { HelpButton, HelpModal } from '../components/HelpModal';
 import { PlateFilterSheet } from '../components/PlateFilterSheet';
 import { HELP } from '../data/helpContent';
-import { SavedPlate } from '../data/saved';
+import { SavedPlate, PLATE_CATEGORIES } from '../data/saved';
 import {
   PlateFilterState,
   DEFAULT_FILTER,
@@ -77,6 +77,14 @@ function SavedCard({ plate, onPress, onEdit }: { plate: SavedPlate; onPress: () 
         </StripedThumb>
       )}
       <Text style={styles.cardName}>{plate.name}</Text>
+      {plate.category && (() => {
+        const meta = PLATE_CATEGORIES.find((c) => c.id === plate.category);
+        return meta ? (
+          <View style={styles.catPill}>
+            <Text style={styles.catPillText}>{meta.emoji} {meta.label}</Text>
+          </View>
+        ) : null;
+      })()}
       <View style={styles.tags}>
         {plate.tags.map((t) => (
           <View key={t} style={styles.tagPill}>
@@ -438,6 +446,21 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     letterSpacing: -0.15,
     color: Colors.ink,
+  },
+
+  catPill: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    borderRadius: 100,
+    paddingVertical: 2,
+    paddingHorizontal: 7,
+    backgroundColor: Colors.paper2,
+  },
+  catPillText: {
+    fontFamily: Fonts.sans,
+    fontSize: 10,
+    color: Colors.muted,
   },
 
   tags: {
