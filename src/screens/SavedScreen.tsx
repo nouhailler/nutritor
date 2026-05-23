@@ -120,9 +120,10 @@ interface SavedScreenProps {
   onEditPlate: (plate: SavedPlate) => void;
   onOpenMenu: () => void;
   onStartDemo?: () => void;
+  onOpenPlateAI?: () => void;
 }
 
-export function SavedScreen({ plates, onOpenPlate, onCreatePlate, onEditPlate, onOpenMenu, onStartDemo }: SavedScreenProps) {
+export function SavedScreen({ plates, onOpenPlate, onCreatePlate, onEditPlate, onOpenMenu, onStartDemo, onOpenPlateAI }: SavedScreenProps) {
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<PlateFilterState>(DEFAULT_FILTER);
   const [filterVisible, setFilterVisible] = useState(false);
@@ -147,6 +148,11 @@ export function SavedScreen({ plates, onOpenPlate, onCreatePlate, onEditPlate, o
           <Text style={styles.eyebrow}>Bibliothèque</Text>
           <Text style={styles.title}>Plats sauvegardés</Text>
         </View>
+        {onOpenPlateAI && (
+          <TouchableOpacity style={styles.iconBtnAI} onPress={onOpenPlateAI} activeOpacity={0.7}>
+            <Icon name="sparkle" size={18} color={Colors.paper2} />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={onCreatePlate}>
           <Icon name="plus" size={20} color={Colors.ink} />
         </TouchableOpacity>
@@ -267,6 +273,15 @@ const styles = StyleSheet.create({
     borderColor: Colors.hairline,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 4,
+  },
+  iconBtnAI: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.ink,
     marginBottom: 4,
   },
 

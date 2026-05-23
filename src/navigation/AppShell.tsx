@@ -42,6 +42,7 @@ import { BarcodeScannerScreen } from '../screens/BarcodeScannerScreen';
 import { FoodPhotoScreen } from '../screens/FoodPhotoScreen';
 import { FodmapScreen } from '../screens/FodmapScreen';
 import { MealGeneratorScreen } from '../screens/MealGeneratorScreen';
+import { PlateAIScreen } from '../screens/PlateAIScreen';
 import { KnowledgeScreen } from '../screens/KnowledgeScreen';
 import { ShoppingAssistantScreen } from '../screens/ShoppingAssistantScreen';
 import { ShoppingScannerScreen } from '../screens/ShoppingScannerScreen';
@@ -65,7 +66,7 @@ function todayStr() {
 }
 
 type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile' | 'shopping';
-type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'manualFood' | 'editFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge' | 'shoppingScanner' | null;
+type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'manualFood' | 'editFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge' | 'shoppingScanner' | 'plateAI' | null;
 
 const TABS: { id: Tab; label: string; icon: 'home' | 'leaf' | 'book' | 'chart' | 'user' | 'shopping-cart' }[] = [
   { id: 'home',     label: 'Journal',  icon: 'home' },
@@ -1158,6 +1159,23 @@ export function AppShell() {
         onStartDemo={() => setDemoScenario('mealGenerator')}
       />
     );
+  } else if (stack === 'plateAI') {
+    screen = (
+      <PlateAIScreen
+        profile={profile}
+        settings={settings}
+        foodList={foodList}
+        savedPlates={savedPlates}
+        onSavePlate={(plate) => {
+          setSavedPlates((prev) => [plate, ...prev]);
+          setStack(null);
+          setToast(`"${plate.name}" sauvegardé !`);
+          setTimeout(() => setToast(null), 2600);
+        }}
+        onBack={() => setStack(null)}
+        onOpenMenu={() => setDrawerOpen(true)}
+      />
+    );
   } else if (stack === 'knowledge') {
     screen = (
       <KnowledgeScreen onBack={() => setStack(null)} onOpenMenu={openMenu} onStartDemo={() => setDemoScenario('knowledge')} />
@@ -1274,6 +1292,7 @@ export function AppShell() {
             }}
             onOpenMenu={() => setDrawerOpen(true)}
             onStartDemo={() => setDemoScenario('saved')}
+            onOpenPlateAI={() => setStack('plateAI')}
           />
         );
         break;

@@ -6,6 +6,7 @@ import { GeneratedMeal, MealGeneratorResult } from '../types/mealGenerator';
 import { SymptomEntry, SYMPTOM_CONFIG } from '../types/symptoms';
 import { LabScores } from '../types/labScores';
 import { aiLogger } from './aiLogger';
+import { SmartRecipe, SmartRecipeQuery } from '../types/smartRecipe';
 
 const FOOD_SCHEMA = `{
   "id": "slug-unique-001",
@@ -948,6 +949,126 @@ function extractJSONArray(raw: string): string {
     } catch { /* ignore */ }
   }
   return s;
+}
+
+// ── Smart Recipe Generator ────────────────────────────────────
+
+const SMART_RECIPE_SCHEMA = `{
+  "name": "Curry poulet léger",
+  "emoji": "🍛",
+  "description": "Description appétissante 1-2 phrases",
+  "prepTime": 10,
+  "cookTime": 20,
+  "servings": 2,
+  "ingredients": [
+    { "name": "Poulet", "amount": "200g", "note": null, "substitution": null },
+    { "name": "Lait de coco", "amount": "100ml", "note": "version légère", "substitution": "Crème de riz si intolérance coco" }
+  ],
+  "steps": ["Étape 1", "Étape 2"],
+  "per_serving": { "kcal": 480, "protein": 35, "carbs": 45, "fat": 14, "fiber": 3 },
+  "fodmapLoad": "low",
+  "glycemicLoad": "moderate",
+  "digestionProfile": "light",
+  "satiety": "high",
+  "warnings": ["Lait de coco : ne pas dépasser 100ml/portion"],
+  "physiologicalTimeline": "Digestion ~2h · Énergie stable 3-4h · Faible fermentation",
+  "tags": ["sans-gluten", "low-fodmap"],
+  "whyGoodForProfile": "Adapté à la digestion sensible car...",
+  "energyProfile": "Énergie stable · Digestion légère · Satiété élevée"
+}`;
+
+const SMART_RECIPE_SYSTEM = `Tu es un chef diététicien expert en nutrition fonctionnelle et digestion. Tu génères des recettes JSON personnalisées.
+
+Règles absolues :
+- Réponds UNIQUEMENT avec un tableau JSON brut (array), sans markdown ni texte autour
+- Génère exactement 3 recettes différentes et complémentaires (ou 1 si mode variante)
+- Valeurs nutritionnelles précises par portion (base CIQUAL/USDA)
+- FODMAP : base-toi sur les données Monash University avec portions exactes
+- Respecte STRICTEMENT tous les allergènes et régimes du profil
+- fodmapLoad/glycemicLoad/digestionProfile/satiety : évalue avec précision
+- substitution : propose une alternative si ingrédient potentiellement problématique pour le profil
+- physiologicalTimeline : délai digestion estimé et profil énergétique
+
+Schéma JSON (un objet par recette, tableau de 3) :
+${SMART_RECIPE_SCHEMA}`;
+
+export async function generateSmartRecipes(
+  query: SmartRecipeQuery,
+  profile: UserProfile,
+  settings: AppSettings,
+  signal?: AbortSignal,
+  onStep?: (step: string) => void,
+): Promise<SmartRecipe[]> {
+  const activeDiets = profile.diets.filter((d) => d.on).map((d) => d.label);
+  const activeAllergens = profile.allergens.filter((a) => a.level !== 'aucun');
+
+  let userMsg = '';
+
+  if (query.mode === 'ingredients') {
+    userMsg = `Mode : recette à partir d'ingrédients disponibles\n`;
+    userMsg += `Ingrédients disponibles : ${(query.ingredients ?? []).join(', ')}\n`;
+    userMsg += query.mealType ? `Type de repas souhaité : ${query.mealType}\n` : '';
+  } else if (query.mode === 'profile') {
+    userMsg = `Mode : recettes adaptées au profil complet\n`;
+    userMsg += `Objectif : ${profile.goal}\n`;
+    userMsg += `Calories cible : ${profile.kcalTarget} kcal/jour\n`;
+    if (query.criteria?.length) userMsg += `Critères supplémentaires : ${query.criteria.join(', ')}\n`;
+    if (query.mealType) userMsg += `Type de repas : ${query.mealType}\n`;
+  } else if (query.mode === 'criteria') {
+    userMsg = `Mode : recettes selon critères nutritionnels\n`;
+    userMsg += `Critères : ${(query.criteria ?? []).join(', ')}\n`;
+    if (query.mealType) userMsg += `Type de repas : ${query.mealType}\n`;
+  } else if (query.mode === 'variant') {
+    userMsg = `Mode : variante d'une recette existante\n`;
+    userMsg += `Recette originale : ${query.variantOf}\n`;
+    userMsg += `Type de variante : ${query.variantType}\n`;
+    userMsg += `Génère UNE SEULE recette (pas 3) en adaptant la recette originale selon la variante demandée.\n`;
+  }
+
+  if (activeDiets.length > 0) userMsg += `\nRégimes actifs : ${activeDiets.join(', ')}`;
+  if (activeAllergens.length > 0) {
+    userMsg += `\nAllergènes/intolérances :\n`;
+    for (const a of activeAllergens) {
+      userMsg += `  • ${a.name} — ${a.level}${a.note ? ` (${a.note})` : ''}\n`;
+    }
+  }
+
+  const messages = [
+    { role: 'system', content: SMART_RECIPE_SYSTEM },
+    { role: 'user', content: userMsg },
+  ];
+
+  const WAIT_MSGS = [
+    'Analyse du profil…',
+    'Sélection des ingrédients…',
+    'Calcul FODMAP (Monash)…',
+    'Estimation glycémique…',
+    'Profil de digestion…',
+    'Rédaction des étapes…',
+    'Finalisation des recettes…',
+  ];
+  let msgIdx = 0;
+  onStep?.('Génération en cours…');
+  const interval = setInterval(() => {
+    msgIdx = (msgIdx + 1) % WAIT_MSGS.length;
+    onStep?.(WAIT_MSGS[msgIdx]);
+  }, 5000);
+
+  let raw: string;
+  try {
+    raw = await callAI(settings, messages, signal);
+  } finally {
+    clearInterval(interval);
+  }
+
+  if (!raw) throw new Error("L'IA n'a retourné aucune réponse.");
+
+  const jsonStr = extractJSONArray(raw);
+  const parsed = JSON.parse(jsonStr);
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw new Error('Format inattendu. Réessaie.');
+  }
+  return parsed as SmartRecipe[];
 }
 
 export async function generateMeals(
