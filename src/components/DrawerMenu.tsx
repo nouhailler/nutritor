@@ -42,6 +42,7 @@ interface DrawerMenuProps {
   onOpenMealGenerator: () => void;
   onOpenKnowledge: () => void;
   onClose: () => void;
+  onStartDemo?: () => void;
 }
 
 export function DrawerMenu({
@@ -53,6 +54,7 @@ export function DrawerMenu({
   onOpenMealGenerator,
   onOpenKnowledge,
   onClose,
+  onStartDemo,
 }: DrawerMenuProps) {
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
@@ -200,6 +202,16 @@ export function DrawerMenu({
 
         {/* Footer — always visible */}
         <View style={styles.drawerFooter}>
+          {onStartDemo && (
+            <TouchableOpacity
+              style={styles.demoBtn}
+              onPress={() => { onStartDemo(); onClose(); }}
+              activeOpacity={0.7}
+            >
+              <Icon name="activity" size={16} color={Colors.signal} />
+              <Text style={styles.demoBtnText}>Voir la démo</Text>
+            </TouchableOpacity>
+          )}
           <View style={styles.separator} />
           <TouchableOpacity
             style={styles.settingsBtn}
@@ -400,6 +412,18 @@ const styles = StyleSheet.create({
   // Footer
   drawerFooter: {
     paddingTop: 8,
+  },
+  demoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  demoBtnText: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.signal,
   },
   settingsBtn: {
     flexDirection: 'row',

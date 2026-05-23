@@ -12,8 +12,9 @@ import { DemoShopping }       from './demo/DemoShopping';
 import { DemoMealGenerator }  from './demo/DemoMealGenerator';
 import { DemoSettings }       from './demo/DemoSettings';
 import { DemoCalendar }       from './demo/DemoCalendar';
+import { DemoDrawer }         from './demo/DemoDrawer';
 
-export type DemoScenario = 'home' | 'foods' | 'off' | 'ciqual' | 'scanner' | 'photo' | 'saved' | 'stats' | 'profile' | 'shopping' | 'mealGenerator' | 'settings' | 'calendar';
+export type DemoScenario = 'home' | 'foods' | 'off' | 'ciqual' | 'scanner' | 'photo' | 'saved' | 'stats' | 'profile' | 'shopping' | 'mealGenerator' | 'settings' | 'calendar' | 'drawer';
 
 interface Props {
   scenario: DemoScenario | null;
@@ -36,6 +37,7 @@ export function DemoOverlay({ scenario, onClose }: Props) {
       <DemoMealGenerator visible={scenario === 'mealGenerator'} onClose={onClose} />
       <DemoSettings      visible={scenario === 'settings'}      onClose={onClose} />
       <DemoCalendar      visible={scenario === 'calendar'}      onClose={onClose} />
+      <DemoDrawer        visible={scenario === 'drawer'}        onClose={onClose} />
     </>
   );
 }

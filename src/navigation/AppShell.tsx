@@ -1378,6 +1378,7 @@ export function AppShell() {
         onOpenMealGenerator={() => setStack('mealGenerator')}
         onOpenKnowledge={() => setStack('knowledge')}
         onClose={() => setDrawerOpen(false)}
+        onStartDemo={() => setDemoScenario('drawer')}
       />
       <OnboardingFlow
         visible={!onboardingDone}
