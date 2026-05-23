@@ -13,6 +13,8 @@ import {
   TOLERANCE_DEFINITIONS,
   OBJECTIVE_DEFINITIONS,
 } from '../types/shopping';
+import { SymptomEntry, SYMPTOM_KEYS, SYMPTOM_CONFIG } from '../types/symptoms';
+import { computeCorrelations } from './symptomCorrelation';
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -84,6 +86,25 @@ function computeMonthStats(journal: JournalEntry[], todayMeals: Meal[]) {
   return { loggedDays: logs.length, avgKcal, avgP, avgC, avgF, uniqueFoods: uniqueFoods.length, topFoods };
 }
 
+// ── Symptom stats (30 days) ───────────────────────────────────
+
+function computeSymptomStats(symptoms: SymptomEntry[], windowDays = 30) {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - windowDays);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  const recent = symptoms.filter((s) => s.date >= cutoffStr);
+  if (recent.length === 0) return null;
+
+  const avgs: Partial<Record<string, number>> = {};
+  for (const key of SYMPTOM_KEYS) {
+    const vals = recent.map((s) => s.scores[key]).filter((v) => v >= 0);
+    if (vals.length > 0) {
+      avgs[key] = Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
+    }
+  }
+  return { trackedDays: recent.length, avgs };
+}
+
 // ── HTML builder ──────────────────────────────────────────────
 
 export function generateProfessionalReport(
@@ -91,11 +112,14 @@ export function generateProfessionalReport(
   journal: JournalEntry[],
   todayMeals: Meal[],
   fodmapProtocol: FodmapProtocol,
+  symptoms: SymptomEntry[] = [],
 ): string {
   const generatedOn = isoToFR(todayISO());
   const imc = bmi(profile.weight, profile.height);
   const imcLabel = bmiLabel(profile.weight, profile.height);
-  const stats = computeMonthStats(journal, todayMeals);
+  const stats       = computeMonthStats(journal, todayMeals);
+  const symptomStats = computeSymptomStats(symptoms);
+  const correlations = computeCorrelations(journal, symptoms, 30);
 
   // Active diets
   const activeDiets = profile.diets.filter((d) => d.on);
@@ -135,14 +159,14 @@ export function generateProfessionalReport(
   const testedFoods = fodmapProtocol.testedFoods ?? [];
   const reactions   = fodmapProtocol.reactions ?? [];
 
-  // Correlations: food → reactions
-  const correlations: { food: string; reactions: string[] }[] = [];
+  // FODMAP correlations: food → reactions
+  const fodmapCorrelations: { food: string; reactions: string[] }[] = [];
   testedFoods
     .filter((f) => f.result === 'severe' || f.result === 'moderate')
     .forEach((tf) => {
       const linked = reactions.filter((r) => r.testedFoodId === tf.id);
       if (linked.length > 0) {
-        correlations.push({
+        fodmapCorrelations.push({
           food: tf.foodName,
           reactions: linked.flatMap((r) => r.symptoms),
         });
@@ -577,7 +601,7 @@ export function generateProfessionalReport(
             </table>
           </div>
         ` : ''}
-        ${correlations.length > 0 ? `
+        ${fodmapCorrelations.length > 0 ? `
           <div>
             <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8A8270;margin-bottom:8px;">
               Corrélations identifiées
@@ -585,7 +609,7 @@ export function generateProfessionalReport(
             <table>
               <thead><tr><th>Aliment non toléré</th><th>Symptômes observés</th></tr></thead>
               <tbody>
-                ${correlations.map((c) => `
+                ${fodmapCorrelations.map((c) => `
                   <tr>
                     <td><strong>${c.food}</strong></td>
                     <td>${[...new Set(c.reactions)].join(', ')}</td>
@@ -599,7 +623,109 @@ export function generateProfessionalReport(
     `;
   })() : '';
 
-  // 6. Disclaimer
+  // 6. Symptômes 30 jours
+  const symptomScoreBar = (avg: number, key: string) => {
+    const cfg = SYMPTOM_CONFIG[key as keyof typeof SYMPTOM_CONFIG];
+    // Normalize to a "badness" percentage for visual bar
+    let pct: number;
+    if (cfg.inverse === null) pct = (Math.abs(avg - 2) / 2) * 100;
+    else if (cfg.inverse) pct = (avg / 4) * 100;
+    else pct = ((4 - avg) / 4) * 100;
+    const color = pct < 30 ? '#3F5A3A' : pct < 60 ? '#6B5A2E' : '#8B3A2E';
+    return `
+      <div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+          <span style="font-size:11px;">${cfg.label}</span>
+          <span style="font-size:11px;color:#8A8270;">${avg}/4 — ${cfg.lowLabel} → ${cfg.highLabel}</span>
+        </div>
+        <div style="background:#EDE6D3;border-radius:4px;height:6px;overflow:hidden;">
+          <div style="width:${Math.round(pct)}%;height:100%;background:${color};border-radius:4px;"></div>
+        </div>
+      </div>
+    `;
+  };
+
+  const sectSymptoms = symptomStats ? `
+    <div class="section">
+      <div class="section-title">Bien-être &amp; Symptômes — 30 derniers jours (${symptomStats.trackedDays} jours renseignés)</div>
+      <div style="max-width:480px;">
+        ${Object.entries(symptomStats.avgs).map(([k, v]) => symptomScoreBar(v!, k)).join('')}
+      </div>
+    </div>
+  ` : '';
+
+  // 7. Corrélations aliment → symptômes
+  const corrStrengthBadge = (s: string) =>
+    s === 'forte'   ? '<span class="badge badge-warn">Forte</span>' :
+    s === 'modérée' ? '<span class="badge badge-mid">Modérée</span>' :
+                     '<span class="badge badge-muted">Faible</span>';
+
+  const sectCorrelations = correlations.length > 0 ? `
+    <div class="section">
+      <div class="section-title">Corrélations aliment – symptômes (30 jours)</div>
+      <p style="font-size:11px;color:#8A8270;margin-bottom:14px;">
+        Détectées par comparaison des scores de symptômes les jours avec vs sans chaque facteur alimentaire (incluant le lendemain pour les effets différés). Minimum 3 jours par groupe.
+      </p>
+      <table>
+        <thead><tr><th>Facteur alimentaire</th><th>Symptôme</th><th>Effet</th><th>Force</th><th>Score moy. avec / sans</th></tr></thead>
+        <tbody>
+          ${correlations.map((c) => `
+            <tr>
+              <td><strong>${c.factor}</strong></td>
+              <td>${c.symptomLabel}</td>
+              <td style="color:${c.direction === 'increases' ? '#8B3A2E' : '#3F5A3A'}">
+                ${c.direction === 'increases' ? '↑ Aggravé' : '↓ Amélioré'}
+              </td>
+              <td>${corrStrengthBadge(c.strength)}</td>
+              <td style="color:#8A8270;font-size:11px;">
+                ${c.avgWith} / ${c.avgWithout} (sur 4)
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  ` : '';
+
+  // 8. Résultats biologiques
+  const bioResults = profile.bioResults ?? [];
+  const statusBadge = (s?: string) =>
+    s === 'low'  ? '<span class="badge badge-warn">Bas</span>' :
+    s === 'high' ? '<span class="badge badge-mid">Élevé</span>' :
+    s === 'normal' ? '<span class="badge badge-ok">Normal</span>' : '';
+
+  const sectBio = bioResults.length > 0 ? `
+    <div class="section">
+      <div class="section-title">Résultats biologiques</div>
+      <table>
+        <thead><tr><th>Marqueur</th><th>Valeur</th><th>Statut</th><th>Date</th><th>Note</th></tr></thead>
+        <tbody>
+          ${bioResults.map((r) => `
+            <tr>
+              <td><strong>${r.name}</strong></td>
+              <td>${r.value} <span style="color:#8A8270">${r.unit}</span></td>
+              <td>${statusBadge(r.status)}</td>
+              <td style="color:#8A8270">${r.date ? isoToFR(r.date) : '—'}</td>
+              <td style="color:#8A8270;font-size:11px;">${r.note || '—'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  ` : '';
+
+  // 9. Médicaments
+  const medications = profile.medications ?? [];
+  const sectMedications = medications.length > 0 ? `
+    <div class="section">
+      <div class="section-title">Médicaments en cours</div>
+      <div class="pill-list">
+        ${medications.map((m) => `<span class="pill">${m}</span>`).join('')}
+      </div>
+    </div>
+  ` : '';
+
+  // 10. Disclaimer
   const sectDisclaimer = `
     <div class="section">
       <div class="disclaimer">
@@ -661,6 +787,10 @@ export function generateProfessionalReport(
     ${sectAllergens}
     ${sectDigestive}
     ${sectStats}
+    ${sectSymptoms}
+    ${sectCorrelations}
+    ${sectBio}
+    ${sectMedications}
     ${sectFodmap}
     ${sectDisclaimer}
 

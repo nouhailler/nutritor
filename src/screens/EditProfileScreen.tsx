@@ -21,6 +21,7 @@ import { Icon } from '../components/Icon';
 import {
   AllergenEntry,
   AllergenLevel,
+  BioResult,
   Diet,
   UserProfile,
   computeInitial,
@@ -310,6 +311,9 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
   const [objectives, setObjectives] = useState<string[]>(profile.objectives ?? []);
   const [tolerances, setTolerances] = useState<DigestiveTolerances>(getDigestiveTolerances(profile));
   const [pathologies, setPathologies] = useState<string[]>(profile.pathologies ?? []);
+  const [bioResults, setBioResults]   = useState<BioResult[]>(profile.bioResults ?? []);
+  const [medications, setMedications] = useState<string[]>(profile.medications ?? []);
+  const [newMed, setNewMed]           = useState('');
 
   const cycleAllergen = (idx: number) => {
     setAllergens((prev) =>
@@ -373,6 +377,8 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
       objectives,
       digestiveTolerances: tolerances,
       pathologies,
+      bioResults,
+      medications,
     });
   };
 
@@ -555,6 +561,120 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
                 </TouchableOpacity>
               );
             })}
+          </View>
+
+          {/* ── Résultats biologiques ── */}
+          <SectionLabel>Résultats biologiques</SectionLabel>
+          <Text style={styles.sectionDesc}>
+            Ferritine, vitamine D, CRP, glycémie à jeun… Saisis manuellement depuis tes analyses.
+          </Text>
+          {bioResults.map((r, i) => (
+            <View key={i} style={epStyles.bioRow}>
+              <View style={epStyles.bioFields}>
+                <TextInput
+                  style={[epStyles.bioInput, { flex: 2 }]}
+                  value={r.name}
+                  onChangeText={(v) => setBioResults((prev) => prev.map((x, j) => j === i ? { ...x, name: v } : x))}
+                  placeholder="Marqueur (ex: Ferritine)"
+                  placeholderTextColor={Colors.muted2}
+                />
+                <TextInput
+                  style={[epStyles.bioInput, { flex: 1 }]}
+                  value={r.value}
+                  onChangeText={(v) => setBioResults((prev) => prev.map((x, j) => j === i ? { ...x, value: v } : x))}
+                  placeholder="Valeur"
+                  placeholderTextColor={Colors.muted2}
+                  keyboardType="decimal-pad"
+                />
+                <TextInput
+                  style={[epStyles.bioInput, { flex: 1 }]}
+                  value={r.unit}
+                  onChangeText={(v) => setBioResults((prev) => prev.map((x, j) => j === i ? { ...x, unit: v } : x))}
+                  placeholder="Unité"
+                  placeholderTextColor={Colors.muted2}
+                />
+              </View>
+              <View style={epStyles.bioFields}>
+                {(['low', 'normal', 'high'] as const).map((s) => (
+                  <TouchableOpacity
+                    key={s}
+                    style={[
+                      epStyles.statusPill,
+                      r.status === s && (s === 'low' ? epStyles.statusPillLow : s === 'normal' ? epStyles.statusPillNormal : epStyles.statusPillHigh),
+                    ]}
+                    onPress={() => setBioResults((prev) => prev.map((x, j) => j === i ? { ...x, status: s } : x))}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      epStyles.statusPillText,
+                      r.status === s && epStyles.statusPillTextActive,
+                    ]}>
+                      {s === 'low' ? 'Bas' : s === 'normal' ? 'Normal' : 'Élevé'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity
+                  style={epStyles.bioDeleteBtn}
+                  onPress={() => setBioResults((prev) => prev.filter((_, j) => j !== i))}
+                  activeOpacity={0.7}
+                  hitSlop={8}
+                >
+                  <Icon name="trash" size={14} color={Colors.warn} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+          <TouchableOpacity
+            style={epStyles.addBioBtn}
+            onPress={() => setBioResults((prev) => [...prev, { name: '', value: '', unit: '' }])}
+            activeOpacity={0.7}
+          >
+            <Icon name="plus" size={14} color={Colors.ok} />
+            <Text style={epStyles.addBioBtnText}>Ajouter un résultat</Text>
+          </TouchableOpacity>
+
+          {/* ── Médicaments en cours ── */}
+          <SectionLabel>Médicaments en cours</SectionLabel>
+          <Text style={styles.sectionDesc}>
+            Liste des traitements en cours. Ces informations apparaîtront dans le rapport professionnel.
+          </Text>
+          <View style={epStyles.pillWrap}>
+            {medications.map((m, i) => (
+              <View key={i} style={epStyles.medPill}>
+                <Text style={epStyles.medPillText}>{m}</Text>
+                <TouchableOpacity onPress={() => setMedications((prev) => prev.filter((_, j) => j !== i))} hitSlop={8}>
+                  <Icon name="close" size={12} color={Colors.muted} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+          <View style={epStyles.medInputRow}>
+            <TextInput
+              style={epStyles.medInput}
+              value={newMed}
+              onChangeText={setNewMed}
+              placeholder="Ex: Oméprazole 20mg"
+              placeholderTextColor={Colors.muted2}
+              returnKeyType="done"
+              onSubmitEditing={() => {
+                if (newMed.trim()) {
+                  setMedications((prev) => [...prev, newMed.trim()]);
+                  setNewMed('');
+                }
+              }}
+            />
+            <TouchableOpacity
+              style={epStyles.medAddBtn}
+              onPress={() => {
+                if (newMed.trim()) {
+                  setMedications((prev) => [...prev, newMed.trim()]);
+                  setNewMed('');
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <Icon name="plus" size={16} color={Colors.paper2} />
+            </TouchableOpacity>
           </View>
 
           {/* ── Objectifs caloriques ── */}
@@ -851,6 +971,125 @@ const epStyles = StyleSheet.create({
   },
   tagPillTextActive: {
     color: Colors.paper2,
+  },
+
+  // ── Bio results ──────────────────────────────────────────────
+  bioRow: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.hairline2,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  bioFields: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+  },
+  bioInput: {
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    borderRadius: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.ink,
+    backgroundColor: Colors.paper2,
+  },
+  statusPill: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.card,
+  },
+  statusPillLow: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
+  },
+  statusPillNormal: {
+    backgroundColor: '#D1FAE5',
+    borderColor: '#10B981',
+  },
+  statusPillHigh: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#EF4444',
+  },
+  statusPillText: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: Colors.muted,
+  },
+  statusPillTextActive: {
+    color: Colors.ink,
+  },
+  bioDeleteBtn: {
+    marginLeft: 4,
+    padding: 4,
+  },
+  addBioBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.ok,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  addBioBtnText: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 13,
+    color: Colors.ok,
+  },
+
+  // ── Medications ──────────────────────────────────────────────
+  medPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.card,
+  },
+  medPillText: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.ink,
+  },
+  medInputRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  medInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.ink,
+    backgroundColor: Colors.paper2,
+  },
+  medAddBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: Colors.ink,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

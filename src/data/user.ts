@@ -31,6 +31,15 @@ export interface AllergenEntry {
   note: string;
 }
 
+export interface BioResult {
+  name: string;          // "Ferritine", "Vitamine D 25-OH", "CRP"…
+  value: string;         // valeur brute, ex: "45"
+  unit: string;          // "µg/L", "ng/mL", "mg/L"…
+  date?: string;         // YYYY-MM-DD date du prélèvement
+  status?: 'low' | 'normal' | 'high';
+  note?: string;
+}
+
 export interface UserProfile {
   name: string;
   initial: string;
@@ -50,6 +59,8 @@ export interface UserProfile {
   objectives?: string[];
   digestiveTolerances?: DigestiveTolerances;
   pathologies?: string[];
+  bioResults?: BioResult[];      // résultats biologiques saisis manuellement
+  medications?: string[];        // médicaments en cours (texte libre, ex: "Oméprazole 20mg")
 }
 
 export function getDigestiveSensitivities(profile: UserProfile): DigestiveSensitivity[] {

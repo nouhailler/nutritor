@@ -473,7 +473,7 @@ export function AppShell() {
 
   const handleExportReport = async () => {
     try {
-      const html = generateProfessionalReport(profile, journal, meals, fodmapProtocol);
+      const html = generateProfessionalReport(profile, journal, meals, fodmapProtocol, symptoms);
       const fileName = `nutritor-rapport-${profile.name.replace(/\s+/g, '-').toLowerCase()}-${todayStr()}.html`;
       const fileUri = FileSystem.cacheDirectory + fileName;
       await FileSystem.writeAsStringAsync(fileUri, html, { encoding: FileSystem.EncodingType.UTF8 });
