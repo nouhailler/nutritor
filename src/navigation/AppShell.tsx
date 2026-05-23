@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -264,6 +265,8 @@ export function AppShell() {
   const [toast, setToast] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [queueJobs, setQueueJobs] = useState<AIJobSnapshot[]>([]);
+  const [aiErrorMsg, setAiErrorMsg] = useState<string | null>(null);
+  const shownErrorIds = useRef<Set<string>>(new Set());
   const [detailOrigin, setDetailOrigin] = useState<'search' | null>(null);
   const [selectedPlate, setSelectedPlate] = useState<SavedPlate | null>(null);
   const [plateForEdit, setPlateForEdit] = useState<SavedPlate | null>(null);
@@ -419,9 +422,17 @@ export function AppShell() {
     });
   }, [mealsLoading, journalLoading]);
 
-  // Subscribe to AI queue for banner updates
+  // Subscribe to AI queue for banner updates + error toast
   useEffect(() => {
-    const unsub = aiQueue.subscribe(setQueueJobs);
+    const unsub = aiQueue.subscribe((jobs) => {
+      setQueueJobs(jobs);
+      for (const job of jobs) {
+        if (job.status === 'error' && !shownErrorIds.current.has(job.id)) {
+          shownErrorIds.current.add(job.id);
+          setAiErrorMsg(job.label);
+        }
+      }
+    });
     return unsub;
   }, []);
 
@@ -1423,6 +1434,17 @@ export function AppShell() {
         }}
       />
       <DemoOverlay scenario={demoScenario} onClose={() => setDemoScenario(null)} />
+      {aiErrorMsg && (
+        <View style={[styles.aiErrorToast, { bottom: (showTabs ? 72 : 0) + insets.bottom + 8 }]}>
+          <Icon name="alert-circle" size={15} color="#fff" />
+          <Text style={styles.aiErrorToastText} numberOfLines={1}>
+            Génération IA échouée : {aiErrorMsg}
+          </Text>
+          <Pressable onPress={() => setAiErrorMsg(null)} hitSlop={10}>
+            <Icon name="close" size={15} color="rgba(255,255,255,0.7)" />
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
@@ -1524,6 +1546,31 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.sans,
     fontSize: 13,
     color: Colors.paper2,
+  },
+
+  aiErrorToast: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#8B3A2E',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 12,
+    zIndex: 500,
+  },
+  aiErrorToastText: {
+    flex: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: '#fff',
   },
 
   loadingScreen: {

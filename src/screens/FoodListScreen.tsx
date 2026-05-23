@@ -884,6 +884,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
     color: Colors.ink,
     paddingRight: 10,
+    minWidth: 64,
+    textAlign: 'right',
   },
   kcalUnit: {
     fontFamily: Fonts.sans,

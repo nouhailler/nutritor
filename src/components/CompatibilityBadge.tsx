@@ -48,7 +48,7 @@ export function CompatBadge({ result }: { result: CompatibilityResult }) {
       >
         <View style={[styles.badge, { backgroundColor: bg, borderColor: border }]}>
           <View style={[styles.dot, { backgroundColor: color }]} />
-          <Text style={[styles.badgeLabel, { color }]}>{label} · {result.score}%</Text>
+          <Text style={[styles.badgeLabel, { color }]} numberOfLines={1}>{label} · {result.score}%</Text>
           {!expanded && result.level !== 'compatible' && result.reasons.length > 0 && (
             <Text style={[styles.badgeHint, { color }]} numberOfLines={1}>
               · {result.reasons[0].label}
