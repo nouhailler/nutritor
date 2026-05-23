@@ -7,7 +7,7 @@
 *Comprendre ce que vous mangez. Manger ce qui vous convient.*
 
 [![Platform](https://img.shields.io/badge/📱%20Android%20%7C%20iOS%20%7C%20Web-lightgrey?style=for-the-badge)](.)
-[![Version](https://img.shields.io/badge/version-0.26.0-4CAF50?style=for-the-badge)](.)
+[![Version](https://img.shields.io/badge/version-0.30.0-4CAF50?style=for-the-badge)](.)
 [![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020?style=for-the-badge&logo=expo)](.)
 
 </div>
@@ -48,6 +48,7 @@ C'est un **compagnon de connaissance nutritionnelle** — conçu pour les person
 ### 🤖 Intelligence artificielle intégrée
 - **Enrichissement de fiches nutritionnelles** — l'IA complète automatiquement acides aminés, FODMAP, vitamines, bioactifs depuis le nom de l'aliment
 - **Générateur de repas** — recettes IA adaptées à votre profil (allergènes, FODMAP, objectifs macro)
+- **Cuisine IA** — 4 modes de génération : par ingrédients, par profil, par critères, ou variante d'un plat existant ; analyse FODMAP/glycémie/digestion/satiété + timeline physiologique
 - **Reconnaissance photo** — photographier un aliment pour l'identifier et créer sa fiche
 - **Mémoire digestive** — l'IA croise 21 jours de repas × symptômes pour révéler vos patterns d'intolérance personnels
 - **Laboratoire nutritionnel** — 7 scores experts (ratio ω-3/ω-6, densité micronutritionnelle, score inflammatoire, NOVA…)
@@ -96,8 +97,9 @@ C'est un **compagnon de connaissance nutritionnelle** — conçu pour les person
 - 📷 Photo → aliment (IA vision)
 - 🧬 Protocole FODMAP personnel
 - 🍽️ Générateur de repas IA
+- ✦ Cuisine IA (génération de recettes)
 - 📚 Encyclopédie nutritionnelle
-- ⚙️ Config IA (OpenRouter / Ollama)
+- ⚙️ Config IA (OpenRouter / Ollama / Anthropic / OpenAI)
 
 </td>
 </tr>
@@ -111,7 +113,7 @@ C'est un **compagnon de connaissance nutritionnelle** — conçu pour les person
 |--------|--------|-------|
 | 🇫🇷 **CIQUAL 2020** (ANSES) | 3 167 aliments | Base alimentaire française embarquée |
 | 🌍 **Open Food Facts** | +3 millions de produits | Recherche & scan code-barres |
-| 🤖 **IA** (OpenRouter / Ollama) | Modèles `:free` | Génération & enrichissement nutritionnel |
+| 🤖 **IA** (OpenRouter / Ollama / Anthropic / OpenAI) | Modèles au choix | Génération & enrichissement nutritionnel |
 | 📚 **Encyclopédie** | 87 entrées | Statique, 100 % hors-ligne, sans IA |
 
 ---
@@ -125,6 +127,16 @@ L'IA est **optionnelle** — l'application est pleinement utilisable sans elle. 
 2. Dans l'app : **Paramètres → OpenRouter**
 3. Entrer votre clé API, cliquer **Actualiser** pour charger les modèles gratuits (`:free`)
 4. Sélectionner un modèle et enregistrer
+
+### 🧠 Anthropic — Claude
+1. Obtenir une clé API sur [console.anthropic.com](https://console.anthropic.com)
+2. Dans l'app : **Paramètres → Anthropic**, entrer la clé (`sk-ant-…`)
+3. Sélectionner le modèle (Opus 4.7 / Sonnet 4.6 / Haiku 4.5)
+
+### 💬 OpenAI — ChatGPT
+1. Obtenir une clé API sur [platform.openai.com](https://platform.openai.com)
+2. Dans l'app : **Paramètres → OpenAI**, entrer la clé (`sk-…`)
+3. Sélectionner le modèle (GPT-4o / GPT-4o Mini / o1 / o1 Mini)
 
 ### 🏠 Ollama (local, 100 % privé)
 1. Installer [Ollama](https://ollama.ai) sur votre machine
@@ -169,7 +181,7 @@ React Native + Expo SDK 54  ·  TypeScript strict
 ├── Rendu SVG      react-native-svg (anneau kcal, sparklines)
 ├── Typographie    Instrument Serif · Geist · JetBrains Mono
 ├── Icônes         @expo/vector-icons (Feather)
-├── IA             OpenRouter API + Ollama (modèles locaux)
+├── IA             OpenRouter · Ollama · Anthropic · OpenAI
 ├── Caméra         expo-camera v17 (scan + photo IA)
 └── Build          EAS Build (APK Android)
 ```
@@ -213,6 +225,8 @@ React Native + Expo SDK 54  ·  TypeScript strict
 - ✅ Laboratoire nutritionnel IA (7 scores experts avec valeur quantitative)
 - ✅ Calcul IA des macros sur les plats sauvegardés
 - ✅ Commentaire IA sur l'équilibre nutritionnel des plats
+- ✅ **Cuisine IA** — génération de recettes personnalisées (4 modes) avec analyse FODMAP/glycémie/digestion/satiété
+- ✅ Support Anthropic (Claude) et OpenAI (ChatGPT) en plus d'OpenRouter et Ollama
 
 </details>
 
@@ -282,6 +296,10 @@ Chaque écran principal dispose d'un bouton **◉** (ambre, topbar) qui lance un
 | Profil | Hero / allergènes / laboratoire IA | ~16 s |
 | Courses | Historique / fiche produit / liste | ~16 s |
 | Générateur de repas | Requête → résultats → détail FODMAP | ~18 s |
+| Paramètres | OpenRouter / Ollama / Données | ~16 s |
+| Calendrier | Navigation mois, points repas | ~14 s |
+| Menu tiroir | Navigation onglets + section IA | ~14 s |
+| Encyclopédie | Home / liste / fiche expert | ~16 s |
 
 ---
 

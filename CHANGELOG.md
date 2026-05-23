@@ -9,6 +9,79 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [0.30.0] — 2026-05-23
+
+### Ajouté
+- **Cuisine IA** (`PlateAIScreen`) : nouvel écran de génération de recettes personnalisées, accessible depuis Plats sauvegardés via le bouton ✦ (sparkle) dans la topbar
+  - **4 modes de génération** en grille 2×2 :
+    - 🥬 **Par ingrédients** — barre de recherche, autocomplete depuis la bibliothèque, 12 chips de suggestions rapides, chips d'ingrédients sélectionnés
+    - 👤 **Par profil** — carte de synthèse profil (allergènes, régimes, FODMAP) + critères additionnels multi-select
+    - ⚡ **Par critères** — chips nutritionnels (low FODMAP, anti-inflammatoire, haute protéine…) + sélecteur de type de repas
+    - 🔄 **Variante** — sélection d'un plat sauvegardé + type de variation (allégée, plus protéinée, végétarienne…)
+  - **Résultats** : 3 cartes de recettes avec bandeau coloré, badges FODMAP/digestion et explication "pourquoi adapté à votre profil"
+  - **Fiche détail** : grille analyse Nutritor (FODMAP, glycémie, digestion, satiété), timeline physiologique, avertissements, ingrédients avec substitutions, étapes numérotées, chips de variante, bouton sauvegarder
+  - **Sauvegarde directe** : conversion `SmartRecipe → SavedPlate` et ajout à la bibliothèque de plats
+- **`src/types/smartRecipe.ts`** (nouveau) : types `QueryMode`, `SmartIngredient`, `SmartRecipe`, `SmartRecipeQuery` avec champs FODMAP/glycémie/digestion/satiété et `physiologicalTimeline`
+- **`generateSmartRecipes()`** dans `aiService.ts` : prompt système expert + schéma JSON strict, routé via `callAI()` vers les 4 providers
+
+---
+
+## [0.29.0] — 2026-05-23
+
+### Ajouté
+- **Catégories de plats** (optionnel) : 26 catégories sélectionnables sur chaque plat sauvegardé
+  - 19 catégories alimentaires : Salades, Soupes & potages, Pâtes & féculents, Plats mijotés, Viandes & protéines, Végétarien / Vegan, Fast-food, Sandwichs & wraps, Pizzas, Cuisine du monde, Bowls, Accompagnements, Produits laitiers, Desserts, Fruits, Snacks, Petit-déjeuner, Boissons, Autre
+  - 7 catégories digestives/nutritionnelles : 🧬 Digestion légère, 🐌 Digestion lente, ⚡ Énergie rapide, 🌿 Anti-inflammatoire, 💪 Riche en protéines, 🌬 Fermentescible, 🍬 Glycémie élevée
+  - Sélection dans `EditSavedPlateScreen` (section optionnelle avec badge "Optionnel" et astuce)
+  - Pill catégorie affichée sur les cartes `SavedScreen` et dans le détail `SavedDetailScreen`
+  - Filtre multi-select "Catégorie" dans `PlateFilterSheet` (en tête de la liste de filtres)
+- **Support Anthropic (Claude) et OpenAI (ChatGPT)** :
+  - `AIProvider` étendu : `'ollama' | 'openrouter' | 'anthropic' | 'openai'`
+  - `AnthropicSettings` + `OpenAISettings` dans `AppSettings`
+  - Modèles Anthropic : Claude Opus 4.7, Claude Sonnet 4.6, Claude Haiku 4.5
+  - Modèles OpenAI : GPT-4o, GPT-4o Mini, o1, o1 Mini
+  - `callAnthropic()` : POST `api.anthropic.com/v1/messages`, headers `x-api-key` + `anthropic-version`, système séparé
+  - `callOpenAI()` : POST `api.openai.com/v1/chat/completions`, `Authorization: Bearer`
+  - `callAI()` helper unifié — tous les 8 call sites de l'appli sont routés via ce helper
+  - Sections dédiées dans `SettingsScreen` pour Anthropic et OpenAI (clé API + sélecteur de modèle)
+  - Migration backwards-compat dans `AppShell` pour les anciens `AppSettings` en AsyncStorage
+
+---
+
+## [0.28.0] — 2026-05-23
+
+### Ajouté
+- **Démo interactive — Encyclopédie** (`DemoKnowledge`) : 3 phases, ~16 s/boucle
+  - Phase `home` : grille de 5 catégories animées + barre de recherche + 3 entrées vedettes
+  - Phase `list` : liste filtrée catégorie Acides aminés (6 entrées avec emoji et tagline)
+  - Phase `entry` : fiche "Glutamine" — bascule simple/expert, mécanisme biochimique, interactions, notes FODMAP
+- Bouton `iconBtnSignal` dans la topbar de `KnowledgeScreen` → déclenche la démo
+
+---
+
+## [0.27.1] — 2026-05-23
+
+### Ajouté
+- **Démo interactive — Menu tiroir** (`DemoDrawer`) : 2 phases, ~14 s/boucle
+  - Phase `nav` : avatar profil + 5 onglets animés (Journal, Aliments, Plats, Stats, Profil, Courses)
+  - Phase `ai` : section Intelligence artificielle — Générateur de repas + Encyclopédie, footer version
+- Bouton "Voir la démo" dans le footer du `DrawerMenu` (icône signal) → déclenche la démo
+
+---
+
+## [0.27.0] — 2026-05-23
+
+### Ajouté
+- **Démo interactive — Profil (màj)** : phase 4 ajoutée — Mémoire digestive et 7 métriques labo avec badges de statut
+- **Démo interactive — Paramètres** (`DemoSettings`) : 3 phases, ~16 s/boucle
+  - Phase `openrouter` : champ clé API, bouton Actualiser, liste de modèles gratuits, sélection
+  - Phase `ollama` : URL locale, bouton Tester, modèles détectés, sélection
+  - Phase `data` : export JSON, effacer les données, section diagnostic IA
+- **Démo interactive — Calendrier** (`DemoCalendar`) : 2 phases, ~14 s/boucle — navigation Mai/Avril, points repas par jour, sélection d'un jour historique
+- Long-press sur l'icône calendrier dans `HomeScreen` → déclenche `DemoCalendar`
+
+---
+
 ## [0.26.0] — 2026-05-22
 
 ### Ajouté

@@ -4,18 +4,18 @@
 
 ---
 
-## État actuel (2026-05-22)
+## État actuel (2026-05-23)
 
 ### Derniers commits
-- `455cb67` — feat: démo interactive pour le Générateur de repas (v0.26.0)
-- `ec88ff5` — feat: démo interactive pour l'écran Assistant de courses (v0.25.0)
-- `753a4d9` — feat: démo interactive pour l'écran Profil (v0.24.0)
-- `880f25d` — feat: démo interactive pour l'écran Statistiques (v0.23.0)
-- `69aafaa` — feat: démo interactive pour l'écran Plats sauvegardés (v0.22.0)
+- `a9085af` — feat: Cuisine IA — générateur de recettes personnalisées (v0.30.0)
+- `4e5f673` — feat: support Anthropic (Claude) et OpenAI (ChatGPT) comme fournisseurs IA
+- `adddb96` — feat: ajout de 7 catégories digestives/nutritionnelles pour les plats
+- `c7f65cc` — feat: catégories optionnelles pour les plats sauvegardés
+- `202d1aa` — feat: démo interactive pour l'écran Encyclopédie (v0.28.0)
 
-### Version courante : 0.26.0 (app.json : 0.17.0 — non mis à jour automatiquement)
+### Version courante : 0.30.0 (app.json : 0.17.0 — non mis à jour automatiquement)
 
-Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été ajoutées :
+Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été ajoutées (voir CHANGELOG.md pour le détail complet) :
 
 **v0.15.0 — Diagnostic IA**
 - `aiLogger.ts` : singleton qui capture chaque étape, durée et erreur des appels IA
@@ -53,7 +53,7 @@ Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été
 
 **v0.20.0–v0.22.0 — Système de démos interactives (1ère vague)**
 - Moteur partagé : `useDemoEngine` (curseur doigt, ripple, phases, boucle), `DemoShell` (modal plein-écran, légendes animées, dots de phase)
-- `DemoOverlay` : dispatcher central ; `DemoScenario` union type
+- `DemoOverlay` : dispatcher central ; `DemoScenario` union type : `'home' | 'foods' | 'off' | 'ciqual' | 'scanner' | 'photo' | 'saved' | 'stats' | 'profile' | 'shopping' | 'mealGenerator' | 'settings' | 'calendar' | 'drawer' | 'knowledge'`
 - Démos disponibles :
   - `DemoHome` : Journal → recherche banane → fiche → ajout → timeline 24h → insight IA (~14 s)
   - `DemoFoods` : Aliments → CIQUAL poivron → import → bannière IA → portion → repas (~14 s)
@@ -74,6 +74,26 @@ Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été
 
 **v0.26.0 — Démo Générateur de repas**
 - `DemoMealGenerator` (3 phases, ~18 s) : champ requête + chips suggestions + bouton Générer → 3 cartes repas collapées (Buddha Bowl 🥗, Saumon 🐟, Porridge 🌾) → détail expandé macros/ingrédients FODMAP/micronutriments/score anti-inflammatoire/bouton sauvegarder
+
+**v0.27.0–v0.28.0 — Démos Settings, Calendar, Drawer, Encyclopédie**
+- `DemoSettings` (3 phases) : OpenRouter (clé API + modèles) / Ollama (URL + test) / Données (export/effacer/diagnostic)
+- `DemoCalendar` (2 phases) : navigation mois, points repas par jour, sélection historique — déclenché par long-press icône calendrier
+- `DemoDrawer` (2 phases) : navigation onglets + section IA (Générateur/Encyclopédie) — bouton dans footer DrawerMenu
+- `DemoKnowledge` (3 phases) : home catégories → liste filtrée → fiche expert (bascule simple/expert)
+- `DemoProfile` étendu : phase 4 ajoutée — mémoire digestive + 7 métriques labo
+
+**v0.29.0 — Catégories de plats + Anthropic/OpenAI**
+- 26 catégories optionnelles pour les plats (19 alimentaires + 7 digestives/nutritionnelles)
+- Filtre multi-select "Catégorie" dans `PlateFilterSheet`
+- `AIProvider` étendu : `'anthropic' | 'openai'` en plus d'`'ollama'` et `'openrouter'`
+- `callAI()` helper unifié routant vers les 4 providers
+- Migration backwards-compat `AppSettings` dans `AppShell`
+
+**v0.30.0 — Cuisine IA**
+- `PlateAIScreen` : écran de génération de recettes personnalisées (4 modes : ingrédients / profil / critères / variante)
+- `SmartRecipe` avec analyse FODMAP/glycémie/digestion/satiété + timeline physiologique
+- `generateSmartRecipes()` dans `aiService.ts` — routé via `callAI()` vers les 4 providers
+- Bouton sparkle ✦ dans la topbar de `SavedScreen`
 
 ### Dernier build APK
 - **Build ID** : `8fc6725c-7e2b-484a-9e06-1ddb494e4840`
@@ -127,7 +147,7 @@ type StackScreen =
   | 'settings' | 'addFood' | 'manualFood' | 'editFood'
   | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate'
   | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge'
-  | 'shoppingScanner' | null;
+  | 'shoppingScanner' | 'plateAI' | null;
 ```
 
 - `stack === null` → écran de l'onglet actif, tabbar visible
@@ -215,15 +235,20 @@ Au premier démarrage après mise à jour, recompute les allergènes CIQUAL pour
 - **Historique de recherche** : `getOFFRecentSearches()` / `saveOFFRecentSearch(query)` — jusqu'à 12 entrées, clé `nutritor:off_recent`. Affiché en dropdown sous le champ de recherche
 
 ### IA (`src/services/aiService.ts`)
-- Providers : `'openrouter'` | `'ollama'`
+- Providers : `'openrouter'` | `'ollama'` | `'anthropic'` | `'openai'`
+- **`callAI(settings, messages, signal?)`** : helper unifié — route vers les 4 providers selon `settings.aiProvider`
+  - `callOllama` : POST `{baseUrl}/api/chat`, format messages OpenAI
+  - `callOpenRouter` : POST `openrouter.ai/api/v1/chat/completions`, `Authorization: Bearer`
+  - `callAnthropic` : POST `api.anthropic.com/v1/messages`, headers `x-api-key` + `anthropic-version: 2023-06-01`, système séparé
+  - `callOpenAI` : POST `api.openai.com/v1/chat/completions`, `Authorization: Bearer`
 - `generateFoodWithAI(name, brand, context, settings, signal?, onStep?): Promise<Food>` — messages rotatifs toutes les 8 s via `setInterval` nettoyé dans `finally`
-- `enrichFoodWithAI(food, settings, signal?, onStep?): Promise<Food>` — les messages rotatifs sont construits depuis le tableau `missing` (champs à remplir connus avant l'appel)
+- `enrichFoodWithAI(food, settings, signal?, onStep?): Promise<Food>` — messages rotatifs depuis tableau `missing`
 - `generateMeals(query, profile, fodmapPhase, settings, signal?): Promise<MealGeneratorResult>`
-- `generateDayAdvice(totals, profile, settings, signal?): Promise<string>` — accepte `AbortSignal`, valide le contenu (filtre les réponses < 20 chars ou contenant "text is empty")
+- `generateSmartRecipes(query, profile, settings, signal?, onStep?): Promise<SmartRecipe[]>` — prompt expert + schéma JSON strict ; retourne 3 recettes avec FODMAP/glycémie/digestion/satiété/timeline physiologique
+- `generateDayAdvice(totals, profile, settings, signal?): Promise<string>` — valide le contenu (filtre < 20 chars)
 - `analyzeFoodPhoto(imageBase64, settings): Promise<VisionItem[]>`
-- `isAIReady(settings): boolean` — vérifie si un provider est configuré
+- `isAIReady(settings): boolean` — vérifie si le provider actif est configuré (clé ou URL)
 - Valide les réponses JSON, strips markdown fences avant `JSON.parse`
-- **Messages rotatifs** : dans `generateFoodWithAI`, cycle sur 8 messages prédéfinis (macros, FODMAP, vitamines, allergènes…). Dans `enrichFoodWithAI`, cycle sur `['Envoi à l\'IA…', ...missing.map(ENRICH_FIELD_LABELS)]`.
 - **⚠️ Typage runtime** : les champs enrichis par l'IA peuvent être `number` au lieu de `string` (ex: `pct`, `overall`). Toujours faire `String(val ?? '')` avant d'appeler des méthodes string sur des données IA persistées en AsyncStorage.
 
 ### File d'attente IA (`src/services/aiQueue.ts`)
@@ -272,12 +297,41 @@ interface SavedPlate {
   photo?: string;           // URI ou base64 data URI
   note?: string;
   pairedWith?: string[];    // IDs de plats compatibles
+  category?: PlateCategory; // catégorie optionnelle (26 valeurs — voir saved.ts)
+  nutrition?: PlateNutrition;
+  aiComment?: string;
+}
+
+// 26 catégories pour les plats (src/data/saved.ts)
+type PlateCategory =
+  | 'salads' | 'soups' | 'pasta' | 'stews' | 'meats'
+  | 'vegetarian' | 'fastfood' | 'sandwiches' | 'pizzas'
+  | 'worldcuisine' | 'bowls' | 'sides' | 'dairy'
+  | 'desserts' | 'fruits' | 'snacks' | 'breakfast' | 'drinks' | 'other'
+  | 'light_digestion' | 'slow_digestion' | 'quick_energy'
+  | 'anti_inflammatory' | 'high_protein' | 'fermentable' | 'high_glycemic';
+
+// Types Cuisine IA (src/types/smartRecipe.ts)
+type QueryMode = 'ingredients' | 'profile' | 'criteria' | 'variant';
+interface SmartRecipe {
+  name: string; emoji: string; description: string;
+  prepTime: number; cookTime: number; servings: number;
+  ingredients: SmartIngredient[]; steps: string[];
+  per_serving: { kcal: number; protein: number; carbs: number; fat: number; fiber: number };
+  fodmapLoad: 'low' | 'moderate' | 'high';
+  glycemicLoad: 'low' | 'moderate' | 'high';
+  digestionProfile: 'light' | 'moderate' | 'heavy';
+  satiety: 'low' | 'moderate' | 'high';
+  warnings: string[]; physiologicalTimeline: string;
+  tags: string[]; whyGoodForProfile: string; energyProfile: string;
 }
 
 interface AppSettings {
-  aiProvider: 'ollama' | 'openrouter';
+  aiProvider: 'ollama' | 'openrouter' | 'anthropic' | 'openai';
   ollama: { baseUrl: string; model: string };
   openrouter: { apiKey: string; model: string; models: OpenRouterModel[] };
+  anthropic: { apiKey: string; model: string };  // claude-opus-4-7 / claude-sonnet-4-6 / claude-haiku-4-5
+  openai: { apiKey: string; model: string };     // gpt-4o / gpt-4o-mini / o1 / o1-mini
 }
 
 interface JournalEntry {
@@ -342,6 +396,7 @@ interface KnowledgeEntry {
 | Encyclopédie | `KnowledgeScreen.tsx` | stack `'knowledge'` (drawer) |
 | Assistant courses | `ShoppingAssistantScreen.tsx` | tab `shopping` |
 | Scanner courses | `ShoppingScannerScreen.tsx` | stack `'shoppingScanner'` |
+| Cuisine IA | `PlateAIScreen.tsx` | stack `'plateAI'` (bouton ✦ de SavedScreen) |
 
 ---
 
@@ -392,6 +447,10 @@ type KView =
 | `DemoProfile` | `components/demo/DemoProfile.tsx` | Scénario Profil — hero/allergènes/labo (~16 s/boucle) |
 | `DemoShopping` | `components/demo/DemoShopping.tsx` | Scénario Assistant de courses — historique/détail/liste (~16 s/boucle) |
 | `DemoMealGenerator` | `components/demo/DemoMealGenerator.tsx` | Scénario Générateur de repas — input/résultats/détail (~18 s/boucle) |
+| `DemoSettings` | `components/demo/DemoSettings.tsx` | Scénario Paramètres — OpenRouter/Ollama/Données (~16 s/boucle) |
+| `DemoCalendar` | `components/demo/DemoCalendar.tsx` | Scénario Calendrier — navigation mois, points repas (~14 s/boucle) |
+| `DemoDrawer` | `components/demo/DemoDrawer.tsx` | Scénario Menu tiroir — navigation onglets + section IA (~14 s/boucle) |
+| `DemoKnowledge` | `components/demo/DemoKnowledge.tsx` | Scénario Encyclopédie — home/liste/fiche expert (~16 s/boucle) |
 
 ---
 
@@ -486,5 +545,5 @@ python3 scripts/gen_icon.py
 - [ ] Données Monash FODMAP officielles (licence commerciale)
 - [ ] Retirer les `console.log` de débogage avant la production
 - [ ] `ManualFoodScreen` — aide contextuelle intégrée (bouton `?` → HELP.manualFood)
-- [ ] Démo `KnowledgeScreen` (encyclopédie — recherche, catégorie, fiche expert)
-- [ ] Mettre à jour `app.json` version pour refléter v0.26.0
+- [ ] Mettre à jour `app.json` version pour refléter v0.30.0
+- [ ] Démo `PlateAIScreen` (Cuisine IA)
