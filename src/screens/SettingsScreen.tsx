@@ -345,19 +345,16 @@ export function SettingsScreen({
         {/* ── IA ─────────────────────────────────────────────── */}
         <SectionHeader icon="cpu" label="Intelligence artificielle" />
         <Card>
-          <Row
-            label="Fournisseur"
-            description="Moteur utilisé pour enrichir les aliments"
-            borderBottom={true}
-            right={
-              <View style={styles.pillGroup}>
-                <ProviderPill label="OpenRouter" active={isOpenRouter}  onPress={() => setProvider('openrouter')} />
-                <ProviderPill label="Anthropic"  active={isAnthropic}   onPress={() => setProvider('anthropic')} />
-                <ProviderPill label="OpenAI"     active={isOpenAI}      onPress={() => setProvider('openai')} />
-                <ProviderPill label="Ollama"     active={isOllama}      onPress={() => setProvider('ollama')} />
-              </View>
-            }
-          />
+          <View style={styles.providerSection}>
+            <Text style={styles.rowLabel}>Fournisseur</Text>
+            <Text style={styles.rowDesc}>Moteur utilisé pour enrichir les aliments</Text>
+            <View style={styles.pillGroup}>
+              <ProviderPill label="OpenRouter" active={isOpenRouter}  onPress={() => setProvider('openrouter')} />
+              <ProviderPill label="Anthropic"  active={isAnthropic}   onPress={() => setProvider('anthropic')} />
+              <ProviderPill label="OpenAI"     active={isOpenAI}      onPress={() => setProvider('openai')} />
+              <ProviderPill label="Ollama"     active={isOllama}      onPress={() => setProvider('ollama')} />
+            </View>
+          </View>
 
           {/* OpenRouter */}
           {isOpenRouter && (
@@ -722,6 +719,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
 
+  providerSection: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 14,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline2,
+  },
   pillGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   pill: {
     paddingVertical: 5,
