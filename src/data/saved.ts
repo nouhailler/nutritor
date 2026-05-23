@@ -4,7 +4,9 @@ export type PlateCategory =
   | 'salads' | 'soups' | 'pasta' | 'stews' | 'meats'
   | 'vegetarian' | 'fastfood' | 'sandwiches' | 'pizzas'
   | 'worldcuisine' | 'bowls' | 'sides' | 'dairy'
-  | 'desserts' | 'fruits' | 'snacks' | 'breakfast' | 'drinks' | 'other';
+  | 'desserts' | 'fruits' | 'snacks' | 'breakfast' | 'drinks' | 'other'
+  | 'light_digestion' | 'slow_digestion' | 'quick_energy'
+  | 'anti_inflammatory' | 'high_protein' | 'fermentable' | 'high_glycemic';
 
 export interface PlateCategoryMeta {
   id: PlateCategory;
@@ -31,7 +33,14 @@ export const PLATE_CATEGORIES: PlateCategoryMeta[] = [
   { id: 'snacks',       emoji: '🥜', label: 'Snacks & grignotage' },
   { id: 'breakfast',    emoji: '☕', label: 'Petit-déjeuner' },
   { id: 'drinks',       emoji: '🧃', label: 'Boissons' },
-  { id: 'other',        emoji: '📦', label: 'Autre' },
+  { id: 'other',            emoji: '📦', label: 'Autre' },
+  { id: 'light_digestion',  emoji: '🧬', label: 'Digestion légère' },
+  { id: 'slow_digestion',   emoji: '🐌', label: 'Digestion lente' },
+  { id: 'quick_energy',     emoji: '⚡', label: 'Énergie rapide' },
+  { id: 'anti_inflammatory',emoji: '🌿', label: 'Anti-inflammatoire' },
+  { id: 'high_protein',     emoji: '💪', label: 'Riche en protéines' },
+  { id: 'fermentable',      emoji: '🌬', label: 'Fermentescible' },
+  { id: 'high_glycemic',    emoji: '🍬', label: 'Glycémie élevée' },
 ];
 
 export interface SavedPlateItem {
