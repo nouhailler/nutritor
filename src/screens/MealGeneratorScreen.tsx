@@ -4,7 +4,7 @@
  * allergènes, régimes actifs, phase FODMAP, objectifs caloriques et macros.
  * Résultats expandables : macros, ingrédients, micronutriments, score anti-inflammatoire.
  */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -22,36 +22,368 @@ import { FodmapProtocol } from '../data/fodmapProtocol';
 import { AppSettings } from '../types/settings';
 import { GeneratedMeal, MealGeneratorResult } from '../types/mealGenerator';
 import { generateMeals, isAIReady } from '../services/aiService';
+import { Food } from '../types';
 
-// ── Suggestion chips ──────────────────────────────────────────
+// ── Suggestion categories ─────────────────────────────────────
 
-function buildSuggestions(profile: UserProfile): string[] {
-  const chips: string[] = [];
-  const isLowFodmap = profile.diets.some((d) => d.id === 'low' && d.on);
-  const isVegan = profile.diets.some((d) => d.id === 'vg' && d.on);
-  const isVegetarian = profile.diets.some((d) => d.id === 'veg' && d.on);
-  const noLactose = profile.allergens.some(
-    (a) => a.name === 'Lactose' && (a.level === 'sévère' || a.level === 'modéré'),
+type ExType = 'direct' | 'food-select' | 'profile';
+
+interface SuggestionEx {
+  id: string;
+  text: string;
+  type: ExType;
+  template?: string;
+  buildQuery?: (profile: UserProfile, fodmap: FodmapProtocol) => string;
+}
+
+interface SuggestionCat {
+  id: string;
+  emoji: string;
+  label: string;
+  examples: SuggestionEx[];
+}
+
+const SENS_LABELS: Record<string, string> = {
+  fructans: 'Fructanes', polyols: 'Polyols', lactose: 'Lactose',
+  histamine: 'Histamine', gluten: 'Gluten', caffeine: 'Caféine',
+  sweeteners: 'Édulcorants', fattyFoods: 'Aliments gras',
+};
+const PHASE_FR: Record<string, string> = {
+  elimination: 'élimination', reintroduction: 'réintroduction', stabilization: 'stabilisation',
+};
+const PATHO_LABELS: Record<string, string> = {
+  ibs: 'SII', reflux: 'Reflux gastrique', crohn: 'Maladie de Crohn',
+  uc: 'RCH', foodMigraine: 'Migraine alimentaire',
+};
+
+function buildProfileSummary(profile: UserProfile, fodmap: FodmapProtocol): string {
+  const parts: string[] = [];
+  const severe = profile.allergens.filter((a) => a.level === 'sévère').map((a) => a.name);
+  const moderate = profile.allergens.filter((a) => a.level === 'modéré').map((a) => a.name);
+  const diets = profile.diets.filter((d) => d.on).map((d) => d.label);
+  const activeSens = (profile.digestiveSensitivities ?? [])
+    .filter((s) => s.level && s.level !== 'none')
+    .map((s) => SENS_LABELS[s.id] ?? s.id);
+  const pathos = (profile.pathologies ?? []).map((p) => PATHO_LABELS[p] ?? p);
+  if (severe.length)   parts.push(`Allergies sévères : ${severe.join(', ')}`);
+  if (moderate.length) parts.push(`Intolérances : ${moderate.join(', ')}`);
+  if (diets.length)    parts.push(`Régimes : ${diets.join(', ')}`);
+  if (activeSens.length) parts.push(`Sensibilités : ${activeSens.join(', ')}`);
+  if (pathos.length)   parts.push(`Pathologies : ${pathos.join(', ')}`);
+  if (fodmap.active)   parts.push(`Phase FODMAP : ${PHASE_FR[fodmap.phase] ?? fodmap.phase}`);
+  return parts.join('. ');
+}
+
+const SUGGESTION_CATEGORIES: SuggestionCat[] = [
+  {
+    id: 'basics', emoji: '🥗', label: 'Basiques',
+    examples: [
+      { id: 'b1', type: 'food-select', text: 'Crée un repas avec mes ingrédients…', template: 'Crée un repas équilibré et savoureux avec les ingrédients suivants : {foods}.' },
+      { id: 'b2', type: 'direct', text: 'Que puis-je cuisiner avec des œufs et des épinards ?' },
+      { id: 'b3', type: 'food-select', text: 'Dîner rapide avec ce que j\'ai dans le frigo…', template: 'Propose un dîner rapide et digeste avec les ingrédients suivants : {foods}.' },
+    ],
+  },
+  {
+    id: 'energy', emoji: '⚡', label: 'Énergie',
+    examples: [
+      { id: 'e1', type: 'direct', text: 'Génère un déjeuner pour éviter le coup de fatigue de l\'après-midi.' },
+      { id: 'e2', type: 'direct', text: 'Je veux un petit-déjeuner avec une énergie stable toute la matinée.' },
+      { id: 'e3', type: 'direct', text: 'Prépare un repas énergétique avant une séance de sport.' },
+    ],
+  },
+  {
+    id: 'digestion', emoji: '🫃', label: 'Digestion',
+    examples: [
+      { id: 'd1', type: 'direct', text: 'Crée un repas facile à digérer pour ce soir.' },
+      { id: 'd2', type: 'direct', text: 'Je veux un repas faible en FODMAP.' },
+      { id: 'd3', type: 'direct', text: 'Propose une recette sans aliments fermentescibles.' },
+      { id: 'd4', type: 'direct', text: 'Génère un repas qui limite les ballonnements.' },
+    ],
+  },
+  {
+    id: 'moment', emoji: '🌙', label: 'Selon le moment',
+    examples: [
+      { id: 'm1', type: 'direct', text: 'Crée un dîner léger pour favoriser un meilleur sommeil.' },
+      { id: 'm2', type: 'direct', text: 'Je veux un déjeuner rassasiant mais pas lourd.' },
+      { id: 'm3', type: 'direct', text: 'Propose un snack digestif pour la fin d\'après-midi.' },
+    ],
+  },
+  {
+    id: 'personal', emoji: '🧬', label: 'Personnalisés',
+    examples: [
+      {
+        id: 'p1', type: 'profile', text: 'Adapté à mon profil digestif complet',
+        buildQuery: (p, f) => { const ctx = buildProfileSummary(p, f); return `Crée un repas adapté à mon profil digestif complet.${ctx ? ' ' + ctx + '.' : ''}`; },
+      },
+      {
+        id: 'p2', type: 'profile', text: 'Compatible avec ma sensibilité au lactose',
+        buildQuery: (p) => {
+          const entry = p.allergens.find((a) => a.name.toLowerCase().includes('lactose'));
+          const sens = p.digestiveSensitivities?.find((s) => s.id === 'lactose');
+          const has = entry || (sens && sens.level !== 'none');
+          return has
+            ? `Propose une recette sans lactose adaptée à une intolérance de niveau ${entry?.level ?? 'modéré'}.`
+            : 'Propose une recette légère en lactose et digeste.';
+        },
+      },
+      {
+        id: 'p3', type: 'profile', text: 'Compatible avec mes sensibilités FODMAP',
+        buildQuery: (p, f) => {
+          const phase = f.active ? (PHASE_FR[f.phase] ?? f.phase) : 'non définie';
+          const activeSens = (p.digestiveSensitivities ?? []).filter((s) => s.level && s.level !== 'none').map((s) => SENS_LABELS[s.id] ?? s.id);
+          const ctx = activeSens.length ? ` Sensibilités actives : ${activeSens.join(', ')}.` : '';
+          return `Propose un repas compatible avec mes sensibilités FODMAP (phase : ${phase}).${ctx}`;
+        },
+      },
+    ],
+  },
+  {
+    id: 'compensation', emoji: '🍔', label: 'Compensation',
+    examples: [
+      { id: 'c1', type: 'direct', text: 'J\'ai beaucoup mangé ce midi, propose un dîner léger et digeste.' },
+      { id: 'c2', type: 'direct', text: 'Après une journée riche en sucre, que devrais-je manger ce soir ?' },
+    ],
+  },
+  {
+    id: 'physio', emoji: '🧠', label: 'Physiologiques',
+    examples: [
+      { id: 'ph1', type: 'direct', text: 'Crée un repas à digestion lente et énergie stable.' },
+      { id: 'ph2', type: 'direct', text: 'Je veux un repas qui minimise les pics glycémiques.' },
+      { id: 'ph3', type: 'direct', text: 'Propose une recette anti-inflammatoire.' },
+      { id: 'ph4', type: 'direct', text: 'Génère un repas riche en fibres mais facile à tolérer.' },
+    ],
+  },
+  {
+    id: 'world', emoji: '🥘', label: 'Cuisine du monde',
+    examples: [
+      { id: 'w1', type: 'direct', text: 'Crée un curry faible en FODMAP.' },
+      { id: 'w2', type: 'direct', text: 'Je veux un bowl asiatique riche en protéines.' },
+      { id: 'w3', type: 'direct', text: 'Propose une recette méditerranéenne légère et anti-inflammatoire.' },
+    ],
+  },
+  {
+    id: 'constraints', emoji: '⏱️', label: 'Contraintes',
+    examples: [
+      { id: 'co1', type: 'direct', text: 'Crée un repas en moins de 15 minutes.' },
+      { id: 'co2', type: 'direct', text: 'Je veux une recette avec seulement 5 ingrédients.' },
+      { id: 'co3', type: 'direct', text: 'Propose un repas économique et digeste.' },
+    ],
+  },
+  {
+    id: 'shopping', emoji: '🛒', label: 'Courses',
+    examples: [
+      { id: 's1', type: 'food-select', text: 'Cuisiner avec les produits scannés…', template: 'Que puis-je cuisiner avec ces produits : {foods} ?' },
+      {
+        id: 's2', type: 'profile', text: 'Repas compatible avec mon profil',
+        buildQuery: (p, f) => { const ctx = buildProfileSummary(p, f); return `Génère un repas avec des aliments compatibles avec mon profil.${ctx ? ' ' + ctx + '.' : ''}`; },
+      },
+      { id: 's3', type: 'food-select', text: 'Utiliser les aliments bientôt périmés…', template: 'Crée un repas digeste avec les aliments suivants à utiliser rapidement : {foods}.' },
+    ],
+  },
+  {
+    id: 'ai', emoji: '🤖', label: 'Assistant IA',
+    examples: [
+      {
+        id: 'ai1', type: 'profile', text: 'Repas le mieux toléré pour moi ce soir',
+        buildQuery: (p, f) => { const ctx = buildProfileSummary(p, f); return `Quel repas semble le mieux toléré pour moi ce soir ?${ctx ? ' Mon profil : ' + ctx + '.' : ''}`; },
+      },
+      {
+        id: 'ai2', type: 'profile', text: 'Basé sur mes bonnes tolérances',
+        buildQuery: (p, f) => { const ctx = buildProfileSummary(p, f); return `Propose un repas basé sur mes bonnes tolérances alimentaires.${ctx ? ' Mon profil : ' + ctx + '.' : ''}`; },
+      },
+      {
+        id: 'ai3', type: 'profile', text: 'Éviter les ingrédients de mes symptômes',
+        buildQuery: (p, f) => { const ctx = buildProfileSummary(p, f); return `Propose un repas en évitant les ingrédients associés à mes symptômes digestifs.${ctx ? ' ' + ctx + '.' : ''}`; },
+      },
+    ],
+  },
+  {
+    id: 'goals', emoji: '📊', label: 'Objectifs',
+    examples: [
+      { id: 'g1', type: 'direct', text: 'Crée un repas riche en protéines.' },
+      { id: 'g2', type: 'direct', text: 'Je veux un repas rassasiant avec peu de sucres rapides.' },
+      { id: 'g3', type: 'direct', text: 'Propose un repas pour la récupération sportive.' },
+    ],
+  },
+  {
+    id: 'future', emoji: '🔥', label: 'Futuristes',
+    examples: [
+      { id: 'f1', type: 'direct', text: 'Génère un repas qui produira une énergie stable pendant 4 heures.' },
+      { id: 'f2', type: 'direct', text: 'Je veux minimiser les risques de fermentation cet après-midi.' },
+      { id: 'f3', type: 'direct', text: 'Crée un dîner optimisé pour favoriser la digestion et le sommeil.' },
+    ],
+  },
+];
+
+// ── Food picker modal ─────────────────────────────────────────
+
+const pickerSt = StyleSheet.create({
+  overlay:    { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 },
+  backdrop:   { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)' },
+  sheet:      { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: Colors.paper2, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '78%' },
+  handle:     { width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.hairline, alignSelf: 'center', marginTop: 10, marginBottom: 4 },
+  title:      { fontFamily: Fonts.serif, fontSize: 20, color: Colors.ink, letterSpacing: -0.3, paddingHorizontal: 20, paddingBottom: 10 },
+  searchRow:  { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginBottom: 8, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: Colors.hairline, backgroundColor: Colors.card },
+  searchInput:{ flex: 1, fontFamily: Fonts.sans, fontSize: 14, color: Colors.ink, paddingVertical: 0 },
+  list:       { maxHeight: 300 },
+  empty:      { fontFamily: Fonts.sans, fontSize: 13, color: Colors.muted, textAlign: 'center', padding: 24 },
+  foodRow:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.hairline2, gap: 14 },
+  checkbox:   { width: 22, height: 22, borderRadius: 7, borderWidth: 1.5, borderColor: Colors.hairline, backgroundColor: Colors.paper2, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  checkboxOn: { backgroundColor: Colors.ink, borderColor: Colors.ink },
+  foodInfo:   { flex: 1 },
+  foodName:   { fontFamily: Fonts.sans, fontSize: 14, color: Colors.ink },
+  foodBrand:  { fontFamily: Fonts.mono, fontSize: 10, color: Colors.muted, letterSpacing: 0.2, marginTop: 1 },
+  confirmBtn: { margin: 16, backgroundColor: Colors.ink, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  confirmOff: { opacity: 0.35 },
+  confirmTxt: { fontFamily: Fonts.sansSemiBold, fontSize: 15, color: Colors.paper2 },
+});
+
+function FoodPickerModal({
+  foodList, onConfirm, onClose, bottomInset,
+}: {
+  foodList: Food[];
+  onConfirm: (foods: Food[]) => void;
+  onClose: () => void;
+  bottomInset: number;
+}) {
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return foodList.slice(0, 60);
+    const q = search.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    return foodList.filter((f) => {
+      const n = f.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      const b = (f.brand ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      return n.includes(q) || b.includes(q);
+    }).slice(0, 60);
+  }, [search, foodList]);
+
+  const toggle = (id: string) => setSelected((prev) => {
+    const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next;
+  });
+
+  const handleConfirm = () => {
+    onConfirm(foodList.filter((f) => selected.has(f.id)));
+    setSelected(new Set()); setSearch('');
+  };
+
+  return (
+    <View style={pickerSt.overlay}>
+      <TouchableOpacity style={pickerSt.backdrop} onPress={onClose} activeOpacity={1} />
+      <View style={[pickerSt.sheet, { paddingBottom: bottomInset + 8 }]}>
+        <View style={pickerSt.handle} />
+        <Text style={pickerSt.title}>Sélectionner des aliments</Text>
+        <View style={pickerSt.searchRow}>
+          <Icon name="search" size={15} color={Colors.muted} />
+          <TextInput
+            style={pickerSt.searchInput}
+            placeholder="Rechercher dans ma bibliothèque…"
+            placeholderTextColor={Colors.muted2}
+            value={search}
+            onChangeText={setSearch}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')} activeOpacity={0.7}>
+              <Icon name="close" size={14} color={Colors.muted} />
+            </TouchableOpacity>
+          )}
+        </View>
+        <ScrollView style={pickerSt.list} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {filtered.length === 0
+            ? <Text style={pickerSt.empty}>Aucun aliment trouvé dans ta bibliothèque</Text>
+            : filtered.map((food) => (
+              <TouchableOpacity key={food.id} style={pickerSt.foodRow} onPress={() => toggle(food.id)} activeOpacity={0.7}>
+                <View style={[pickerSt.checkbox, selected.has(food.id) && pickerSt.checkboxOn]}>
+                  {selected.has(food.id) && <Icon name="check" size={11} color={Colors.paper2} />}
+                </View>
+                <View style={pickerSt.foodInfo}>
+                  <Text style={pickerSt.foodName} numberOfLines={1}>{food.name}</Text>
+                  {food.brand ? <Text style={pickerSt.foodBrand} numberOfLines={1}>{food.brand}</Text> : null}
+                </View>
+              </TouchableOpacity>
+            ))}
+        </ScrollView>
+        <TouchableOpacity
+          style={[pickerSt.confirmBtn, selected.size === 0 && pickerSt.confirmOff]}
+          onPress={handleConfirm}
+          disabled={selected.size === 0}
+          activeOpacity={0.8}
+        >
+          <Text style={pickerSt.confirmTxt}>
+            {selected.size > 0 ? `Utiliser ${selected.size} aliment${selected.size > 1 ? 's' : ''}` : 'Sélectionner des aliments'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
-  const noGluten = profile.allergens.some(
-    (a) => a.name === 'Gluten' && (a.level === 'sévère' || a.level === 'modéré'),
+}
+
+// ── Suggestion categories section ─────────────────────────────
+
+function SuggestionCategoriesSection({
+  profile, fodmapProtocol, onSelectExample, onSelectFoodExample, disabled,
+}: {
+  profile: UserProfile;
+  fodmapProtocol: FodmapProtocol;
+  onSelectExample: (query: string) => void;
+  onSelectFoodExample: (template: string) => void;
+  disabled: boolean;
+}) {
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const active = SUGGESTION_CATEGORIES.find((c) => c.id === activeId);
+
+  const handleExTap = (ex: SuggestionEx) => {
+    if (disabled) return;
+    if (ex.type === 'food-select') {
+      onSelectFoodExample(ex.template ?? '');
+    } else if (ex.type === 'profile') {
+      onSelectExample(ex.buildQuery?.(profile, fodmapProtocol) ?? ex.text);
+    } else {
+      onSelectExample(ex.text);
+    }
+  };
+
+  return (
+    <View style={styles.catSection}>
+      <Text style={styles.catLabel}>Exemples de requêtes</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catScrollContent}>
+        {SUGGESTION_CATEGORIES.map((cat) => (
+          <TouchableOpacity
+            key={cat.id}
+            style={[styles.catChip, activeId === cat.id && styles.catChipActive]}
+            onPress={() => setActiveId(activeId === cat.id ? null : cat.id)}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.catEmoji}>{cat.emoji}</Text>
+            <Text style={[styles.catChipLabel, activeId === cat.id && styles.catChipLabelActive]}>{cat.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      {active && (
+        <View style={styles.examplesCard}>
+          {active.examples.map((ex, i) => (
+            <TouchableOpacity
+              key={ex.id}
+              style={[styles.exRow, i === active.examples.length - 1 && styles.exRowLast]}
+              onPress={() => handleExTap(ex)}
+              activeOpacity={0.75}
+              disabled={disabled}
+            >
+              <View style={styles.exRowLeft}>
+                {ex.type === 'food-select' && <View style={styles.exBadge}><Text style={styles.exBadgeText}>🥬</Text></View>}
+                {ex.type === 'profile' && <View style={[styles.exBadge, styles.exBadgeProfile]}><Text style={styles.exBadgeText}>👤</Text></View>}
+                <Text style={[styles.exText, disabled && styles.exTextMuted]}>{ex.text}</Text>
+              </View>
+              <Icon name="arrow-right" size={14} color={Colors.muted2} />
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
   );
-  const highProtein = profile.macroTargets.protein >= 120;
-
-  if (isLowFodmap) {
-    chips.push('3 repas low FODMAP pour la semaine');
-    chips.push('Petit déjeuner low FODMAP riche en fibres');
-  }
-  if (noLactose) chips.push('Dîner sans lactose léger');
-  if (noGluten) chips.push('Déjeuner sans gluten équilibré');
-  if (isVegan || isVegetarian) chips.push('Repas végétarien riche en protéines');
-  if (highProtein) chips.push('Dîner riche en protéines post-entraînement');
-
-  chips.push('Déjeuner anti-inflammatoire');
-  chips.push('Petit déjeuner rassasiant rapide');
-  chips.push('Repas léger digeste pour le soir');
-
-  return chips.slice(0, 6);
 }
 
 // ── Macro pill ────────────────────────────────────────────────
@@ -240,6 +572,7 @@ interface MealGeneratorScreenProps {
   profile: UserProfile;
   fodmapProtocol: FodmapProtocol;
   settings: AppSettings;
+  foodList: Food[];
   externalResult?: MealGeneratorResult | null;
   onGenerateInBackground?: (query: string) => void;
   onSaveMeal?: (meal: GeneratedMeal) => void;
@@ -253,6 +586,7 @@ export function MealGeneratorScreen({
   profile,
   fodmapProtocol,
   settings,
+  foodList,
   externalResult,
   onGenerateInBackground,
   onSaveMeal,
@@ -268,8 +602,9 @@ export function MealGeneratorScreen({
   const [error, setError] = useState<string | null>(null);
   const [sentToBackground, setSentToBackground] = useState(false);
   const [savedIndices, setSavedIndices] = useState<Set<number>>(new Set());
+  const [pickerTemplate, setPickerTemplate] = useState('');
+  const [pickerVisible, setPickerVisible] = useState(false);
   const aiReady = isAIReady(settings);
-  const suggestions = buildSuggestions(profile);
 
   // Show externally generated result when it arrives
   const displayResult = externalResult ?? result;
@@ -317,6 +652,18 @@ export function MealGeneratorScreen({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFoodExample = (template: string) => {
+    setPickerTemplate(template);
+    setPickerVisible(true);
+  };
+
+  const handlePickerConfirm = (foods: Food[]) => {
+    setPickerVisible(false);
+    if (foods.length === 0) return;
+    const names = foods.map((f) => f.name).join(', ');
+    handleGenerate(pickerTemplate.replace('{foods}', names));
   };
 
   return (
@@ -396,24 +743,15 @@ export function MealGeneratorScreen({
           )}
         </View>
 
-        {/* Suggestion chips */}
+        {/* Suggestion categories */}
         {!displayResult && !loading && (
-          <View style={styles.suggestionsSection}>
-            <Text style={styles.suggestionsLabel}>Suggestions pour ton profil</Text>
-            <View style={styles.chipsWrap}>
-              {suggestions.map((s) => (
-                <TouchableOpacity
-                  key={s}
-                  style={styles.suggestionChip}
-                  onPress={() => handleGenerate(s)}
-                  activeOpacity={0.75}
-                  disabled={loading || !aiReady}
-                >
-                  <Text style={styles.suggestionChipText}>{s}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+          <SuggestionCategoriesSection
+            profile={profile}
+            fodmapProtocol={fodmapProtocol}
+            onSelectExample={(q) => handleGenerate(q)}
+            onSelectFoodExample={handleFoodExample}
+            disabled={loading || !aiReady}
+          />
         )}
 
         {/* Loading state */}
@@ -472,6 +810,15 @@ export function MealGeneratorScreen({
           </View>
         )}
       </ScrollView>
+
+      {pickerVisible && (
+        <FoodPickerModal
+          foodList={foodList}
+          onConfirm={handlePickerConfirm}
+          onClose={() => setPickerVisible(false)}
+          bottomInset={insets.bottom}
+        />
+      )}
     </View>
   );
 }
@@ -576,30 +923,24 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1,
   },
 
-  // Suggestions
-  suggestionsSection: { marginTop: 28 },
-  suggestionsLabel: {
-    fontFamily: Fonts.mono,
-    fontSize: 9,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    color: Colors.muted,
-    marginBottom: 12,
-  },
-  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  suggestionChip: {
-    borderWidth: 1,
-    borderColor: Colors.hairline,
-    borderRadius: 100,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    backgroundColor: Colors.card,
-  },
-  suggestionChipText: {
-    fontFamily: Fonts.sans,
-    fontSize: 13,
-    color: Colors.ink2,
-  },
+  // Suggestion categories
+  catSection:          { marginTop: 24 },
+  catLabel:            { fontFamily: Fonts.mono, fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', color: Colors.muted, marginBottom: 12 },
+  catScrollContent:    { paddingRight: 8, gap: 8 },
+  catChip:             { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 13, borderRadius: 100, borderWidth: 1, borderColor: Colors.hairline, backgroundColor: Colors.card, flexShrink: 0 },
+  catChipActive:       { backgroundColor: Colors.ink, borderColor: Colors.ink },
+  catEmoji:            { fontSize: 14 },
+  catChipLabel:        { fontFamily: Fonts.sans, fontSize: 12.5, color: Colors.ink2 },
+  catChipLabelActive:  { color: Colors.paper2 },
+  examplesCard:        { marginTop: 10, borderRadius: 16, borderWidth: 1, borderColor: Colors.hairline2, backgroundColor: Colors.card, overflow: 'hidden' },
+  exRow:               { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: Colors.hairline2, gap: 10 },
+  exRowLast:           { borderBottomWidth: 0 },
+  exRowLeft:           { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  exBadge:             { width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(63,90,58,0.12)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  exBadgeProfile:      { backgroundColor: 'rgba(107,90,46,0.12)' },
+  exBadgeText:         { fontSize: 11 },
+  exText:              { flex: 1, fontFamily: Fonts.sans, fontSize: 13.5, color: Colors.ink2, lineHeight: 19 },
+  exTextMuted:         { color: Colors.muted2 },
 
   // Loading
   loadingBlock: {

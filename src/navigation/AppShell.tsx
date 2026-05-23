@@ -1144,6 +1144,7 @@ export function AppShell() {
         profile={profile}
         fodmapProtocol={fodmapProtocol}
         settings={settings}
+        foodList={foodList}
         externalResult={mealResult}
         onGenerateInBackground={handleGenerateMeals}
         onSaveMeal={handleSaveGeneratedMeal}
