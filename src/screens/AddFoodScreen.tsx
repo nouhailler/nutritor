@@ -4,6 +4,7 @@
  * Saisie du nom + contexte optionnel → JSON Food structuré enfilé dans aiQueue.
  */
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -39,6 +40,7 @@ function MacroBar({ label, value, color }: { label: string; value: number; color
 }
 
 function FoodPreviewCard({ food }: { food: Food }) {
+  const { t } = useTranslation();
   return (
     <View style={previewStyles.card}>
       {/* Header */}
@@ -63,10 +65,10 @@ function FoodPreviewCard({ food }: { food: Food }) {
 
       {/* Macros */}
       <View style={previewStyles.macros}>
-        <MacroBar label="Protéines" value={food.per100.protein} color={Colors.ok} />
-        <MacroBar label="Glucides" value={food.per100.carbs} color={Colors.signal} />
-        <MacroBar label="Lipides" value={food.per100.fat} color={Colors.warn} />
-        <MacroBar label="Fibres" value={food.per100.fiber} color={Colors.muted} />
+        <MacroBar label={t('addFood.macroProtein')} value={food.per100.protein} color={Colors.ok} />
+        <MacroBar label={t('addFood.macroCarbs')} value={food.per100.carbs} color={Colors.signal} />
+        <MacroBar label={t('addFood.macroFat')} value={food.per100.fat} color={Colors.warn} />
+        <MacroBar label={t('addFood.macroFiber')} value={food.per100.fiber} color={Colors.muted} />
       </View>
 
       <View style={previewStyles.divider} />
@@ -145,6 +147,7 @@ interface Props {
 }
 
 export function AddFoodScreen({ settings, onAdd, onBack, onOpenMenu, onManualEntry, initialQuery = '' }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [phase, setPhase] = useState<Phase>('input');
   const [foodName, setFoodName] = useState(initialQuery);
@@ -186,8 +189,8 @@ export function AddFoodScreen({ settings, onAdd, onBack, onOpenMenu, onManualEnt
             <Icon name="back" size={20} color={Colors.ink} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={styles.eyebrow}>Étape 1 sur 3</Text>
-            <Text style={styles.title}>Ajouter avec l'IA</Text>
+            <Text style={styles.eyebrow}>{t('addFood.stepLabel')}</Text>
+            <Text style={styles.title}>{t('addFood.title')}</Text>
           </View>
           <View style={styles.providerBadge}>
             <Icon name="sparkle" size={11} color={Colors.signal} />
@@ -209,10 +212,10 @@ export function AddFoodScreen({ settings, onAdd, onBack, onOpenMenu, onManualEnt
         >
           <View style={styles.formCard}>
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Nom de l'aliment *</Text>
+              <Text style={styles.inputLabel}>{t('addFood.nameLabel')}</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="ex. Lentilles vertes du Puy"
+                placeholder={t('addFood.namePlaceholder')}
                 placeholderTextColor={Colors.muted2}
                 value={foodName}
                 onChangeText={setFoodName}
@@ -223,10 +226,10 @@ export function AddFoodScreen({ settings, onAdd, onBack, onOpenMenu, onManualEnt
             </View>
             <View style={styles.inputDivider} />
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Marque (optionnel)</Text>
+              <Text style={styles.inputLabel}>{t('addFood.brandLabel')}</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="ex. Intermarché Bio, Maison Bertin…"
+                placeholder={t('addFood.brandPlaceholder')}
                 placeholderTextColor={Colors.muted2}
                 value={brand}
                 onChangeText={setBrand}
@@ -236,10 +239,10 @@ export function AddFoodScreen({ settings, onAdd, onBack, onOpenMenu, onManualEnt
             </View>
             <View style={styles.inputDivider} />
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Contexte (optionnel)</Text>
+              <Text style={styles.inputLabel}>{t('addFood.contextLabel')}</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="ex. cuit, cru, en conserve, bio…"
+                placeholder={t('addFood.contextPlaceholder')}
                 placeholderTextColor={Colors.muted2}
                 value={context}
                 onChangeText={setContext}
@@ -259,10 +262,7 @@ export function AddFoodScreen({ settings, onAdd, onBack, onOpenMenu, onManualEnt
           {/* Background info hint */}
           <View style={styles.bgHint}>
             <Icon name="sparkle" size={12} color={Colors.signal} />
-            <Text style={styles.bgHintText}>
-              La génération s'exécute en arrière-plan.{'\n'}
-              Un bandeau apparaîtra en bas de l'écran pendant le traitement.
-            </Text>
+            <Text style={styles.bgHintText}>{t('addFood.bgHint')}</Text>
           </View>
 
           <Text style={styles.modelHint}>{providerLabel}</Text>
@@ -274,7 +274,7 @@ export function AddFoodScreen({ settings, onAdd, onBack, onOpenMenu, onManualEnt
             disabled={!foodName.trim()}
           >
             <Icon name="sparkle" size={18} color={Colors.paper2} />
-            <Text style={styles.generateBtnText}>Générer avec l'IA</Text>
+            <Text style={styles.generateBtnText}>{t('addFood.generateBtn')}</Text>
           </TouchableOpacity>
 
           {onManualEntry && (
@@ -283,7 +283,7 @@ export function AddFoodScreen({ settings, onAdd, onBack, onOpenMenu, onManualEnt
               onPress={() => onManualEntry(foodName.trim())}
               activeOpacity={0.7}
             >
-              <Text style={styles.manualBtnText}>Saisie libre de l'aliment</Text>
+              <Text style={styles.manualBtnText}>{t('addFood.manualEntry')}</Text>
             </TouchableOpacity>
           )}
         </ScrollView>

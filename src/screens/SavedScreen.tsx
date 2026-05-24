@@ -4,6 +4,7 @@
  * filtres (tag, tri, texte), création et édition depuis ce même écran.
  */
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Image,
   ScrollView,
@@ -124,6 +125,7 @@ interface SavedScreenProps {
 }
 
 export function SavedScreen({ plates, onOpenPlate, onCreatePlate, onEditPlate, onOpenMenu, onStartDemo, onOpenPlateAI }: SavedScreenProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<PlateFilterState>(DEFAULT_FILTER);
   const [filterVisible, setFilterVisible] = useState(false);
@@ -145,8 +147,8 @@ export function SavedScreen({ plates, onOpenPlate, onCreatePlate, onEditPlate, o
           <Icon name="menu" size={22} color={Colors.ink} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.eyebrow}>Bibliothèque</Text>
-          <Text style={styles.title}>Plats sauvegardés</Text>
+          <Text style={styles.eyebrow}>{t('saved.eyebrow')}</Text>
+          <Text style={styles.title}>{t('saved.title')}</Text>
         </View>
         {onOpenPlateAI && (
           <TouchableOpacity style={styles.iconBtnAI} onPress={onOpenPlateAI} activeOpacity={0.7}>
@@ -181,7 +183,7 @@ export function SavedScreen({ plates, onOpenPlate, onCreatePlate, onEditPlate, o
         >
           <Icon name="sliders" size={14} color={activeCount > 0 ? Colors.paper2 : Colors.ink} />
           <Text style={[styles.filterBtnText, activeCount > 0 && styles.filterBtnTextActive]}>
-            Filtres{activeCount > 0 ? ` · ${activeCount}` : ''}
+            {t('search.filters')}{activeCount > 0 ? ` · ${activeCount}` : ''}
           </Text>
         </TouchableOpacity>
         <Text style={styles.filterInfo}>
@@ -201,8 +203,8 @@ export function SavedScreen({ plates, onOpenPlate, onCreatePlate, onEditPlate, o
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         {filtered.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>Aucun plat trouvé</Text>
-            <Text style={styles.emptyHint}>Modifie les filtres pour voir plus de résultats.</Text>
+            <Text style={styles.emptyTitle}>{t('saved.empty')}</Text>
+            <Text style={styles.emptyHint}>{t('saved.emptyDesc')}</Text>
           </View>
         ) : (
           <View style={styles.grid}>

@@ -17,6 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { HelpButton, HelpModal } from '../components/HelpModal';
@@ -132,6 +133,7 @@ function EditKcalModal({
   onSave: (kcal: number) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [value, setValue] = useState(currentKcal === 0 ? '' : String(currentKcal));
   useEffect(() => {
     if (visible) setValue(currentKcal === 0 ? '' : String(currentKcal));
@@ -146,26 +148,26 @@ function EditKcalModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <View style={kcalModalStyles.overlay}>
         <View style={kcalModalStyles.card}>
-          <Text style={kcalModalStyles.title}>Énergie pour 100 g</Text>
+          <Text style={kcalModalStyles.title}>{t('detail.editEnergyTitle')}</Text>
           <View style={kcalModalStyles.inputRow}>
             <TextInput
               style={kcalModalStyles.input}
               value={value}
               onChangeText={setValue}
               keyboardType="decimal-pad"
-              placeholder="ex : 38"
+              placeholder={t('detail.editEnergyPlaceholder')}
               placeholderTextColor={Colors.muted2}
               autoFocus
               selectTextOnFocus
             />
-            <Text style={kcalModalStyles.unit}>kcal</Text>
+            <Text style={kcalModalStyles.unit}>{t('detail.editEnergyUnit')}</Text>
           </View>
           <View style={kcalModalStyles.btnRow}>
             <TouchableOpacity style={kcalModalStyles.cancelBtn} onPress={onCancel} activeOpacity={0.7}>
-              <Text style={kcalModalStyles.cancelText}>Annuler</Text>
+              <Text style={kcalModalStyles.cancelText}>{t('detail.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={kcalModalStyles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
-              <Text style={kcalModalStyles.saveText}>Enregistrer</Text>
+              <Text style={kcalModalStyles.saveText}>{t('detail.save')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -253,13 +255,14 @@ function ApportsSection({
   portion: number;
   onEditKcal?: () => void;
 }) {
+  const { t } = useTranslation();
   const f = portion / 100;
   const sc = (v: number) => round1(v * f);
   const kcalIsZero = food.per100.kcal === 0;
 
   return (
     <View style={styles.section}>
-      <SectionHead num="01" title="Apports" right={`pour ${portion} ${food.unit}`} />
+      <SectionHead num="01" title={t('detail.section01')} right={t('detail.forPortion', { portion, unit: food.unit })} />
       <View style={styles.nutriTable}>
         <TouchableOpacity
           style={[styles.nutriRow, styles.nutriRowBorderless]}
@@ -267,7 +270,7 @@ function ApportsSection({
           activeOpacity={kcalIsZero && onEditKcal ? 0.6 : 1}
           disabled={!kcalIsZero || !onEditKcal}
         >
-          <Text style={styles.nutriNameLarge}>Énergie</Text>
+          <Text style={styles.nutriNameLarge}>{t('detail.energy')}</Text>
           <View style={styles.kcalValueRow}>
             <Text style={[styles.nutriValLarge, kcalIsZero && styles.nutriValZero]}>
               {Math.round(food.per100.kcal * f)} kcal
@@ -278,7 +281,7 @@ function ApportsSection({
           </View>
         </TouchableOpacity>
         <View style={styles.nutriRow}>
-          <Text style={styles.nutriName}>Protéines</Text>
+          <Text style={styles.nutriName}>{t('detail.nutriProtein')}</Text>
           <View style={styles.nutriValRow}>
             <Text style={styles.nutriVal}>{sc(food.per100.protein)} g</Text>
             <Text style={styles.nutriPct}>
@@ -287,7 +290,7 @@ function ApportsSection({
           </View>
         </View>
         <View style={styles.nutriRow}>
-          <Text style={styles.nutriName}>Glucides</Text>
+          <Text style={styles.nutriName}>{t('detail.nutriCarbs')}</Text>
           <View style={styles.nutriValRow}>
             <Text style={styles.nutriVal}>{sc(food.per100.carbs)} g</Text>
             <Text style={styles.nutriPct}>
@@ -296,7 +299,7 @@ function ApportsSection({
           </View>
         </View>
         <View style={styles.nutriRow}>
-          <Text style={styles.nutriName}>Lipides</Text>
+          <Text style={styles.nutriName}>{t('detail.nutriFat')}</Text>
           <View style={styles.nutriValRow}>
             <Text style={styles.nutriVal}>{sc(food.per100.fat)} g</Text>
             <Text style={styles.nutriPct}>
@@ -305,7 +308,7 @@ function ApportsSection({
           </View>
         </View>
         <View style={styles.nutriRow}>
-          <Text style={styles.nutriName}>Sel</Text>
+          <Text style={styles.nutriName}>{t('detail.nutriSalt')}</Text>
           <Text style={styles.nutriVal}>{(food.per100.salt * f).toFixed(2)} g</Text>
         </View>
       </View>
@@ -316,25 +319,25 @@ function ApportsSection({
 // ── Section 02 · Protéines ─────────────────────────────────
 
 function ProteinSection({ p }: { p: ProteinDetail }) {
+  const { t } = useTranslation();
   const amino = Array.isArray(p.amino) ? p.amino : [];
   return (
     <View style={styles.section}>
       <SectionHead
         num="02"
-        title="Protéines & acides aminés"
+        title={t('detail.section02')}
         right={`${p.totalG ?? 0} g · PDCAAS ${p.pdcaas ?? 0}`}
       />
       <Text style={styles.lede}>
-        Protéine {p.complete ? 'complète' : 'incomplète'} — les 9 acides aminés essentiels sont
-        présents. BCAA cumulés :{' '}
-        <Text style={styles.ledeBold}>{p.bcaaG ?? 0} g</Text>, signal anabolique modéré.
+        {p.complete ? t('detail.complete') : t('detail.incomplete')} — {t('detail.bcaa')}{' '}
+        <Text style={styles.ledeBold}>{p.bcaaG ?? 0} g</Text>, {t('detail.anabolicSignal')}
       </Text>
       <View style={styles.nutri3}>
         {amino.map((a, i) => (
           <NutriRow
             key={a.name ?? i}
             name={a.name ?? ''}
-            sub={a.essential ? 'Essentiel' : 'Non-essentiel'}
+            sub={a.essential ? t('detail.essential') : t('detail.nonEssential')}
             qty={a.qty ?? ''}
             role={a.role ?? ''}
           />
@@ -347,36 +350,37 @@ function ProteinSection({ p }: { p: ProteinDetail }) {
 // ── Section 03 · Glucides ──────────────────────────────────
 
 function CarbSection({ c }: { c: CarbDetail }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.section}>
       <SectionHead
         num="03"
-        title="Glucides"
+        title={t('detail.section03')}
         right={`IG ${c.glycemicIndex} · CG ${c.glycemicLoad}`}
       />
       <View style={styles.nutriTable}>
         <View style={[styles.nutriRow, styles.nutriRowBorderless]}>
-          <Text style={styles.nutriNameLarge}>Glucides totaux</Text>
+          <Text style={styles.nutriNameLarge}>{t('detail.totalCarbs')}</Text>
           <Text style={styles.nutriValLarge}>{c.totalG} g</Text>
         </View>
         <View style={[styles.nutriRow, styles.nutriRowIndent]}>
-          <Text style={styles.nutriNameMuted}>Amidons complexes</Text>
+          <Text style={styles.nutriNameMuted}>{t('detail.complexStarches')}</Text>
           <Text style={styles.nutriVal}>{c.starchG} g</Text>
         </View>
         <View style={[styles.nutriRow, styles.nutriRowIndent]}>
-          <Text style={styles.nutriNameMuted}>Sucres simples</Text>
+          <Text style={styles.nutriNameMuted}>{t('detail.simpleSugars')}</Text>
           <Text style={styles.nutriVal}>{c.sugarsG} g</Text>
         </View>
         <View style={styles.nutriRow}>
-          <Text style={styles.nutriNameLarge}>Fibres alimentaires</Text>
+          <Text style={styles.nutriNameLarge}>{t('detail.dietaryFiber')}</Text>
           <Text style={styles.nutriValLarge}>{c.fiberG} g</Text>
         </View>
         <View style={[styles.nutriRow, styles.nutriRowIndent]}>
-          <Text style={styles.nutriNameMuted}>Solubles (prébiotiques)</Text>
+          <Text style={styles.nutriNameMuted}>{t('detail.solubleFiber')}</Text>
           <Text style={styles.nutriVal}>{c.fiberSolubleG} g</Text>
         </View>
         <View style={[styles.nutriRow, styles.nutriRowIndent]}>
-          <Text style={styles.nutriNameMuted}>Insolubles (transit)</Text>
+          <Text style={styles.nutriNameMuted}>{t('detail.insolubleFiber')}</Text>
           <Text style={styles.nutriVal}>{c.fiberInsolubleG} g</Text>
         </View>
       </View>
@@ -388,6 +392,7 @@ function CarbSection({ c }: { c: CarbDetail }) {
 // ── Section 04 · Lipides ───────────────────────────────────
 
 function LipidSection({ l }: { l: LipidDetail }) {
+  const { t } = useTranslation();
   const parsed = (Array.isArray(l.fa) ? l.fa : []).map((fa, i) => {
     const m = String(fa.pct ?? '').match(/(\d+(?:\.\d+)?)/);
     return { ...fa, pct: String(fa.pct ?? ''), qty: String(fa.qty ?? ''), num: m ? parseFloat(m[1]) : 0, color: FA_COLORS[i % FA_COLORS.length] };
@@ -396,7 +401,7 @@ function LipidSection({ l }: { l: LipidDetail }) {
 
   return (
     <View style={styles.section}>
-      <SectionHead num="04" title="Lipides & acides gras" right={`${l.totalG} g · ${l.ratioOmega}`} />
+      <SectionHead num="04" title={t('detail.section04')} right={`${l.totalG} g · ${l.ratioOmega}`} />
 
       {/* Stacked bar */}
       <View style={styles.faBar}>
@@ -423,7 +428,7 @@ function LipidSection({ l }: { l: LipidDetail }) {
           <NutriRow
             key={fa.name}
             name={fa.name}
-            sub={`${fa.pct} du total`}
+            sub={t('detail.percentTotal', { pct: fa.pct })}
             qty={fa.qty}
             role={fa.role}
           />
@@ -469,6 +474,7 @@ function NutriTableSection({
 const FODMAP_MAX = 300;
 
 function FodmapSection({ f }: { f: Fodmap }) {
+  const { t } = useTranslation();
   const pct = (str: unknown) =>
     Math.min(100, (parseFloat(String(str ?? 0)) / FODMAP_MAX) * 100);
 
@@ -479,18 +485,15 @@ function FodmapSection({ f }: { f: Fodmap }) {
   const alternatives = Array.isArray(f.alternatives) ? f.alternatives : [];
 
   const markers = [
-    { pct: pct(elim.portion), label: 'Élimination', sub: `${elim.portion} g` },
-    { pct: pct(reintro.portion), label: 'Réintroduction', sub: `${reintro.portion} g` },
-    { pct: pct(absLimit.portion), label: 'Limite', sub: `${absLimit.portion} g` },
+    { pct: pct(elim.portion), label: t('detail.fodmapElimination'), sub: `${elim.portion} g` },
+    { pct: pct(reintro.portion), label: t('detail.fodmapReintroduction'), sub: `${reintro.portion} g` },
+    { pct: pct(absLimit.portion), label: t('detail.fodmapLimit'), sub: `${absLimit.portion} g` },
   ];
 
   return (
     <View style={styles.section}>
-      <SectionHead num="07" title="FODMAP" right={`profil ${String(f.overall ?? '').toUpperCase()}`} />
-      <Text style={styles.lede}>
-        Trois seuils calculés pour la phase d'élimination, de réintroduction et la dose maximale
-        tolérée. Échelle de référence : 0 → 300 g cuit.
-      </Text>
+      <SectionHead num="07" title="FODMAP" right={t('detail.fodmapProfile', { level: String(f.overall ?? '').toUpperCase() })} />
+      <Text style={styles.lede}>{t('detail.fodmapRulerLede')}</Text>
 
       {/* Ruler */}
       <View style={styles.fodmapRulerWrap}>
@@ -512,7 +515,7 @@ function FodmapSection({ f }: { f: Fodmap }) {
       </View>
 
       {/* Types */}
-      <Text style={styles.sectionMicrolabel}>Types présents</Text>
+      <Text style={styles.sectionMicrolabel}>{t('detail.fodmapTypesPresent')}</Text>
       <View>
         {types.map((t, i) => {
           const present = String(t.present ?? '');
@@ -540,7 +543,7 @@ function FodmapSection({ f }: { f: Fodmap }) {
       </View>
 
       {/* Alternatives */}
-      <Text style={[styles.sectionMicrolabel, { marginTop: 22 }]}>Alternatives low FODMAP</Text>
+      <Text style={[styles.sectionMicrolabel, { marginTop: 22 }]}>{t('detail.fodmapAlternatives')}</Text>
       <View style={styles.altGrid}>
         {alternatives.map((a, i) => (
           <View key={a.name ?? i} style={styles.altCard}>
@@ -556,9 +559,10 @@ function FodmapSection({ f }: { f: Fodmap }) {
 // ── Section 08 · Bioactives ───────────────────────────────
 
 function BioactiveSection({ items }: { items: Bioactive[] }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.section}>
-      <SectionHead num="08" title="Molécules bioactives" right="composés non-essentiels" />
+      <SectionHead num="08" title={t('detail.section08')} right={t('detail.nonEssentialComposites')} />
       <View style={styles.nutri3}>
         {items.map((b) => (
           <NutriRow key={b.name} name={b.name} qty={b.qty} role={b.role} />
@@ -571,16 +575,17 @@ function BioactiveSection({ items }: { items: Bioactive[] }) {
 // ── Section 09 · Action métabolique ──────────────────────
 
 function MetabolicSection({ items }: { items: MetabolicItem[] }) {
+  const { t } = useTranslation();
   const safeItems = Array.isArray(items) ? items : [];
   const toneLabel = (tone: MetabolicItem['tone']) => {
-    if (tone === 'high') return '↑ favorable';
-    if (tone === 'mid') return '~ modéré';
-    return '↓ faible impact';
+    if (tone === 'high') return t('detail.metabolicHigh');
+    if (tone === 'mid') return t('detail.metabolicMid');
+    return t('detail.metabolicLow');
   };
 
   return (
     <View style={styles.section}>
-      <SectionHead num="09" title="Action métabolique" />
+      <SectionHead num="09" title={t('detail.section09')} />
       <View>
         {safeItems.map((m, i) => (
           <View key={m.axis} style={[styles.metabolicRow, i === 0 && styles.metabolicRowFirst]}>
@@ -613,15 +618,16 @@ function MetabolicSection({ items }: { items: MetabolicItem[] }) {
 // ── Section 10 · Profil sensoriel ────────────────────────
 
 function SensorySection({ s }: { s: Sensory }) {
+  const { t } = useTranslation();
   const axes: { label: string; words: string[] }[] = [
-    { label: 'Goût', words: Array.isArray(s.taste) ? s.taste : [] },
-    { label: 'Texture', words: Array.isArray(s.texture) ? s.texture : [] },
-    { label: 'Arôme', words: Array.isArray(s.aroma) ? s.aroma : [] },
+    { label: t('detail.sensoryTaste'), words: Array.isArray(s.taste) ? s.taste : [] },
+    { label: t('detail.sensoryTexture'), words: Array.isArray(s.texture) ? s.texture : [] },
+    { label: t('detail.sensoryAroma'), words: Array.isArray(s.aroma) ? s.aroma : [] },
   ];
 
   return (
     <View style={styles.section}>
-      <SectionHead num="10" title="Profil sensoriel" />
+      <SectionHead num="10" title={t('detail.section10')} />
       {axes.map((ax) => (
         <View key={ax.label} style={styles.sensoryAxis}>
           <Text style={styles.sensoryLabel}>{ax.label}</Text>
@@ -635,7 +641,7 @@ function SensorySection({ s }: { s: Sensory }) {
         </View>
       ))}
       <View style={styles.sensoryPairings}>
-        <Text style={styles.sectionMicrolabel}>Pairings recommandés</Text>
+        <Text style={styles.sectionMicrolabel}>{t('detail.sensoryPairings')}</Text>
         <View style={[styles.sensoryWords, { marginTop: 8 }]}>
           {(Array.isArray(s.pairings) ? s.pairings : []).map((p) => (
             <View key={p} style={styles.sensoryWordPill}>
@@ -650,13 +656,8 @@ function SensorySection({ s }: { s: Sensory }) {
 
 // ── Section 11 · Allergènes ───────────────────────────────
 
-const STATUS_MAP: Record<Allergen['status'], { text: string; color: string }> = {
-  contains: { text: 'CONTIENT', color: Colors.warn },
-  trace: { text: 'TRACES', color: Colors.signal },
-  absent: { text: 'ABSENT', color: Colors.ok },
-};
-
 function AllergenSection({ allergens }: { allergens: Allergen[] }) {
+  const { t } = useTranslation();
   const safeAllergens = Array.isArray(allergens) ? allergens : [];
   const pairs: [Allergen, Allergen | undefined][] = [];
   for (let i = 0; i < safeAllergens.length; i += 2) {
@@ -665,7 +666,7 @@ function AllergenSection({ allergens }: { allergens: Allergen[] }) {
 
   return (
     <View style={styles.section}>
-      <SectionHead num="11" title="Allergènes" right="14 prioritaires" />
+      <SectionHead num="11" title={t('detail.section11')} right={t('detail.allergen14')} />
       <View style={styles.allergenGrid}>
         {pairs.map(([left, right], i) => left ? (
           <View key={i} style={styles.allergenGridRow}>
@@ -680,6 +681,12 @@ function AllergenSection({ allergens }: { allergens: Allergen[] }) {
 }
 
 function AllergenCell({ item }: { item: Allergen }) {
+  const { t } = useTranslation();
+  const STATUS_MAP: Record<Allergen['status'], { text: string; color: string }> = {
+    contains: { text: t('detail.allergenContains'), color: Colors.warn },
+    trace: { text: t('detail.allergenTrace'), color: Colors.signal },
+    absent: { text: t('detail.allergenAbsent'), color: Colors.ok },
+  };
   const s = STATUS_MAP[item.status] ?? { text: '?', color: Colors.muted };
   return (
     <View style={styles.allergenCell}>
@@ -698,13 +705,14 @@ function CompositionSection({
   text: string;
   highlights: string[];
 }) {
+  const { t } = useTranslation();
   const safeText = String(text ?? '');
   const safeHL = Array.isArray(highlights) ? highlights : [];
 
   if (!safeHL.length) {
     return (
       <View style={[styles.section, { paddingBottom: 30 }]}>
-        <SectionHead num="12" title="Composition" />
+        <SectionHead num="12" title={t('detail.section12')} />
         <Text style={styles.ingredientsText}>{safeText}</Text>
       </View>
     );
@@ -715,7 +723,7 @@ function CompositionSection({
 
   return (
     <View style={[styles.section, { paddingBottom: 30 }]}>
-      <SectionHead num="12" title="Composition" />
+      <SectionHead num="12" title={t('detail.section12')} />
       <Text style={styles.ingredientsText}>
         {parts.map((part, i) => {
           const isHL = safeHL.some((h) => part.toLowerCase() === h.toLowerCase());
@@ -749,6 +757,7 @@ function MealSheet({
   onSelect: (mealId: string) => void;
   onDismiss: () => void;
 }) {
+  const { t } = useTranslation();
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const sheetAnim = useRef(new Animated.Value(300)).current;
   const [mounted, setMounted] = useState(false);
@@ -784,9 +793,9 @@ function MealSheet({
         style={[styles.sheet, { transform: [{ translateY: sheetAnim }] }]}
       >
         <View style={styles.sheetGrabber} />
-        <Text style={styles.sheetTitle}>À quel repas ?</Text>
+        <Text style={styles.sheetTitle}>{t('detail.mealSheet')}</Text>
         <Text style={styles.sheetSub}>
-          {kcal} kcal · {portion} {food.unit} de {food.name}
+          {t('detail.foodPortion', { kcal, portion, unit: food.unit, name: food.name })}
         </Text>
         {meals.map((m) => (
           <TouchableOpacity
@@ -800,7 +809,7 @@ function MealSheet({
               <Text style={styles.mealOptionTime}>{m.time}</Text>
             </View>
             <Text style={styles.mealOptionCount}>
-              {m.items.length} aliment{m.items.length !== 1 ? 's' : ''}
+              {t('detail.mealItemCount', { count: m.items.length, s: m.items.length !== 1 ? 's' : '' })}
             </Text>
           </TouchableOpacity>
         ))}
@@ -840,6 +849,7 @@ export function DetailScreen({
   onAdd,
 }: DetailScreenProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [portion, setPortion] = useState(food.defaultPortion);
   const [showSheet, setShowSheet] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
@@ -935,16 +945,16 @@ export function DetailScreen({
         {food.carbDetail && <CarbSection c={food.carbDetail} />}
         {food.lipidDetail && <LipidSection l={food.lipidDetail} />}
         {food.minerals && (
-          <NutriTableSection num="05" title="Minéraux" right="ANR adulte" items={food.minerals} />
+          <NutriTableSection num="05" title={t('detail.section05')} right={t('detail.anrAdult')} items={food.minerals} />
         )}
         {food.vitamins && (
-          <NutriTableSection num="06" title="Vitamines" right="ANR adulte" items={food.vitamins} />
+          <NutriTableSection num="06" title={t('detail.section06')} right={t('detail.anrAdult')} items={food.vitamins} />
         )}
         {food.trace && (
           <NutriTableSection
             num="06b"
-            title="Oligo-éléments & nutriments"
-            right="ANR adulte"
+            title={t('detail.section06b')}
+            right={t('detail.anrAdult')}
             items={food.trace}
           />
         )}
@@ -971,7 +981,7 @@ export function DetailScreen({
           </TouchableOpacity>
           <View style={styles.portionValue}>
             <Text style={styles.portionNum}>{portion}</Text>
-            <Text style={styles.portionUnit}>{food.unit} · portion</Text>
+            <Text style={styles.portionUnit}>{t('detail.portionLabel', { unit: food.unit })}</Text>
           </View>
           <TouchableOpacity
             style={styles.portionBtn}
@@ -986,7 +996,7 @@ export function DetailScreen({
           onPress={() => setShowSheet(true)}
           activeOpacity={0.85}
         >
-          <Text style={styles.addBtnText}>Ajouter</Text>
+          <Text style={styles.addBtnText}>{t('detail.addBtn')}</Text>
           <Icon name="arrow-right" size={18} color={Colors.paper2} />
         </TouchableOpacity>
       </View>

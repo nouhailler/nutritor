@@ -50,6 +50,7 @@ export interface AppSettings {
   openrouter: OpenRouterSettings;
   anthropic: AnthropicSettings;
   openai: OpenAISettings;
+  language: 'fr' | 'en';
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -71,4 +72,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
     apiKey: '',
     model: 'gpt-4o',
   },
+  language: 'fr',
 };

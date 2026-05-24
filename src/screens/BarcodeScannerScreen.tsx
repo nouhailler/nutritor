@@ -4,6 +4,7 @@
  * Interroge Open Food Facts au scan, importe la fiche aliment si trouvée.
  */
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Animated,
@@ -111,6 +112,7 @@ function ResultSheet({
   onAdd: () => void;
   onScanAgain: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={sheet.wrap}>
       <View style={sheet.handle} />
@@ -140,7 +142,7 @@ function ResultSheet({
       <View style={sheet.actions}>
         <TouchableOpacity style={sheet.retryBtn} onPress={onScanAgain} activeOpacity={0.7}>
           <Icon name="scan" size={16} color={Colors.muted} />
-          <Text style={sheet.retryText}>Scanner à nouveau</Text>
+          <Text style={sheet.retryText}>{t('scanner.scanAgain')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[sheet.addBtn, alreadyAdded && sheet.addBtnDone]}
@@ -149,8 +151,8 @@ function ResultSheet({
           disabled={alreadyAdded}
         >
           {alreadyAdded
-            ? <><Icon name="check" size={18} color={Colors.paper2} /><Text style={sheet.addText}>Déjà dans ta liste</Text></>
-            : <><Icon name="plus"  size={18} color={Colors.paper2} /><Text style={sheet.addText}>Ajouter à ma liste</Text></>
+            ? <><Icon name="check" size={18} color={Colors.paper2} /><Text style={sheet.addText}>{t('scanner.alreadyInList')}</Text></>
+            : <><Icon name="plus"  size={18} color={Colors.paper2} /><Text style={sheet.addText}>{t('scanner.addToList')}</Text></>
           }
         </TouchableOpacity>
       </View>
@@ -217,6 +219,7 @@ interface Props {
 }
 
 export function BarcodeScannerScreen({ existingIds, onImport, onBack, onOpenMenu, onStartDemo }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [phase, setPhase] = useState<Phase>('scanning');
@@ -267,12 +270,12 @@ export function BarcodeScannerScreen({ existingIds, onImport, onBack, onOpenMenu
           <Icon name="close" size={20} color={Colors.paper2} />
         </TouchableOpacity>
         <Icon name="scan" size={40} color={Colors.muted2} />
-        <Text style={styles.permTitle}>Accès à la caméra requis</Text>
+        <Text style={styles.permTitle}>{t('scanner.permissionDenied')}</Text>
         <Text style={styles.permDesc}>
-          Nutritor a besoin de la caméra pour scanner les codes-barres.
+          {t('scanner.scanPrompt')}
         </Text>
         <TouchableOpacity style={styles.permBtn} onPress={requestPermission} activeOpacity={0.8}>
-          <Text style={styles.permBtnText}>Autoriser la caméra</Text>
+          <Text style={styles.permBtnText}>{t('common.ok')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -305,7 +308,7 @@ export function BarcodeScannerScreen({ existingIds, onImport, onBack, onOpenMenu
           <Icon name="back" size={20} color={Colors.paper2} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.topTitle}>Scanner un code-barres</Text>
+          <Text style={styles.topTitle}>{t('scanner.title')}</Text>
           <Text style={styles.topSub}>Open Food Facts</Text>
         </View>
         <TouchableOpacity style={styles.backBtn} onPress={onOpenMenu} activeOpacity={0.7}>
@@ -323,23 +326,23 @@ export function BarcodeScannerScreen({ existingIds, onImport, onBack, onOpenMenu
       {/* Status / loading */}
       {phase === 'scanning' && (
         <View style={styles.hint}>
-          <Text style={styles.hintText}>Pointe la caméra vers un code-barres EAN-13</Text>
+          <Text style={styles.hintText}>{t('scanner.scanHint')}</Text>
         </View>
       )}
 
       {phase === 'loading' && (
         <View style={styles.loadingBox}>
           <ActivityIndicator color={Colors.paper2} size="large" />
-          <Text style={styles.loadingText}>Recherche sur Open Food Facts…</Text>
+          <Text style={styles.loadingText}>{t('scanner.loadingOFF')}</Text>
         </View>
       )}
 
       {phase === 'not_found' && (
         <View style={styles.notFoundBox}>
           <Icon name="alert" size={20} color={Colors.warn} />
-          <Text style={styles.notFoundText}>Produit introuvable sur Open Food Facts</Text>
+          <Text style={styles.notFoundText}>{t('scanner.notFoundOFF')}</Text>
           <TouchableOpacity style={styles.retrySmall} onPress={handleScanAgain} activeOpacity={0.7}>
-            <Text style={styles.retrySmallText}>Scanner à nouveau</Text>
+            <Text style={styles.retrySmallText}>{t('scanner.scanAgain')}</Text>
           </TouchableOpacity>
         </View>
       )}

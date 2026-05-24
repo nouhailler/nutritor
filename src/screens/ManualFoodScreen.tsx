@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { Colors, Fonts } from '../theme/tokens';
@@ -46,32 +47,35 @@ const AROMA_OPTIONS    = ['Fruité', 'Fumé', 'Herbacé', 'Floral', 'Terreux', '
 
 // ── Compat builder ─────────────────────────────────────────────
 
+type TFunction = (key: string, opts?: Record<string, unknown>) => string;
+
 function buildManualCompat(
   per100: { kcal: number; fat: number; fatSat: number; carbs: number; sugars: number; fiber: number; protein: number; salt: number },
   allergenMap: Record<string, AllergenStatus>,
+  t: TFunction,
 ): CompatItem[] {
   const hasData = per100.kcal > 0 || per100.protein > 0 || per100.carbs > 0 || per100.fat > 0;
-  if (!hasData) return [{ label: 'Données manquantes', kind: 'warn' }];
+  if (!hasData) return [{ label: t('compat.missingData'), kind: 'warn' }];
 
   const compat: CompatItem[] = [];
-  if (per100.salt < 0.3)    compat.push({ label: 'Pauvre en sel',      kind: 'ok'   });
-  if (per100.sugars < 5)    compat.push({ label: 'Pauvre en sucres',   kind: 'ok'   });
-  if (per100.fat < 3)       compat.push({ label: 'Pauvre en graisses', kind: 'ok'   });
-  if (per100.fiber > 5)     compat.push({ label: 'Riche en fibres',    kind: 'ok'   });
-  if (per100.protein > 15)  compat.push({ label: 'Riche en protéines', kind: 'ok'   });
-  if (per100.salt > 1.5)    compat.push({ label: 'Riche en sel',       kind: 'warn' });
-  if (per100.sugars > 15)   compat.push({ label: 'Riche en sucres',    kind: 'warn' });
+  if (per100.salt < 0.3)    compat.push({ label: t('compat.lowSalt'),      kind: 'ok'   });
+  if (per100.sugars < 5)    compat.push({ label: t('compat.lowSugar'),     kind: 'ok'   });
+  if (per100.fat < 3)       compat.push({ label: t('compat.lowFat'),       kind: 'ok'   });
+  if (per100.fiber > 5)     compat.push({ label: t('compat.highFiber'),    kind: 'ok'   });
+  if (per100.protein > 15)  compat.push({ label: t('compat.highProtein'),  kind: 'ok'   });
+  if (per100.salt > 1.5)    compat.push({ label: t('compat.highSalt'),     kind: 'warn' });
+  if (per100.sugars > 15)   compat.push({ label: t('compat.highSugar'),    kind: 'warn' });
 
-  if (allergenMap['Gluten'] === 'absent')    compat.push({ label: 'Sans gluten',      kind: 'ok'   });
-  if (allergenMap['Gluten'] === 'contains')  compat.push({ label: 'Contient gluten',  kind: 'warn' });
-  if (allergenMap['Lactose'] === 'absent')   compat.push({ label: 'Sans lactose',     kind: 'ok'   });
-  if (allergenMap['Lactose'] === 'contains') compat.push({ label: 'Contient lactose', kind: 'warn' });
+  if (allergenMap['Gluten'] === 'absent')    compat.push({ label: t('compat.glutenFree'),      kind: 'ok'   });
+  if (allergenMap['Gluten'] === 'contains')  compat.push({ label: t('compat.containsGluten'),  kind: 'warn' });
+  if (allergenMap['Lactose'] === 'absent')   compat.push({ label: t('compat.lactoseFree'),     kind: 'ok'   });
+  if (allergenMap['Lactose'] === 'contains') compat.push({ label: t('compat.containsLactose'), kind: 'warn' });
 
   const animalKeys = ['Œufs', 'Lactose', 'Poisson', 'Crustacés', 'Mollusques'];
-  if (animalKeys.every((k) => allergenMap[k] === 'absent')) compat.push({ label: 'Vegan', kind: 'ok' });
+  if (animalKeys.every((k) => allergenMap[k] === 'absent')) compat.push({ label: t('compat.vegan'), kind: 'ok' });
 
   for (const n of ALLERGEN_NAMES) {
-    if (allergenMap[n] === 'trace') compat.push({ label: `Traces ${n.toLowerCase()}`, kind: 'warn' });
+    if (allergenMap[n] === 'trace') compat.push({ label: t('compat.traceOf', { name: n.toLowerCase() }), kind: 'warn' });
   }
 
   return compat;
@@ -181,6 +185,7 @@ interface Props {
 
 export function ManualFoodScreen({ initialName = '', onAdd, onBack, onOpenMenu }: Props) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   // Section 01
   const [name, setName]           = useState(initialName);
@@ -247,7 +252,7 @@ export function ManualFoodScreen({ initialName = '', onAdd, onBack, onOpenMenu }
     sugars: parseFloat(sugStr)    || 0,
   }), [kcalStr, protStr, carbStr, fatStr, fiberStr, saltStr, fatSatStr, sugStr]);
 
-  const compat = useMemo(() => buildManualCompat(per100, allergenMap), [per100, allergenMap]);
+  const compat = useMemo(() => buildManualCompat(per100, allergenMap, t), [per100, allergenMap, t]);
 
   // ── Helpers ──────────────────────────────────────────────────
 
@@ -334,8 +339,8 @@ export function ManualFoodScreen({ initialName = '', onAdd, onBack, onOpenMenu }
             <Icon name="back" size={20} color={Colors.ink} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={styles.eyebrow}>Saisie libre</Text>
-            <Text style={styles.screenTitle}>Nouvel aliment</Text>
+            <Text style={styles.eyebrow}>{t('manualFood.eyebrow')}</Text>
+            <Text style={styles.screenTitle}>{t('manualFood.title')}</Text>
           </View>
           <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
             <Icon name="menu" size={22} color={Colors.ink} />
@@ -350,40 +355,40 @@ export function ManualFoodScreen({ initialName = '', onAdd, onBack, onOpenMenu }
 
           {/* ── 01 — Informations générales ────────────── */}
           <View style={styles.card}>
-            <SectionHead num="01" title="Informations générales" />
+            <SectionHead num="01" title={t('manualFood.section01')} />
             <View style={styles.field}>
-              <FieldLabel label="Nom de l'aliment *" />
+              <FieldLabel label={t('manualFood.nameLabel')} />
               <TextInput
                 style={styles.textInput}
                 value={name}
                 onChangeText={setName}
-                placeholder="ex. Purée de cacahuète"
+                placeholder={t('manualFood.namePlaceholder')}
                 placeholderTextColor={Colors.muted2}
                 autoFocus
               />
             </View>
             <View style={styles.divider} />
             <View style={styles.field}>
-              <FieldLabel label="Catégorie" />
+              <FieldLabel label={t('manualFood.categoryLabel')} />
               <TextInput style={styles.textInput} value={category} onChangeText={setCategory}
-                placeholder="ex. Noix & oléagineux" placeholderTextColor={Colors.muted2} />
+                placeholder={t('manualFood.categoryPlaceholder')} placeholderTextColor={Colors.muted2} />
             </View>
             <View style={styles.divider} />
             <View style={styles.field}>
-              <FieldLabel label="Marque" />
+              <FieldLabel label={t('manualFood.brandLabel')} />
               <TextInput style={styles.textInput} value={brand} onChangeText={setBrand}
-                placeholder="ex. Jardin Bio" placeholderTextColor={Colors.muted2} />
+                placeholder={t('manualFood.brandPlaceholder')} placeholderTextColor={Colors.muted2} />
             </View>
             <View style={styles.divider} />
             <View style={styles.field}>
-              <FieldLabel label="Description courte" />
+              <FieldLabel label={t('manualFood.subtitleLabel')} />
               <TextInput style={styles.textInput} value={subtitle} onChangeText={setSubtitle}
-                placeholder="ex. Riche en acides gras essentiels…" placeholderTextColor={Colors.muted2} />
+                placeholder={t('manualFood.subtitlePlaceholder')} placeholderTextColor={Colors.muted2} />
             </View>
             <View style={styles.divider} />
             <View style={[styles.field, { flexDirection: 'row', alignItems: 'flex-end', gap: 12 }]}>
               <View style={{ flex: 1 }}>
-                <FieldLabel label="Portion par défaut" />
+                <FieldLabel label={t('manualFood.portionLabel')} />
                 <TextInput style={styles.textInput} value={portionStr} onChangeText={setPortion}
                   keyboardType="decimal-pad" placeholder="100" placeholderTextColor={Colors.muted2} />
               </View>
@@ -404,75 +409,75 @@ export function ManualFoodScreen({ initialName = '', onAdd, onBack, onOpenMenu }
 
           {/* ── 02 — Apports nutritionnels ─────────────── */}
           <View style={styles.card}>
-            <SectionHead num="02" title="Apports nutritionnels" right="pour 100 g / ml" />
+            <SectionHead num="02" title={t('manualFood.section02')} right={t('manualFood.per100')} />
             <TwoCol>
-              <NumInput label="Énergie (kcal)" value={kcalStr} onChange={setKcal} placeholder="ex. 589" />
-              <NumInput label="Protéines (g)" value={protStr} onChange={setProt} />
+              <NumInput label={t('manualFood.kcalLabel')} value={kcalStr} onChange={setKcal} placeholder={t('manualFood.kcalPlaceholder')} />
+              <NumInput label={t('manualFood.proteinLabel')} value={protStr} onChange={setProt} />
             </TwoCol>
             <View style={{ height: 16 }} />
             <TwoCol>
-              <NumInput label="Glucides (g)" value={carbStr} onChange={setCarb} />
-              <NumInput label="dont Sucres (g)" value={sugStr} onChange={setSug} />
+              <NumInput label={t('manualFood.carbsLabel')} value={carbStr} onChange={setCarb} />
+              <NumInput label={t('manualFood.sugarsLabel')} value={sugStr} onChange={setSug} />
             </TwoCol>
             <View style={{ height: 16 }} />
             <TwoCol>
-              <NumInput label="Lipides (g)" value={fatStr} onChange={setFat} />
-              <NumInput label="dont Saturés (g)" value={fatSatStr} onChange={setFatSat} />
+              <NumInput label={t('manualFood.fatLabel')} value={fatStr} onChange={setFat} />
+              <NumInput label={t('manualFood.fatSatLabel')} value={fatSatStr} onChange={setFatSat} />
             </TwoCol>
             <View style={{ height: 16 }} />
             <TwoCol>
-              <NumInput label="Fibres (g)" value={fiberStr} onChange={setFiber} />
-              <NumInput label="Sel (g)" value={saltStr} onChange={setSalt} />
+              <NumInput label={t('manualFood.fiberLabel')} value={fiberStr} onChange={setFiber} />
+              <NumInput label={t('manualFood.saltLabel')} value={saltStr} onChange={setSalt} />
             </TwoCol>
           </View>
 
           {/* ── 03 — Protéines (optionnel) ─────────────── */}
           <View style={styles.card}>
-            <SectionHead num="03" title="Protéines" right="optionnel"
+            <SectionHead num="03" title={t('manualFood.section03')} right={t('manualFood.optional')}
               collapsible expanded={showS03} onToggle={() => setShowS03((v) => !v)} />
             {showS03 && (
               <View style={{ gap: 14 }}>
                 <View style={styles.switchRow}>
-                  <Text style={styles.switchLabel}>Protéines complètes</Text>
+                  <Text style={styles.switchLabel}>{t('manualFood.completeProtein')}</Text>
                   <Switch value={protComplete} onValueChange={setProtComplete}
                     trackColor={{ true: Colors.ok }} thumbColor={Colors.paper2} />
                 </View>
-                <NumInput label="BCAA (g)" value={bcaaStr} onChange={setBcaa} placeholder="ex. 5.2" />
+                <NumInput label={t('manualFood.bcaaLabel')} value={bcaaStr} onChange={setBcaa} placeholder={t('manualFood.bcaaPlaceholder')} />
               </View>
             )}
           </View>
 
           {/* ── 04 — Glucides (optionnel) ──────────────── */}
           <View style={styles.card}>
-            <SectionHead num="04" title="Glucides" right="optionnel"
+            <SectionHead num="04" title={t('manualFood.section04')} right={t('manualFood.optional')}
               collapsible expanded={showS04} onToggle={() => setShowS04((v) => !v)} />
             {showS04 && (
               <TwoCol>
-                <NumInput label="Index glycémique (0-100)" value={giStr} onChange={setGI} placeholder="ex. 40" />
-                <NumInput label="Charge glycémique" value={glStr} onChange={setGL} placeholder="ex. 12" />
+                <NumInput label={t('manualFood.giLabel')} value={giStr} onChange={setGI} placeholder={t('manualFood.giPlaceholder')} />
+                <NumInput label={t('manualFood.glLabel')} value={glStr} onChange={setGL} placeholder={t('manualFood.glPlaceholder')} />
               </TwoCol>
             )}
           </View>
 
           {/* ── 05 — Lipides (optionnel) ───────────────── */}
           <View style={styles.card}>
-            <SectionHead num="05" title="Lipides" right="optionnel"
+            <SectionHead num="05" title={t('manualFood.section05')} right={t('manualFood.optional')}
               collapsible expanded={showS05} onToggle={() => setShowS05((v) => !v)} />
             {showS05 && (
-              <NumInput label="Ratio Oméga ω6/ω3 (ex : 5:1)" value={ratioOmega} onChange={setRatioOmega} placeholder="5:1" />
+              <NumInput label={t('manualFood.omegaLabel')} value={ratioOmega} onChange={setRatioOmega} placeholder={t('manualFood.omegaPlaceholder')} />
             )}
           </View>
 
           {/* ── 06 — Minéraux & Vitamines (optionnel) ───── */}
           <View style={styles.card}>
-            <SectionHead num="06" title="Minéraux & Vitamines" right="optionnel"
+            <SectionHead num="06" title={t('manualFood.section06')} right={t('manualFood.optional')}
               collapsible expanded={showS06} onToggle={() => setShowS06((v) => !v)} />
             {showS06 && (
               <View style={{ gap: 10 }}>
                 <View style={styles.microHeader}>
-                  <Text style={[styles.microCol, { flex: 2 }]}>Nutriment</Text>
-                  <Text style={[styles.microCol, { flex: 1.5 }]}>Quantité</Text>
-                  <Text style={[styles.microCol, { flex: 1 }]}>ANR %</Text>
+                  <Text style={[styles.microCol, { flex: 2 }]}>{t('manualFood.microNutrient')}</Text>
+                  <Text style={[styles.microCol, { flex: 1.5 }]}>{t('manualFood.microQty')}</Text>
+                  <Text style={[styles.microCol, { flex: 1 }]}>{t('manualFood.microAnr')}</Text>
                   <View style={{ width: 28 }} />
                 </View>
                 {microItems.map((item, idx) => (
@@ -480,17 +485,17 @@ export function ManualFoodScreen({ initialName = '', onAdd, onBack, onOpenMenu }
                     <TextInput
                       style={[styles.microInput, { flex: 2 }]}
                       value={item.name} onChangeText={(v) => updateMicro(idx, 'name', v)}
-                      placeholder="Magnésium" placeholderTextColor={Colors.muted2}
+                      placeholder={t('manualFood.microMagnesiumPlaceholder')} placeholderTextColor={Colors.muted2}
                     />
                     <TextInput
                       style={[styles.microInput, { flex: 1.5 }]}
                       value={item.qty} onChangeText={(v) => updateMicro(idx, 'qty', v)}
-                      placeholder="197 mg" placeholderTextColor={Colors.muted2}
+                      placeholder={t('manualFood.microNutrientMgPlaceholder')} placeholderTextColor={Colors.muted2}
                     />
                     <TextInput
                       style={[styles.microInput, { flex: 1 }]}
                       value={item.anr} onChangeText={(v) => updateMicro(idx, 'anr', v)}
-                      placeholder="52 %" placeholderTextColor={Colors.muted2}
+                      placeholder={t('manualFood.microAnrPlaceholder')} placeholderTextColor={Colors.muted2}
                       keyboardType="decimal-pad"
                     />
                     <TouchableOpacity onPress={() => removeMicro(idx)} activeOpacity={0.7}>
@@ -499,7 +504,7 @@ export function ManualFoodScreen({ initialName = '', onAdd, onBack, onOpenMenu }
                   </View>
                 ))}
                 <TouchableOpacity style={styles.addRowBtn} onPress={addMicro} activeOpacity={0.7}>
-                  <Text style={styles.addRowText}>+ Ajouter un nutriment</Text>
+                  <Text style={styles.addRowText}>{t('manualFood.addNutrient')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -507,20 +512,20 @@ export function ManualFoodScreen({ initialName = '', onAdd, onBack, onOpenMenu }
 
           {/* ── 10 — Profil sensoriel ─────────────────── */}
           <View style={styles.card}>
-            <SectionHead num="10" title="Profil sensoriel" />
+            <SectionHead num="10" title={t('manualFood.section10')} />
             <View style={{ gap: 16 }}>
-              <ChipGroup label="Goûts" options={TASTE_OPTIONS} selected={tastes}
+              <ChipGroup label={t('manualFood.tastesLabel')} options={TASTE_OPTIONS} selected={tastes}
                 onToggle={(v) => toggleChip(setTastes, v)} />
-              <ChipGroup label="Textures" options={TEXTURE_OPTIONS} selected={textures}
+              <ChipGroup label={t('manualFood.texturesLabel')} options={TEXTURE_OPTIONS} selected={textures}
                 onToggle={(v) => toggleChip(setTextures, v)} />
-              <ChipGroup label="Arômes" options={AROMA_OPTIONS} selected={aromas}
+              <ChipGroup label={t('manualFood.aromasLabel')} options={AROMA_OPTIONS} selected={aromas}
                 onToggle={(v) => toggleChip(setAromas, v)} />
               <View>
-                <FieldLabel label="Pairings (séparés par virgule)" />
+                <FieldLabel label={t('manualFood.pairingsLabel')} />
                 <TextInput
                   style={styles.textInput}
                   value={pairings} onChangeText={setPairings}
-                  placeholder="ex. Yaourt, Pomme, Pain complet"
+                  placeholder={t('manualFood.pairingsPlaceholder')}
                   placeholderTextColor={Colors.muted2}
                 />
               </View>
@@ -529,7 +534,7 @@ export function ManualFoodScreen({ initialName = '', onAdd, onBack, onOpenMenu }
 
           {/* ── 11 — Allergènes ──────────────────────── */}
           <View style={styles.card}>
-            <SectionHead num="11" title="Allergènes" right="14 prioritaires" />
+            <SectionHead num="11" title={t('manualFood.section11')} right={t('detail.allergen14')} />
             <View style={styles.allergenGrid}>
               {ALLERGEN_NAMES.map((aName) => {
                 const status = allergenMap[aName];
@@ -547,18 +552,18 @@ export function ManualFoodScreen({ initialName = '', onAdd, onBack, onOpenMenu }
                 );
               })}
             </View>
-            <Text style={styles.allergenHint}>Appuyer pour cycler : absent — présent — traces</Text>
+            <Text style={styles.allergenHint}>{t('manualFood.allergenHint')}</Text>
           </View>
 
           {/* ── 12 — Composition ─────────────────────── */}
           <View style={styles.card}>
-            <SectionHead num="12" title="Composition" />
-            <FieldLabel label="Liste d'ingrédients" />
+            <SectionHead num="12" title={t('manualFood.section12')} />
+            <FieldLabel label={t('manualFood.ingredientsLabel')} />
             <TextInput
               style={[styles.textInput, styles.multiline]}
               value={ingredients}
               onChangeText={setIngredients}
-              placeholder="ex. Cacahuètes 100 %."
+              placeholder={t('manualFood.ingredientsPlaceholder')}
               placeholderTextColor={Colors.muted2}
               multiline
               numberOfLines={4}
@@ -568,7 +573,7 @@ export function ManualFoodScreen({ initialName = '', onAdd, onBack, onOpenMenu }
 
           {/* ── Compatibilité personnalisée ────────────── */}
           <View style={styles.compatCard}>
-            <Text style={styles.compatTitle}>Compatibilité personnalisée</Text>
+            <Text style={styles.compatTitle}>{t('manualFood.compatibility')}</Text>
             <View style={styles.compatTags}>
               {compat.map((c, i) => (
                 <View key={i} style={[styles.tag, c.kind === 'ok' ? styles.tagOk : styles.tagWarn]}>
@@ -578,9 +583,7 @@ export function ManualFoodScreen({ initialName = '', onAdd, onBack, onOpenMenu }
                 </View>
               ))}
             </View>
-            <Text style={styles.compatHint}>
-              Calculée en temps réel — renseignez les macros (§02) et les allergènes (§11) pour affiner.
-            </Text>
+            <Text style={styles.compatHint}>{t('manualFood.compatibilityHint')}</Text>
           </View>
 
           {/* ── Bouton Valider ────────────────────────── */}
@@ -591,7 +594,7 @@ export function ManualFoodScreen({ initialName = '', onAdd, onBack, onOpenMenu }
             disabled={!name.trim()}
           >
             <Icon name="check" size={18} color={Colors.paper2} />
-            <Text style={styles.saveBtnText}>Valider l'aliment</Text>
+            <Text style={styles.saveBtnText}>{t('manualFood.validateBtn')}</Text>
           </TouchableOpacity>
 
         </ScrollView>

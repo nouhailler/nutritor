@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import {
@@ -49,11 +50,11 @@ function nextLevel(current: AllergenLevel): AllergenLevel {
   return SEVERITY_CYCLE[(i + 1) % SEVERITY_CYCLE.length];
 }
 
-const LEVEL_CONFIG: Record<AllergenLevel, { bg: string; color: string; border: string; label: string }> = {
-  aucun:  { bg: Colors.card,   color: Colors.muted2,  border: Colors.hairline,              label: 'Aucun' },
-  trace:  { bg: 'transparent', color: Colors.signal,  border: 'rgba(107,90,46,0.3)',         label: 'Trace' },
-  modéré: { bg: 'transparent', color: Colors.warn,    border: 'rgba(139,58,46,0.3)',         label: 'Modéré' },
-  sévère: { bg: Colors.warn,   color: '#fff',         border: Colors.warn,                  label: 'Sévère' },
+const LEVEL_CONFIG_STYLES: Record<AllergenLevel, { bg: string; color: string; border: string }> = {
+  aucun:  { bg: Colors.card,   color: Colors.muted2,  border: Colors.hairline              },
+  trace:  { bg: 'transparent', color: Colors.signal,  border: 'rgba(107,90,46,0.3)'        },
+  modéré: { bg: 'transparent', color: Colors.warn,    border: 'rgba(139,58,46,0.3)'        },
+  sévère: { bg: Colors.warn,   color: '#fff',         border: Colors.warn                  },
 };
 
 // ── Shared components ─────────────────────────────────────────
@@ -133,6 +134,13 @@ function AllergenEditRow({
   onCycleLevel: () => void;
   onEditNote: (note: string) => void;
 }) {
+  const { t } = useTranslation();
+  const LEVEL_CONFIG: Record<AllergenLevel, { bg: string; color: string; border: string; label: string }> = {
+    aucun:  { ...LEVEL_CONFIG_STYLES.aucun,  label: t('editProfile.allergenLevel.none')     },
+    trace:  { ...LEVEL_CONFIG_STYLES.trace,  label: t('editProfile.allergenLevel.trace')    },
+    modéré: { ...LEVEL_CONFIG_STYLES.modéré, label: t('editProfile.allergenLevel.moderate') },
+    sévère: { ...LEVEL_CONFIG_STYLES.sévère, label: t('editProfile.allergenLevel.severe')   },
+  };
   const cfg = LEVEL_CONFIG[allergen.level];
   const [editingNote, setEditingNote] = useState(false);
 
@@ -158,7 +166,7 @@ function AllergenEditRow({
               value={allergen.note}
               onChangeText={onEditNote}
               onBlur={() => setEditingNote(false)}
-              placeholder="Note personnelle…"
+              placeholder={t('editProfile.noteInputPlaceholder')}
               placeholderTextColor={Colors.muted2}
               autoFocus
               multiline
@@ -171,7 +179,7 @@ function AllergenEditRow({
             >
               <Text style={styles.noteText}>
                 {allergen.note || (
-                  <Text style={styles.notePlaceholder}>Ajouter une note…</Text>
+                  <Text style={styles.notePlaceholder}>{t('editProfile.addNote')}</Text>
                 )}
               </Text>
               <Icon name="menu" size={12} color={Colors.muted2} />
@@ -185,12 +193,7 @@ function AllergenEditRow({
 
 // ── Sensitivity row ───────────────────────────────────────────
 
-const SENSITIVITY_LEVELS: { id: SensitivityLevel; label: string }[] = [
-  { id: 'none',     label: 'Aucune' },
-  { id: 'mild',     label: 'Légère' },
-  { id: 'moderate', label: 'Modérée' },
-  { id: 'strong',   label: 'Forte' },
-];
+// SENSITIVITY_LEVELS labels are defined inside SensitivityRow using t()
 
 const SENSITIVITY_COLORS: Record<SensitivityLevel, string> = {
   none:     Colors.muted2,
@@ -206,6 +209,13 @@ function SensitivityRow({
   sensitivity: DigestiveSensitivity;
   onChange: (level: SensitivityLevel) => void;
 }) {
+  const { t } = useTranslation();
+  const SENSITIVITY_LEVELS: { id: SensitivityLevel; label: string }[] = [
+    { id: 'none',     label: t('editProfile.sensitivityNone')     },
+    { id: 'mild',     label: t('editProfile.sensitivityMild')     },
+    { id: 'moderate', label: t('editProfile.sensitivityModerate') },
+    { id: 'strong',   label: t('editProfile.sensitivityStrong')   },
+  ];
   const def = SENSITIVITY_DEFINITIONS.find((d) => d.id === sensitivity.id);
   if (!def) return null;
   return (
@@ -235,11 +245,7 @@ function SensitivityRow({
 
 // ── Tolerance row ─────────────────────────────────────────────
 
-const TOLERANCE_LEVELS: { id: DigestiveTolerance; label: string }[] = [
-  { id: 'low',    label: 'Faible' },
-  { id: 'medium', label: 'Moyenne' },
-  { id: 'good',   label: 'Bonne' },
-];
+// TOLERANCE_LEVELS labels are defined inside ToleranceRow using t()
 
 const TOLERANCE_COLORS: Record<DigestiveTolerance, string> = {
   low:    '#c0392b',
@@ -254,10 +260,16 @@ function ToleranceRow({
   onChange,
 }: {
   id: keyof DigestiveTolerances;
-  label: string;
+  label: string;  // label comes from TOLERANCE_DEFINITIONS (not translated here)
   value: DigestiveTolerance;
   onChange: (v: DigestiveTolerance) => void;
 }) {
+  const { t } = useTranslation();
+  const TOLERANCE_LEVELS: { id: DigestiveTolerance; label: string }[] = [
+    { id: 'low',    label: t('editProfile.toleranceLow')    },
+    { id: 'medium', label: t('editProfile.toleranceMedium') },
+    { id: 'good',   label: t('editProfile.toleranceGood')   },
+  ];
   return (
     <View style={epStyles.sensitivityRow}>
       <Text style={epStyles.sensitivityLabel}>{label}</Text>
@@ -293,6 +305,7 @@ interface EditProfileScreenProps {
 
 export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreenProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   // Local draft state
   const [name, setName] = useState(profile.name);
@@ -343,15 +356,15 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
     const fa = parseInt(fat, 10);
 
     if (!name.trim()) {
-      Alert.alert('Nom requis', 'Veuillez entrer votre prénom.');
+      Alert.alert(t('editProfile.nameRequired'), t('editProfile.nameRequiredMsg'));
       return;
     }
     if (isNaN(n) || n < 10 || n > 120) {
-      Alert.alert('Âge invalide', 'Entrez un âge entre 10 et 120 ans.');
+      Alert.alert(t('editProfile.ageInvalid'), t('editProfile.ageInvalidMsg'));
       return;
     }
     if (isNaN(k) || k < 500 || k > 6000) {
-      Alert.alert('Objectif calorique invalide', 'Entrez une valeur entre 500 et 6000 kcal.');
+      Alert.alert(t('editProfile.kcalInvalid'), t('editProfile.kcalInvalidMsg'));
       return;
     }
 
@@ -393,9 +406,9 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
           <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.7}>
             <Icon name="close" size={20} />
           </TouchableOpacity>
-          <Text style={styles.topbarTitle}>Modifier le profil</Text>
+          <Text style={styles.topbarTitle}>{t('editProfile.title')}</Text>
           <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
-            <Text style={styles.saveBtnText}>Enregistrer</Text>
+            <Text style={styles.saveBtnText}>{t('editProfile.save')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -406,40 +419,38 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
           keyboardShouldPersistTaps="handled"
         >
           {/* ── Identité ── */}
-          <SectionLabel>Identité</SectionLabel>
+          <SectionLabel>{t('editProfile.sectionIdentity')}</SectionLabel>
 
-          <TextField label="Prénom" value={name} onChangeText={setName} placeholder="Votre prénom" />
+          <TextField label={t('editProfile.nameLabel')} value={name} onChangeText={setName} placeholder={t('editProfile.namePlaceholder')} />
 
           <View style={styles.row3}>
             <View style={{ flex: 1 }}>
-              <NumericField label="Âge" value={age} onChangeText={setAge} unit="ans" />
+              <NumericField label={t('editProfile.ageLabel')} value={age} onChangeText={setAge} unit={t('common.years')} />
             </View>
             <View style={{ flex: 1 }}>
-              <NumericField label="Poids" value={weight} onChangeText={setWeight} unit="kg" />
+              <NumericField label={t('editProfile.weightLabel')} value={weight} onChangeText={setWeight} unit={t('common.kg')} />
             </View>
             <View style={{ flex: 1 }}>
-              <NumericField label="Taille" value={height} onChangeText={setHeight} unit="cm" />
+              <NumericField label={t('editProfile.heightLabel')} value={height} onChangeText={setHeight} unit={t('common.cm')} />
             </View>
           </View>
 
           <TextField
-            label="Objectif"
+            label={t('editProfile.goalLabel')}
             value={goal}
             onChangeText={setGoal}
-            placeholder="Ex. Maintien · digestion sereine"
+            placeholder={t('editProfile.goalPlaceholder')}
           />
           <TextField
-            label="Activité"
+            label={t('editProfile.activityLabel')}
             value={activity}
             onChangeText={setActivity}
-            placeholder="Ex. Modérée · 3 séances / semaine"
+            placeholder={t('editProfile.activityPlaceholder')}
           />
 
           {/* ── Allergènes ── */}
-          <SectionLabel>Allergènes & intolérances</SectionLabel>
-          <Text style={styles.sectionDesc}>
-            Appuyez sur le niveau pour le modifier : aucun → trace → modéré → sévère.
-          </Text>
+          <SectionLabel>{t('editProfile.sectionAllergens')}</SectionLabel>
+          <Text style={styles.sectionDesc}>{t('editProfile.allergenNote')}</Text>
           <View style={styles.allergenList}>
             {allergens.map((a, i) => (
               <AllergenEditRow
@@ -452,7 +463,7 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
           </View>
 
           {/* ── Régimes ── */}
-          <SectionLabel>Régimes alimentaires</SectionLabel>
+          <SectionLabel>{t('editProfile.sectionDiets')}</SectionLabel>
           <View style={styles.dietList}>
             {diets.map((d) => (
               <View key={d.id} style={styles.dietRow}>
@@ -463,11 +474,11 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
                       style={styles.dietRuleInput}
                       value={d.rule === '—' ? '' : d.rule}
                       onChangeText={(v) => updateDietRule(d.id, v || '—')}
-                      placeholder="Phase / règle…"
+                      placeholder={t('editProfile.dietRulePlaceholder')}
                       placeholderTextColor={Colors.muted2}
                     />
                   )}
-                  {!d.on && <Text style={styles.dietRuleOff}>Désactivé</Text>}
+                  {!d.on && <Text style={styles.dietRuleOff}>{t('editProfile.dietDisabled')}</Text>}
                 </View>
                 <Switch
                   value={d.on}
@@ -481,10 +492,8 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
           </View>
 
           {/* ── Sensibilités digestives ── */}
-          <SectionLabel>Sensibilités digestives</SectionLabel>
-          <Text style={styles.sectionDesc}>
-            Indique l'intensité de chaque sensibilité. Utilisé pour personnaliser l'analyse des produits scannés.
-          </Text>
+          <SectionLabel>{t('editProfile.sectionSensitivities')}</SectionLabel>
+          <Text style={styles.sectionDesc}>{t('editProfile.sectionSensitivitiesDesc')}</Text>
           <View style={epStyles.sensitivityList}>
             {sensitivities.map((s) => (
               <SensitivityRow
@@ -498,7 +507,7 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
           </View>
 
           {/* ── Objectifs santé ── */}
-          <SectionLabel>Objectifs santé</SectionLabel>
+          <SectionLabel>{t('editProfile.sectionObjectives')}</SectionLabel>
           <View style={epStyles.pillWrap}>
             {OBJECTIVE_DEFINITIONS.map((obj) => {
               const active = objectives.includes(obj.id);
@@ -522,10 +531,8 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
           </View>
 
           {/* ── Tolérances digestives ── */}
-          <SectionLabel>Tolérances digestives</SectionLabel>
-          <Text style={styles.sectionDesc}>
-            Ton niveau de tolérance habituel pour ces familles d'aliments.
-          </Text>
+          <SectionLabel>{t('editProfile.sectionTolerances')}</SectionLabel>
+          <Text style={styles.sectionDesc}>{t('editProfile.sectionTolerancesDesc')}</Text>
           <View style={epStyles.sensitivityList}>
             {TOLERANCE_DEFINITIONS.map((tol) => (
               <ToleranceRow
@@ -539,8 +546,8 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
           </View>
 
           {/* ── Pathologies (optionnel) ── */}
-          <SectionLabel>Pathologies (optionnel)</SectionLabel>
-          <Text style={styles.sectionDesc}>Sélectionne uniquement si diagnostiqué.</Text>
+          <SectionLabel>{t('editProfile.sectionPathologies')}</SectionLabel>
+          <Text style={styles.sectionDesc}>{t('editProfile.sectionPathologiesDesc')}</Text>
           <View style={epStyles.pillWrap}>
             {PATHOLOGY_DEFINITIONS.map((p) => {
               const active = pathologies.includes(p.id);
@@ -564,10 +571,8 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
           </View>
 
           {/* ── Résultats biologiques ── */}
-          <SectionLabel>Résultats biologiques</SectionLabel>
-          <Text style={styles.sectionDesc}>
-            Ferritine, vitamine D, CRP, glycémie à jeun… Saisis manuellement depuis tes analyses.
-          </Text>
+          <SectionLabel>{t('editProfile.sectionBio')}</SectionLabel>
+          <Text style={styles.sectionDesc}>{t('editProfile.sectionBioDesc')}</Text>
           {bioResults.map((r, i) => (
             <View key={i} style={epStyles.bioRow}>
               <View style={epStyles.bioFields}>
@@ -575,14 +580,14 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
                   style={[epStyles.bioInput, { flex: 2 }]}
                   value={r.name}
                   onChangeText={(v) => setBioResults((prev) => prev.map((x, j) => j === i ? { ...x, name: v } : x))}
-                  placeholder="Marqueur (ex: Ferritine)"
+                  placeholder={t('editProfile.bioMarkerPlaceholder')}
                   placeholderTextColor={Colors.muted2}
                 />
                 <TextInput
                   style={[epStyles.bioInput, { flex: 1 }]}
                   value={r.value}
                   onChangeText={(v) => setBioResults((prev) => prev.map((x, j) => j === i ? { ...x, value: v } : x))}
-                  placeholder="Valeur"
+                  placeholder={t('editProfile.bioValuePlaceholder')}
                   placeholderTextColor={Colors.muted2}
                   keyboardType="decimal-pad"
                 />
@@ -590,7 +595,7 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
                   style={[epStyles.bioInput, { flex: 1 }]}
                   value={r.unit}
                   onChangeText={(v) => setBioResults((prev) => prev.map((x, j) => j === i ? { ...x, unit: v } : x))}
-                  placeholder="Unité"
+                  placeholder={t('editProfile.bioUnitPlaceholder')}
                   placeholderTextColor={Colors.muted2}
                 />
               </View>
@@ -609,7 +614,7 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
                       epStyles.statusPillText,
                       r.status === s && epStyles.statusPillTextActive,
                     ]}>
-                      {s === 'low' ? 'Bas' : s === 'normal' ? 'Normal' : 'Élevé'}
+                      {s === 'low' ? t('editProfile.bioStatusLow') : s === 'normal' ? t('editProfile.bioStatusNormal') : t('editProfile.bioStatusHigh')}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -630,14 +635,12 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
             activeOpacity={0.7}
           >
             <Icon name="plus" size={14} color={Colors.ok} />
-            <Text style={epStyles.addBioBtnText}>Ajouter un résultat</Text>
+            <Text style={epStyles.addBioBtnText}>{t('editProfile.addBioResult')}</Text>
           </TouchableOpacity>
 
           {/* ── Médicaments en cours ── */}
-          <SectionLabel>Médicaments en cours</SectionLabel>
-          <Text style={styles.sectionDesc}>
-            Liste des traitements en cours. Ces informations apparaîtront dans le rapport professionnel.
-          </Text>
+          <SectionLabel>{t('editProfile.sectionMeds')}</SectionLabel>
+          <Text style={styles.sectionDesc}>{t('editProfile.sectionMedsDesc')}</Text>
           <View style={epStyles.pillWrap}>
             {medications.map((m, i) => (
               <View key={i} style={epStyles.medPill}>
@@ -653,7 +656,7 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
               style={epStyles.medInput}
               value={newMed}
               onChangeText={setNewMed}
-              placeholder="Ex: Oméprazole 20mg"
+              placeholder={t('editProfile.medPlaceholder')}
               placeholderTextColor={Colors.muted2}
               returnKeyType="done"
               onSubmitEditing={() => {
@@ -678,18 +681,18 @@ export function EditProfileScreen({ profile, onSave, onBack }: EditProfileScreen
           </View>
 
           {/* ── Objectifs caloriques ── */}
-          <SectionLabel>Objectifs quotidiens</SectionLabel>
-          <NumericField label="Énergie" value={kcalTarget} onChangeText={setKcalTarget} unit="kcal" />
+          <SectionLabel>{t('editProfile.sectionCaloric')}</SectionLabel>
+          <NumericField label={t('editProfile.energyLabel')} value={kcalTarget} onChangeText={setKcalTarget} unit="kcal" />
 
           <View style={styles.row3}>
             <View style={{ flex: 1 }}>
-              <NumericField label="Protéines" value={protein} onChangeText={setProtein} unit="g" />
+              <NumericField label={t('editProfile.proteinLabel')} value={protein} onChangeText={setProtein} unit="g" />
             </View>
             <View style={{ flex: 1 }}>
-              <NumericField label="Glucides" value={carbs} onChangeText={setCarbs} unit="g" />
+              <NumericField label={t('editProfile.carbsLabel')} value={carbs} onChangeText={setCarbs} unit="g" />
             </View>
             <View style={{ flex: 1 }}>
-              <NumericField label="Lipides" value={fat} onChangeText={setFat} unit="g" />
+              <NumericField label={t('editProfile.fatLabel')} value={fat} onChangeText={setFat} unit="g" />
             </View>
           </View>
         </ScrollView>

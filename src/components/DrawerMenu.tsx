@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Animated,
   Dimensions,
@@ -26,12 +27,12 @@ interface NavItem {
   description: string;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { id: 'home',    label: 'Journal',    icon: 'home',  description: 'Bilan du jour' },
-  { id: 'foods',   label: 'Aliments',   icon: 'leaf',  description: 'Ma bibliothèque d\'aliments' },
-  { id: 'saved',   label: 'Plats',      icon: 'book',  description: 'Mes repas sauvegardés' },
-  { id: 'stats',   label: 'Statistiques', icon: 'chart', description: 'Tendances hebdomadaires' },
-  { id: 'profile', label: 'Profil',     icon: 'user',  description: 'Allergies & objectifs' },
+const NAV_ITEMS_DEF: { id: Tab; labelKey: string; icon: 'home' | 'leaf' | 'book' | 'chart' | 'user'; descKey: string }[] = [
+  { id: 'home',    labelKey: 'drawer.journal', icon: 'home',  descKey: 'drawer.journalDesc' },
+  { id: 'foods',   labelKey: 'drawer.foods',   icon: 'leaf',  descKey: 'drawer.foodsDesc' },
+  { id: 'saved',   labelKey: 'drawer.saved',   icon: 'book',  descKey: 'drawer.savedDesc' },
+  { id: 'stats',   labelKey: 'drawer.stats',   icon: 'chart', descKey: 'drawer.statsDesc' },
+  { id: 'profile', labelKey: 'drawer.profile', icon: 'user',  descKey: 'drawer.profileDesc' },
 ];
 
 interface DrawerMenuProps {
@@ -57,6 +58,7 @@ export function DrawerMenu({
   onClose,
   onStartDemo,
 }: DrawerMenuProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -145,7 +147,7 @@ export function DrawerMenu({
         <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
           {/* Navigation */}
           <View style={styles.nav}>
-            {NAV_ITEMS.map((item) => {
+            {NAV_ITEMS_DEF.map((item) => {
               const active = item.id === activeTab;
               return (
                 <TouchableOpacity
@@ -166,9 +168,9 @@ export function DrawerMenu({
                   </View>
                   <View style={styles.navText}>
                     <Text style={[styles.navLabel, active && styles.navLabelActive]}>
-                      {item.label}
+                      {t(item.labelKey)}
                     </Text>
-                    <Text style={styles.navDesc}>{item.description}</Text>
+                    <Text style={styles.navDesc}>{t(item.descKey)}</Text>
                   </View>
                 </TouchableOpacity>
               );
@@ -177,7 +179,7 @@ export function DrawerMenu({
 
           {/* IA section */}
           <View style={styles.iaSection}>
-            <Text style={styles.iaSectionLabel}>Intelligence artificielle</Text>
+            <Text style={styles.iaSectionLabel}>{t('drawer.ai')}</Text>
             <TouchableOpacity
               style={styles.iaItem}
               onPress={() => { onOpenMealGenerator(); onClose(); }}
@@ -187,8 +189,8 @@ export function DrawerMenu({
                 <Icon name="sparkle" size={16} color={Colors.paper2} />
               </View>
               <View style={styles.navText}>
-                <Text style={styles.iaLabel}>Générateur de repas</Text>
-                <Text style={styles.navDesc}>Recettes personnalisées par IA</Text>
+                <Text style={styles.iaLabel}>{t('drawer.mealGenerator')}</Text>
+                <Text style={styles.navDesc}>{t('drawer.mealGeneratorDesc')}</Text>
               </View>
               <Icon name="chevron-right" size={14} color={Colors.muted2} />
             </TouchableOpacity>
@@ -201,8 +203,8 @@ export function DrawerMenu({
                 <Icon name="book" size={16} color={Colors.paper2} />
               </View>
               <View style={styles.navText}>
-                <Text style={styles.iaLabel}>Encyclopédie</Text>
-                <Text style={styles.navDesc}>Vitamines, minéraux, bioactifs</Text>
+                <Text style={styles.iaLabel}>{t('drawer.knowledge')}</Text>
+                <Text style={styles.navDesc}>{t('drawer.knowledgeDesc')}</Text>
               </View>
               <Icon name="chevron-right" size={14} color={Colors.muted2} />
             </TouchableOpacity>
@@ -218,7 +220,7 @@ export function DrawerMenu({
               activeOpacity={0.7}
             >
               <Icon name="activity" size={16} color={Colors.signal} />
-              <Text style={styles.demoBtnText}>Voir la démo</Text>
+              <Text style={styles.demoBtnText}>{t('drawer.demo')}</Text>
             </TouchableOpacity>
           )}
           <View style={styles.separator} />
@@ -228,10 +230,10 @@ export function DrawerMenu({
             activeOpacity={0.7}
           >
             <Icon name="settings" size={16} color={Colors.muted} />
-            <Text style={styles.settingsBtnText}>Paramètres</Text>
+            <Text style={styles.settingsBtnText}>{t('drawer.settings')}</Text>
           </TouchableOpacity>
-          <Text style={styles.footerBrand}>Nutritor</Text>
-          <Text style={styles.footerTagline}>Allergies & micronutriments</Text>
+          <Text style={styles.footerBrand}>{t('drawer.brand')}</Text>
+          <Text style={styles.footerTagline}>{t('drawer.tagline')}</Text>
         </View>
       </Animated.View>
     </View>

@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { Colors, Fonts, Spacing } from '../theme/tokens';
@@ -97,6 +98,7 @@ const stepStyles = StyleSheet.create({
 // ── Timer Card ────────────────────────────────────────────────
 
 function TimerCard({ protocol, onAdvance }: { protocol: FodmapProtocol; onAdvance: () => void }) {
+  const { t } = useTranslation();
   const cfg          = PHASE_CONFIG[protocol.phase];
   const daysInPhase  = daysSince(protocol.phaseStartDate);
   const daysTotal    = daysSince(protocol.startDate);
@@ -111,11 +113,11 @@ function TimerCard({ protocol, onAdvance }: { protocol: FodmapProtocol; onAdvanc
       <View style={timerStyles.head}>
         <View style={{ gap: 2 }}>
           <Text style={[timerStyles.phaseLabel, { color: cfg.color }]}>{cfg.emoji} {cfg.label}</Text>
-          <Text style={timerStyles.globalDays}>Jour {daysTotal} du protocole global</Text>
+          <Text style={timerStyles.globalDays}>{t('fodmap.globalDay', { day: daysTotal })}</Text>
         </View>
         {!isLast && (
           <TouchableOpacity style={[timerStyles.advanceBtn, { borderColor: cfg.color + '50' }]} onPress={onAdvance} activeOpacity={0.8}>
-            <Text style={[timerStyles.advanceBtnText, { color: cfg.color }]}>Avancer →</Text>
+            <Text style={[timerStyles.advanceBtnText, { color: cfg.color }]}>{t('fodmap.advance')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -124,17 +126,17 @@ function TimerCard({ protocol, onAdvance }: { protocol: FodmapProtocol; onAdvanc
       <View style={timerStyles.daysRow}>
         <View style={timerStyles.daysStat}>
           <Text style={[timerStyles.daysNum, { color: cfg.color }]}>{daysInPhase}</Text>
-          <Text style={timerStyles.daysSub}>jours écoulés</Text>
+          <Text style={timerStyles.daysSub}>{t('fodmap.daysElapsed')}</Text>
         </View>
         {remaining !== null && (
           <View style={timerStyles.daysStat}>
             <Text style={[timerStyles.daysNum, { color: cfg.color }]}>{remaining}</Text>
-            <Text style={timerStyles.daysSub}>jours restants</Text>
+            <Text style={timerStyles.daysSub}>{t('fodmap.daysRemaining')}</Text>
           </View>
         )}
         <View style={timerStyles.daysStat}>
           <Text style={timerStyles.startDate}>{formatDate(protocol.phaseStartDate)}</Text>
-          <Text style={timerStyles.daysSub}>début de phase</Text>
+          <Text style={timerStyles.daysSub}>{t('fodmap.phaseStart')}</Text>
         </View>
       </View>
 
@@ -193,6 +195,7 @@ const bannerStyles = StyleSheet.create({
 // ── Section Header ────────────────────────────────────────────
 
 function SectionHeader({ title, count, onAdd }: { title: string; count: number; onAdd: () => void }) {
+  const { t } = useTranslation();
   return (
     <View style={shStyles.row}>
       <Text style={shStyles.title}>{title}</Text>
@@ -200,7 +203,7 @@ function SectionHeader({ title, count, onAdd }: { title: string; count: number; 
       <View style={{ flex: 1 }} />
       <TouchableOpacity style={shStyles.btn} onPress={onAdd} activeOpacity={0.8}>
         <Icon name="plus" size={12} color={Colors.paper2} />
-        <Text style={shStyles.btnText}>Ajouter</Text>
+        <Text style={shStyles.btnText}>{t('fodmap.addBtn')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -245,10 +248,11 @@ function TestedFoodRow({ item, onDelete }: { item: TestedFood; onDelete: () => v
 // ── Reaction Row ──────────────────────────────────────────────
 
 const SEV_COLOR = ['', '#3F5A3A', '#6B5A2E', '#8B3A2E'];
-const SEV_LABEL = ['', 'Léger', 'Modéré', 'Sévère'];
 
 function ReactionRow({ item, onDelete }: { item: ReactionEntry; onDelete: () => void }) {
+  const { t } = useTranslation();
   const color = SEV_COLOR[item.severity];
+  const SEV_LABEL = ['', t('fodmap.sevMild'), t('fodmap.sevModerate'), t('fodmap.sevSevere')];
   return (
     <View style={rowStyles.row}>
       <View style={[rowStyles.icon, { backgroundColor: color + '15' }]}>
@@ -259,7 +263,7 @@ function ReactionRow({ item, onDelete }: { item: ReactionEntry; onDelete: () => 
           <Text style={[rowStyles.name, { color }]}>{SEV_LABEL[item.severity]}</Text>
           <Text style={rowStyles.date}>{formatDate(item.date)}</Text>
         </View>
-        {item.foodName && <Text style={rowStyles.portion}>Lié à : {item.foodName}</Text>}
+        {item.foodName && <Text style={rowStyles.portion}>{t('fodmap.linkedTo', { food: item.foodName })}</Text>}
         {item.symptoms.length > 0 && (
           <Text style={rowStyles.notes} numberOfLines={2}>{item.symptoms.join(' · ')}</Text>
         )}
@@ -333,6 +337,7 @@ const tolStyles = StyleSheet.create({
 function AddTestSheet({
   phase, onSave, onCancel,
 }: { phase: FodmapPhase; onSave: (t: TestedFood) => void; onCancel: () => void }) {
+  const { t } = useTranslation();
   const [name, setName]       = useState('');
   const [type, setType]       = useState<string | undefined>(undefined);
   const [portion, setPortion] = useState('');
@@ -356,12 +361,12 @@ function AddTestSheet({
       <TouchableOpacity style={sheetStyles.backdrop} onPress={onCancel} activeOpacity={1} />
       <View style={sheetStyles.sheet}>
         <View style={sheetStyles.handle} />
-        <Text style={sheetStyles.sheetTitle}>Ajouter un test</Text>
+        <Text style={sheetStyles.sheetTitle}>{t('fodmap.addTestTitle')}</Text>
 
-        <Text style={sheetStyles.fieldLabel}>Aliment testé *</Text>
-        <TextInput style={sheetStyles.input} value={name} onChangeText={setName} placeholder="ex. Riz basmati" placeholderTextColor={Colors.muted2} autoFocus />
+        <Text style={sheetStyles.fieldLabel}>{t('fodmap.foodTested')}</Text>
+        <TextInput style={sheetStyles.input} value={name} onChangeText={setName} placeholder={t('fodmap.foodPlaceholder')} placeholderTextColor={Colors.muted2} autoFocus />
 
-        <Text style={sheetStyles.fieldLabel}>Groupe FODMAP</Text>
+        <Text style={sheetStyles.fieldLabel}>{t('fodmap.fodmapGroup')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={sheetStyles.chips}>
           {FODMAP_TYPES.map((ft) => (
             <TouchableOpacity
@@ -375,10 +380,10 @@ function AddTestSheet({
           ))}
         </ScrollView>
 
-        <Text style={sheetStyles.fieldLabel}>Portion testée</Text>
-        <TextInput style={sheetStyles.input} value={portion} onChangeText={setPortion} placeholder="ex. 80 g" placeholderTextColor={Colors.muted2} />
+        <Text style={sheetStyles.fieldLabel}>{t('fodmap.portionTested')}</Text>
+        <TextInput style={sheetStyles.input} value={portion} onChangeText={setPortion} placeholder={t('fodmap.portionPlaceholder')} placeholderTextColor={Colors.muted2} />
 
-        <Text style={sheetStyles.fieldLabel}>Résultat</Text>
+        <Text style={sheetStyles.fieldLabel}>{t('fodmap.result')}</Text>
         <View style={sheetStyles.chips}>
           {(['ok', 'moderate', 'severe', 'pending'] as TestResult[]).map((r) => {
             const rc = RESULT_CONFIG[r];
@@ -395,11 +400,11 @@ function AddTestSheet({
           })}
         </View>
 
-        <Text style={sheetStyles.fieldLabel}>Notes</Text>
-        <TextInput style={[sheetStyles.input, sheetStyles.inputMulti]} value={notes} onChangeText={setNotes} placeholder="Observations, contexte…" placeholderTextColor={Colors.muted2} multiline />
+        <Text style={sheetStyles.fieldLabel}>{t('fodmap.notes')}</Text>
+        <TextInput style={[sheetStyles.input, sheetStyles.inputMulti]} value={notes} onChangeText={setNotes} placeholder={t('fodmap.notesPlaceholder')} placeholderTextColor={Colors.muted2} multiline />
 
         <TouchableOpacity style={[sheetStyles.saveBtn, !valid && { opacity: 0.4 }]} onPress={handleSave} activeOpacity={0.8} disabled={!valid}>
-          <Text style={sheetStyles.saveBtnText}>Enregistrer</Text>
+          <Text style={sheetStyles.saveBtnText}>{t('fodmap.save')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -411,6 +416,8 @@ function AddTestSheet({
 function AddReactionSheet({
   phase, onSave, onCancel,
 }: { phase: FodmapPhase; onSave: (r: ReactionEntry) => void; onCancel: () => void }) {
+  const { t } = useTranslation();
+  const SEV_LABEL = ['', t('fodmap.sevMild'), t('fodmap.sevModerate'), t('fodmap.sevSevere')];
   const [severity, setSeverity]   = useState<1 | 2 | 3>(1);
   const [symptoms, setSymptoms]   = useState<string[]>([]);
   const [foodName, setFoodName]   = useState('');
@@ -433,9 +440,9 @@ function AddReactionSheet({
       <TouchableOpacity style={sheetStyles.backdrop} onPress={onCancel} activeOpacity={1} />
       <View style={sheetStyles.sheet}>
         <View style={sheetStyles.handle} />
-        <Text style={sheetStyles.sheetTitle}>Enregistrer une réaction</Text>
+        <Text style={sheetStyles.sheetTitle}>{t('fodmap.addReactionTitle')}</Text>
 
-        <Text style={sheetStyles.fieldLabel}>Sévérité</Text>
+        <Text style={sheetStyles.fieldLabel}>{t('fodmap.severity')}</Text>
         <View style={sheetStyles.chips}>
           {([1, 2, 3] as const).map((s) => {
             const color = SEV_COLOR[s];
@@ -452,7 +459,7 @@ function AddReactionSheet({
           })}
         </View>
 
-        <Text style={sheetStyles.fieldLabel}>Symptômes</Text>
+        <Text style={sheetStyles.fieldLabel}>{t('fodmap.symptoms')}</Text>
         <View style={sheetStyles.chips}>
           {SYMPTOM_OPTIONS.map((s) => {
             const active = symptoms.includes(s);
@@ -468,14 +475,14 @@ function AddReactionSheet({
           })}
         </View>
 
-        <Text style={sheetStyles.fieldLabel}>Aliment associé (optionnel)</Text>
-        <TextInput style={sheetStyles.input} value={foodName} onChangeText={setFoodName} placeholder="Quel aliment a précédé la réaction ?" placeholderTextColor={Colors.muted2} />
+        <Text style={sheetStyles.fieldLabel}>{t('fodmap.linkedFood')}</Text>
+        <TextInput style={sheetStyles.input} value={foodName} onChangeText={setFoodName} placeholder={t('fodmap.reactionFoodPlaceholder')} placeholderTextColor={Colors.muted2} />
 
-        <Text style={sheetStyles.fieldLabel}>Notes</Text>
-        <TextInput style={[sheetStyles.input, sheetStyles.inputMulti]} value={notes} onChangeText={setNotes} placeholder="Contexte, heure, observations…" placeholderTextColor={Colors.muted2} multiline />
+        <Text style={sheetStyles.fieldLabel}>{t('fodmap.notes')}</Text>
+        <TextInput style={[sheetStyles.input, sheetStyles.inputMulti]} value={notes} onChangeText={setNotes} placeholder={t('fodmap.reactionNotesPlaceholder')} placeholderTextColor={Colors.muted2} multiline />
 
         <TouchableOpacity style={sheetStyles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
-          <Text style={sheetStyles.saveBtnText}>Enregistrer</Text>
+          <Text style={sheetStyles.saveBtnText}>{t('fodmap.save')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -514,6 +521,7 @@ const sheetStyles = StyleSheet.create({
 function AdvancePhaseConfirm({
   current, onConfirm, onCancel,
 }: { current: FodmapPhase; onConfirm: () => void; onCancel: () => void }) {
+  const { t } = useTranslation();
   const nextIndex = PHASES.indexOf(current) + 1;
   const next      = PHASES[nextIndex];
   const nextCfg   = PHASE_CONFIG[next];
@@ -523,7 +531,7 @@ function AdvancePhaseConfirm({
       <TouchableOpacity style={sheetStyles.backdrop} onPress={onCancel} activeOpacity={1} />
       <View style={[sheetStyles.sheet, { gap: 16 }]}>
         <View style={sheetStyles.handle} />
-        <Text style={sheetStyles.sheetTitle}>Passer en {nextCfg.label} ?</Text>
+        <Text style={sheetStyles.sheetTitle}>{t('fodmap.advanceTitle', { phase: nextCfg.label })}</Text>
         <Text style={{ fontFamily: Fonts.sans, fontSize: 14, color: Colors.ink2, lineHeight: 20 }}>
           {nextCfg.rule}
         </Text>
@@ -534,10 +542,10 @@ function AdvancePhaseConfirm({
           style={[sheetStyles.saveBtn, { backgroundColor: nextCfg.color }]}
           onPress={onConfirm} activeOpacity={0.8}
         >
-          <Text style={sheetStyles.saveBtnText}>{nextCfg.emoji} Commencer la {nextCfg.label}</Text>
+          <Text style={sheetStyles.saveBtnText}>{nextCfg.emoji} {t('fodmap.beginPhase', { phase: nextCfg.label })}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={onCancel} style={{ alignItems: 'center', paddingBottom: 4 }} activeOpacity={0.7}>
-          <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: Colors.muted, letterSpacing: 0.5 }}>Annuler</Text>
+          <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: Colors.muted, letterSpacing: 0.5 }}>{t('fodmap.cancel')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -547,6 +555,7 @@ function AdvancePhaseConfirm({
 // ── Stats bar ─────────────────────────────────────────────────
 
 function ProtocolStats({ protocol }: { protocol: FodmapProtocol }) {
+  const { t } = useTranslation();
   const total      = protocol.testedFoods.length;
   const tolerated  = protocol.testedFoods.filter((f) => f.result === 'ok').length;
   const avoided    = protocol.testedFoods.filter((f) => f.result === 'severe').length;
@@ -555,10 +564,10 @@ function ProtocolStats({ protocol }: { protocol: FodmapProtocol }) {
   return (
     <View style={statStyles.row}>
       {[
-        { num: total,     sub: 'aliments testés',  color: Colors.ink },
-        { num: tolerated, sub: 'tolérés',           color: PHASE_CONFIG.stabilization.color },
-        { num: avoided,   sub: 'à éviter',          color: PHASE_CONFIG.elimination.color },
-        { num: reactions, sub: 'réactions',         color: PHASE_CONFIG.reintroduction.color },
+        { num: total,     sub: t('fodmap.statTested'),    color: Colors.ink },
+        { num: tolerated, sub: t('fodmap.statTolerated'), color: PHASE_CONFIG.stabilization.color },
+        { num: avoided,   sub: t('fodmap.statAvoided'),   color: PHASE_CONFIG.elimination.color },
+        { num: reactions, sub: t('fodmap.statReactions'), color: PHASE_CONFIG.reintroduction.color },
       ].map((s, i) => (
         <View key={i} style={statStyles.cell}>
           <Text style={[statStyles.num, { color: s.color }]}>{s.num}</Text>
@@ -587,6 +596,7 @@ interface FodmapScreenProps {
 
 export function FodmapScreen({ protocol, onUpdate, onBack, onOpenMenu }: FodmapScreenProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [showAddTest, setShowAddTest]           = useState(false);
   const [showAddReaction, setShowAddReaction]   = useState(false);
   const [showAdvanceConfirm, setShowAdvanceConfirm] = useState(false);
@@ -633,8 +643,8 @@ export function FodmapScreen({ protocol, onUpdate, onBack, onOpenMenu }: FodmapS
             <Icon name="back" size={20} color={Colors.ink} />
           </TouchableOpacity>
           <View>
-            <Text style={styles.eyebrow}>Protocole</Text>
-            <Text style={styles.title}>Mode Low FODMAP</Text>
+            <Text style={styles.eyebrow}>{t('fodmap.eyebrow')}</Text>
+            <Text style={styles.title}>{t('fodmap.title')}</Text>
           </View>
           <View style={{ flex: 1 }} />
           <View style={[styles.badge, { backgroundColor: PHASE_CONFIG[protocol.phase].bgColor, borderColor: PHASE_CONFIG[protocol.phase].color + '40' }]}>
@@ -661,32 +671,32 @@ export function FodmapScreen({ protocol, onUpdate, onBack, onOpenMenu }: FodmapS
 
         {/* Aliments testés */}
         <SectionHeader
-          title="Aliments testés"
+          title={t('fodmap.testedFoodsSection')}
           count={sortedTests.length}
           onAdd={() => setShowAddTest(true)}
         />
         {sortedTests.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>Aucun aliment testé pour l'instant.</Text>
-            <Text style={styles.emptyHint}>Ajouter un test après chaque challenge FODMAP.</Text>
+            <Text style={styles.emptyText}>{t('fodmap.emptyTests')}</Text>
+            <Text style={styles.emptyHint}>{t('fodmap.emptyTestsHint')}</Text>
           </View>
         ) : (
-          sortedTests.map((t) => (
-            <TestedFoodRow key={t.id} item={t} onDelete={() => handleDeleteTest(t.id)} />
+          sortedTests.map((testedItem) => (
+            <TestedFoodRow key={testedItem.id} item={testedItem} onDelete={() => handleDeleteTest(testedItem.id)} />
           ))
         )}
 
         {/* Réactions */}
         <View style={{ marginTop: 24 }}>
           <SectionHeader
-            title="Réactions récentes"
+            title={t('fodmap.recentReactions')}
             count={sortedReactions.length}
             onAdd={() => setShowAddReaction(true)}
           />
           {sortedReactions.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>Aucune réaction enregistrée.</Text>
-              <Text style={styles.emptyHint}>Loguer une réaction dès qu'elle survient.</Text>
+              <Text style={styles.emptyText}>{t('fodmap.emptyReactions')}</Text>
+              <Text style={styles.emptyHint}>{t('fodmap.emptyReactionsHint')}</Text>
             </View>
           ) : (
             sortedReactions.slice(0, 8).map((r) => (
@@ -698,9 +708,9 @@ export function FodmapScreen({ protocol, onUpdate, onBack, onOpenMenu }: FodmapS
         {/* Carte de tolérance */}
         <View style={{ marginTop: 24 }}>
           <View style={shStyles.row}>
-            <Text style={shStyles.title}>Carte de tolérance</Text>
+            <Text style={shStyles.title}>{t('fodmap.toleranceMap')}</Text>
           </View>
-          <Text style={styles.toleranceHint}>Dérivée de vos tests — tapez + pour enrichir</Text>
+          <Text style={styles.toleranceHint}>{t('fodmap.toleranceHint')}</Text>
           <View style={{ marginTop: 12 }}>
             <ToleranceMap testedFoods={protocol.testedFoods} />
           </View>

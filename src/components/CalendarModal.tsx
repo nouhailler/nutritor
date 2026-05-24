@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Modal,
   StyleSheet,
@@ -27,12 +28,18 @@ const MONTHS_FR = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
 ];
+const MONTHS_EN = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
 
-const DAY_HEADERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+const DAY_HEADERS_FR = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+const DAY_HEADERS_EN = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 // ── Calendar Modal ────────────────────────────────────────────
 
 export function CalendarModal({ visible, selectedDate, markedDates, todayStr, onSelect, onClose }: Props) {
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const [monthOffset, setMonthOffset] = useState(0);
 
@@ -78,7 +85,7 @@ export function CalendarModal({ visible, selectedDate, markedDates, todayStr, on
           <TouchableOpacity style={styles.navBtn} onPress={() => setMonthOffset((o) => o - 1)} activeOpacity={0.7}>
             <Icon name="back" size={18} color={Colors.ink} />
           </TouchableOpacity>
-          <Text style={styles.monthLabel}>{MONTHS_FR[month]} {year}</Text>
+          <Text style={styles.monthLabel}>{(i18n.language === 'en' ? MONTHS_EN : MONTHS_FR)[month]} {year}</Text>
           <TouchableOpacity style={styles.navBtn} onPress={() => setMonthOffset((o) => o + 1)} activeOpacity={0.7}>
             <Icon name="chevron-right" size={18} color={Colors.ink} />
           </TouchableOpacity>
@@ -86,7 +93,7 @@ export function CalendarModal({ visible, selectedDate, markedDates, todayStr, on
 
         {/* Day headers */}
         <View style={styles.dayHeaders}>
-          {DAY_HEADERS.map((d, i) => (
+          {(i18n.language === 'en' ? DAY_HEADERS_EN : DAY_HEADERS_FR).map((d, i) => (
             <Text key={i} style={styles.dayHeader}>{d}</Text>
           ))}
         </View>
@@ -148,10 +155,10 @@ export function CalendarModal({ visible, selectedDate, markedDates, todayStr, on
             activeOpacity={0.8}
           >
             <Icon name="home" size={14} color={Colors.ink} />
-            <Text style={styles.todayBtnText}>Aujourd'hui</Text>
+            <Text style={styles.todayBtnText}>{t('calendar.today')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.7}>
-            <Text style={styles.closeBtnText}>Fermer</Text>
+            <Text style={styles.closeBtnText}>{t('calendar.close')}</Text>
           </TouchableOpacity>
         </View>
       </View>

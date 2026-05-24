@@ -4,6 +4,7 @@
  * régimes actifs, objectif calorique. Accès au protocole FODMAP et à l'édition.
  */
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Image,
@@ -58,11 +59,7 @@ const STATUS_COLOR: Record<LabStatus, string> = {
   warn: Colors.warn,
 };
 
-const STATUS_LABEL: Record<LabStatus, string> = {
-  ok:   'Bon',
-  mid:  'Moyen',
-  warn: 'À corriger',
-};
+// STATUS_LABEL is now derived from t() inside the component
 
 interface ProfileScreenProps {
   profile: UserProfile;
@@ -105,9 +102,16 @@ export function ProfileScreen({
   onChangePhoto,
   onStartDemo,
 }: ProfileScreenProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [helpVisible, setHelpVisible] = useState(false);
   const dietLabel = computeDietLabel(profile.diets);
+
+  const STATUS_LABEL: Record<LabStatus, string> = {
+    ok:   t('profile.labStatusOk'),
+    mid:  t('profile.labStatusMid'),
+    warn: t('profile.labStatusWarn'),
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -148,31 +152,31 @@ export function ProfileScreen({
               <Icon name="camera" size={13} color={Colors.paper2} />
             </View>
           </TouchableOpacity>
-          <Text style={styles.eyebrow}>Profil nutritionnel</Text>
+          <Text style={styles.eyebrow}>{t('profile.nutritionalProfile')}</Text>
           <Text style={styles.name}>{profile.name}</Text>
           <Text style={styles.goal}>{profile.goal}</Text>
 
           {/* Stats row */}
           <View style={styles.statsRow}>
             <View style={styles.statCell}>
-              <Text style={styles.statLabel}>Âge</Text>
+              <Text style={styles.statLabel}>{t('profile.ageLabel')}</Text>
               <Text style={styles.statVal}>
                 {profile.age}
-                <Text style={styles.statUnit}> ans</Text>
+                <Text style={styles.statUnit}> {t('common.years')}</Text>
               </Text>
             </View>
             <View style={[styles.statCell, styles.statCellBordered]}>
-              <Text style={styles.statLabel}>Poids</Text>
+              <Text style={styles.statLabel}>{t('profile.weightLabel')}</Text>
               <Text style={styles.statVal}>
                 {profile.weight}
-                <Text style={styles.statUnit}> kg</Text>
+                <Text style={styles.statUnit}> {t('common.kg')}</Text>
               </Text>
             </View>
             <View style={[styles.statCell, styles.statCellBordered]}>
-              <Text style={styles.statLabel}>Taille</Text>
+              <Text style={styles.statLabel}>{t('profile.heightLabel')}</Text>
               <Text style={styles.statVal}>
                 {profile.height}
-                <Text style={styles.statUnit}> cm</Text>
+                <Text style={styles.statUnit}> {t('common.cm')}</Text>
               </Text>
             </View>
           </View>
@@ -184,8 +188,8 @@ export function ProfileScreen({
         <TouchableOpacity style={styles.exportBtn} onPress={onExportReport} activeOpacity={0.8}>
           <Text style={styles.exportEmoji}>👨‍⚕️</Text>
           <View style={styles.exportText}>
-            <Text style={styles.exportTitle}>Export professionnel</Text>
-            <Text style={styles.exportDesc}>PDF partageable — nutritionniste, gastro-entérologue, diététicien</Text>
+            <Text style={styles.exportTitle}>{t('profile.professionalExport')}</Text>
+            <Text style={styles.exportDesc}>{t('profile.professionalExportDesc')}</Text>
           </View>
           <Icon name="upload" size={16} color={Colors.ok} />
         </TouchableOpacity>
@@ -193,21 +197,16 @@ export function ProfileScreen({
         {/* Section: Mode Low FODMAP */}
         <TouchableOpacity style={styles.fodmapCard} onPress={onOpenFodmap} activeOpacity={0.85}>
           <View style={styles.fodmapLeft}>
-            <Text style={styles.fodmapTitle}>Mode Low FODMAP</Text>
-            <Text style={styles.fodmapDesc}>
-              Phases · Timers · Aliments testés · Réactions · Carte de tolérance
-            </Text>
+            <Text style={styles.fodmapTitle}>{t('profile.fodmapMode')}</Text>
+            <Text style={styles.fodmapDesc}>{t('profile.fodmapDesc')}</Text>
           </View>
           <Icon name="activity" size={18} color={Colors.ok} />
         </TouchableOpacity>
 
         {/* Section: Allergènes */}
         <View style={styles.section}>
-          <Text style={styles.sectionEyebrow}>Allergènes & intolérances</Text>
-          <Text style={styles.sectionDesc}>
-            Quatre niveaux de surveillance : sévère, modéré, trace, aucun. Les aliments concernés
-            sont filtrés dans la recherche.
-          </Text>
+          <Text style={styles.sectionEyebrow}>{t('profile.allergens')}</Text>
+          <Text style={styles.sectionDesc}>{t('profile.allergenDesc')}</Text>
           <View style={styles.allergenList}>
             {profile.allergens.map((a) => (
               <View key={a.name} style={styles.allergenRow}>
@@ -223,7 +222,7 @@ export function ProfileScreen({
 
         {/* Section: Régimes */}
         <View style={styles.section}>
-          <Text style={styles.sectionEyebrow}>Régimes alimentaires</Text>
+          <Text style={styles.sectionEyebrow}>{t('profile.diets')}</Text>
           <View style={styles.dietList}>
             {profile.diets.map((d) => (
               <View key={d.id} style={styles.dietRow}>
@@ -245,19 +244,17 @@ export function ProfileScreen({
 
         {/* Section: Mémoire digestive */}
         <View style={styles.section}>
-          <Text style={styles.sectionEyebrow}>Mémoire digestive</Text>
-          <Text style={styles.sectionDesc}>
-            L'IA analyse tes repas des 21 derniers jours croisés avec tes symptômes quotidiens pour construire une mémoire personnalisée de ta tolérance digestive.
-          </Text>
+          <Text style={styles.sectionEyebrow}>{t('profile.digestiveMemory')}</Text>
+          <Text style={styles.sectionDesc}>{t('profile.digestiveMemoryDesc')}</Text>
 
           {/* Existing memory */}
           {digestiveMemory ? (
             <View style={styles.memoryCard}>
               <View style={styles.memoryHeader}>
                 <Icon name="sparkle" size={12} color={Colors.ok} />
-                <Text style={styles.memoryHeaderText}>Observations personnalisées</Text>
+                <Text style={styles.memoryHeaderText}>{t('profile.personalizedObservations')}</Text>
                 {digestiveMemoryDate ? (
-                  <Text style={styles.memoryDate}>mis à jour le {digestiveMemoryDate}</Text>
+                  <Text style={styles.memoryDate}>{t('profile.updatedOn', { date: digestiveMemoryDate })}</Text>
                 ) : null}
               </View>
               <View style={styles.memoryLines}>
@@ -274,9 +271,7 @@ export function ProfileScreen({
           ) : (
             <View style={styles.memoryEmpty}>
               <Icon name="leaf" size={18} color={Colors.muted2} />
-              <Text style={styles.memoryEmptyText}>
-                Aucune observation enregistrée.{'\n'}Note tes repas et ton bien-être quotidien pendant quelques jours, puis lance l'analyse.
-              </Text>
+              <Text style={styles.memoryEmptyText}>{t('profile.noObservations')}</Text>
             </View>
           )}
 
@@ -296,23 +291,21 @@ export function ProfileScreen({
             }
             <Text style={styles.memoryBtnText}>
               {memoryLoading
-                ? 'Analyse en cours…'
-                : digestiveMemory ? 'Mettre à jour la mémoire' : 'Analyser mes données'}
+                ? t('profile.analyzing')
+                : digestiveMemory ? t('profile.updateMemory') : t('profile.analyzeData')}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Section: Laboratoire nutritionnel */}
         <View style={styles.section}>
-          <Text style={styles.sectionEyebrow}>🧪 Laboratoire nutritionnel</Text>
-          <Text style={styles.sectionDesc}>
-            Analyse IA de ta journée selon 7 indicateurs de santé nutritionnelle avancés : ratio oméga, densité micronutritionnelle, score inflammatoire, diversité, ultra-transformé, charge FODMAP et équilibre protéique.
-          </Text>
+          <Text style={styles.sectionEyebrow}>{t('profile.lab')}</Text>
+          <Text style={styles.sectionDesc}>{t('profile.labDesc')}</Text>
 
           {labScores ? (
             <View style={styles.labCard}>
               {labScoresDate ? (
-                <Text style={styles.labDate}>Analysé le {labScoresDate}</Text>
+                <Text style={styles.labDate}>{t('profile.labAnalyzed', { date: labScoresDate })}</Text>
               ) : null}
               {LAB_METRICS.map(({ key, emoji, name }) => {
                 const score = labScores[key];
@@ -325,7 +318,7 @@ export function ProfileScreen({
                       <View style={styles.labRowTop}>
                         <Text style={styles.labName}>{name}</Text>
                         <View style={[styles.labStatusBadge, { backgroundColor: color + '20', borderColor: color + '50' }]}>
-                          <Text style={[styles.labStatusText, { color }]}>{score.label}</Text>
+                          <Text style={[styles.labStatusText, { color }]}>{STATUS_LABEL[score.status]}</Text>
                         </View>
                       </View>
                       <Text style={styles.labValue}>{score.value}</Text>
@@ -339,9 +332,7 @@ export function ProfileScreen({
           ) : (
             <View style={styles.labEmpty}>
               <Text style={styles.labEmptyIcon}>🧪</Text>
-              <Text style={styles.labEmptyText}>
-                Analyse basée sur les repas d'aujourd'hui.{'\n'}Ajoute tes repas dans le Journal puis lance l'évaluation.
-              </Text>
+              <Text style={styles.labEmptyText}>{t('profile.labEmpty')}</Text>
             </View>
           )}
 
@@ -361,31 +352,31 @@ export function ProfileScreen({
             }
             <Text style={styles.memoryBtnText}>
               {labLoading
-                ? 'Analyse en cours…'
-                : labScores ? 'Ré-analyser la journée' : 'Analyser ma journée'}
+                ? t('profile.analyzing')
+                : labScores ? t('profile.labReanalyze') : t('profile.labAnalyze')}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Section: Objectifs */}
         <View style={[styles.section, { paddingBottom: 40 }]}>
-          <Text style={styles.sectionEyebrow}>Objectifs quotidiens</Text>
+          <Text style={styles.sectionEyebrow}>{t('profile.objectives')}</Text>
           <View style={styles.nutriTable}>
             <View style={styles.nutriRow}>
-              <Text style={styles.nutriNameLarge}>Énergie</Text>
-              <Text style={styles.nutriValLarge}>{profile.kcalTarget} kcal</Text>
+              <Text style={styles.nutriNameLarge}>{t('profile.energy')}</Text>
+              <Text style={styles.nutriValLarge}>{profile.kcalTarget} {t('common.kcal')}</Text>
             </View>
             <View style={styles.nutriRow}>
-              <Text style={styles.nutriName}>Protéines</Text>
-              <Text style={styles.nutriVal}>{profile.macroTargets.protein} g</Text>
+              <Text style={styles.nutriName}>{t('profile.protein')}</Text>
+              <Text style={styles.nutriVal}>{profile.macroTargets.protein} {t('common.grams')}</Text>
             </View>
             <View style={styles.nutriRow}>
-              <Text style={styles.nutriName}>Glucides</Text>
-              <Text style={styles.nutriVal}>{profile.macroTargets.carbs} g</Text>
+              <Text style={styles.nutriName}>{t('profile.carbs')}</Text>
+              <Text style={styles.nutriVal}>{profile.macroTargets.carbs} {t('common.grams')}</Text>
             </View>
             <View style={styles.nutriRow}>
-              <Text style={styles.nutriName}>Lipides</Text>
-              <Text style={styles.nutriVal}>{profile.macroTargets.fat} g</Text>
+              <Text style={styles.nutriName}>{t('profile.fat')}</Text>
+              <Text style={styles.nutriVal}>{profile.macroTargets.fat} {t('common.grams')}</Text>
             </View>
           </View>
         </View>

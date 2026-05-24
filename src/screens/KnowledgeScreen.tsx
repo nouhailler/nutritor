@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { Colors, Fonts } from '../theme/tokens';
@@ -46,6 +47,7 @@ function ModeToggle({
   mode: 'simple' | 'expert';
   onChange: (m: 'simple' | 'expert') => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.modeToggle}>
       <TouchableOpacity
@@ -54,7 +56,7 @@ function ModeToggle({
         activeOpacity={0.75}
       >
         <Text style={[styles.modeBtnText, mode === 'simple' && styles.modeBtnTextActive]}>
-          Simple
+          {t('knowledge.modeSimple')}
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
@@ -63,7 +65,7 @@ function ModeToggle({
         activeOpacity={0.75}
       >
         <Text style={[styles.modeBtnText, mode === 'expert' && styles.modeBtnTextActive]}>
-          Expert
+          {t('knowledge.modeExpert')}
         </Text>
       </TouchableOpacity>
     </View>
@@ -83,6 +85,7 @@ function EntryView({
   onOpenEntry: (e: KnowledgeEntry) => void;
   onOpenMenu: () => void;
 }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<'simple' | 'expert'>('simple');
   const meta = CATEGORY_META[entry.category];
@@ -127,18 +130,18 @@ function EntryView({
         {/* Contenu selon mode */}
         {mode === 'simple' ? (
           <View style={styles.contentBlock}>
-            <Section label="Qu'est-ce que c'est ?" text={entry.simple.what} />
-            <Section label="Pourquoi c'est important" text={entry.simple.why} />
+            <Section label={t('knowledge.what')} text={entry.simple.what} />
+            <Section label={t('knowledge.why')} text={entry.simple.why} />
             {entry.simple.deficiency && (
               <Section
-                label="Signes de carence"
+                label={t('knowledge.deficiency')}
                 text={entry.simple.deficiency}
                 accent={Colors.warn}
               />
             )}
             {entry.simple.sources.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Meilleures sources</Text>
+                <Text style={styles.sectionLabel}>{t('knowledge.sources')}</Text>
                 <View style={styles.sourcesGrid}>
                   {entry.simple.sources.map((s) => (
                     <View key={s} style={styles.sourceChip}>
@@ -151,11 +154,11 @@ function EntryView({
           </View>
         ) : (
           <View style={styles.contentBlock}>
-            <Section label="Mécanisme" text={entry.expert.mechanism} />
+            <Section label={t('knowledge.mechanism')} text={entry.expert.mechanism} />
 
             {entry.expert.interactions.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Interactions & synergies</Text>
+                <Text style={styles.sectionLabel}>{t('knowledge.interactions')}</Text>
                 {entry.expert.interactions.map((inter, i) => (
                   <View key={i} style={styles.interactionRow}>
                     <View style={styles.interactionDot} />
@@ -167,14 +170,14 @@ function EntryView({
 
             {entry.expert.dosage && (
               <View style={[styles.dosageBlock]}>
-                <Text style={styles.dosageLabel}>Apport de référence (AJR)</Text>
+                <Text style={styles.dosageLabel}>{t('knowledge.rda')}</Text>
                 <Text style={styles.dosageVal}>
                   {entry.expert.dosage.rda}
                   <Text style={styles.dosageUnit}> {entry.expert.dosage.unit}</Text>
                 </Text>
                 {entry.expert.dosage.upper && (
                   <Text style={styles.dosageUpper}>
-                    Limite supérieure : {entry.expert.dosage.upper} {entry.expert.dosage.unit}
+                    {t('knowledge.upperLimit', { val: entry.expert.dosage.upper, unit: entry.expert.dosage.unit })}
                   </Text>
                 )}
               </View>
@@ -182,7 +185,7 @@ function EntryView({
 
             {entry.expert.clinicalNote && (
               <Section
-                label="Note clinique"
+                label={t('knowledge.clinicalNote')}
                 text={entry.expert.clinicalNote}
                 accent="#2E5A8B"
               />
@@ -192,7 +195,7 @@ function EntryView({
               <View style={styles.fodmapNoteBlock}>
                 <Icon name="activity" size={13} color={Colors.ok} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.fodmapNoteLabel}>Note FODMAP</Text>
+                  <Text style={styles.fodmapNoteLabel}>{t('knowledge.fodmapNote')}</Text>
                   <Text style={styles.fodmapNoteText}>{entry.expert.fodmapNote}</Text>
                 </View>
               </View>
@@ -203,7 +206,7 @@ function EntryView({
         {/* Entrées liées */}
         {related.length > 0 && (
           <View style={styles.relatedSection}>
-            <Text style={styles.relatedLabel}>Entrées liées</Text>
+            <Text style={styles.relatedLabel}>{t('knowledge.relatedEntries')}</Text>
             <View style={styles.relatedGrid}>
               {related.map((r) => {
                 const rm = CATEGORY_META[r.category];
@@ -260,6 +263,7 @@ function ListView({
   onPickEntry: (e: KnowledgeEntry) => void;
   onOpenMenu: () => void;
 }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   return (
@@ -279,7 +283,7 @@ function ListView({
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.listCount}>{entries.length} entrée{entries.length > 1 ? 's' : ''}</Text>
+        <Text style={styles.listCount}>{t('knowledge.entryCount', { count: entries.length, word: entries.length > 1 ? t('knowledge.entries') : t('knowledge.entry') })}</Text>
         {entries.map((e) => (
           <EntryRow key={e.id} entry={e} onPress={() => onPickEntry(e)} />
         ))}
@@ -325,6 +329,7 @@ function HomeView({
   onOpenMenu: () => void;
   onStartDemo?: () => void;
 }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const counts = useMemo(() => getCategoryCounts(), []);
   const [query, setQuery] = useState('');
@@ -344,8 +349,8 @@ function HomeView({
           <Icon name="back" size={22} />
         </TouchableOpacity>
         <View style={styles.topbarCenter}>
-          <Text style={styles.topbarTitle}>Base de connaissances</Text>
-          <Text style={styles.topbarSub}>{KNOWLEDGE_BASE.length} entrées · 100 % hors-ligne</Text>
+          <Text style={styles.topbarTitle}>{t('knowledge.title')}</Text>
+          <Text style={styles.topbarSub}>{t('knowledge.subtitle', { count: KNOWLEDGE_BASE.length })}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           {onStartDemo && (
@@ -372,7 +377,7 @@ function HomeView({
             style={styles.searchInput}
             value={query}
             onChangeText={setQuery}
-            placeholder="Magnésium, curcumine, microbiote…"
+            placeholder={t('knowledge.searchPlaceholder')}
             placeholderTextColor={Colors.muted2}
             returnKeyType="search"
             onSubmitEditing={() => query.trim() && onOpenSearch(query.trim())}

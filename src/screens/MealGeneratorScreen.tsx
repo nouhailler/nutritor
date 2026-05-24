@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { Colors, Fonts } from '../theme/tokens';
@@ -246,6 +247,7 @@ function FoodPickerModal({
   onClose: () => void;
   bottomInset: number;
 }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -273,12 +275,12 @@ function FoodPickerModal({
       <TouchableOpacity style={pickerSt.backdrop} onPress={onClose} activeOpacity={1} />
       <View style={[pickerSt.sheet, { paddingBottom: bottomInset + 8 }]}>
         <View style={pickerSt.handle} />
-        <Text style={pickerSt.title}>Sélectionner des aliments</Text>
+        <Text style={pickerSt.title}>{t('mealGenerator.selectFoods')}</Text>
         <View style={pickerSt.searchRow}>
           <Icon name="search" size={15} color={Colors.muted} />
           <TextInput
             style={pickerSt.searchInput}
-            placeholder="Rechercher dans ma bibliothèque…"
+            placeholder={t('mealGenerator.searchLibrary')}
             placeholderTextColor={Colors.muted2}
             value={search}
             onChangeText={setSearch}
@@ -293,7 +295,7 @@ function FoodPickerModal({
         </View>
         <ScrollView style={pickerSt.list} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {filtered.length === 0
-            ? <Text style={pickerSt.empty}>Aucun aliment trouvé dans ta bibliothèque</Text>
+            ? <Text style={pickerSt.empty}>{t('mealGenerator.noFoodsFound')}</Text>
             : filtered.map((food) => (
               <TouchableOpacity key={food.id} style={pickerSt.foodRow} onPress={() => toggle(food.id)} activeOpacity={0.7}>
                 <View style={[pickerSt.checkbox, selected.has(food.id) && pickerSt.checkboxOn]}>
@@ -313,7 +315,7 @@ function FoodPickerModal({
           activeOpacity={0.8}
         >
           <Text style={pickerSt.confirmTxt}>
-            {selected.size > 0 ? `Utiliser ${selected.size} aliment${selected.size > 1 ? 's' : ''}` : 'Sélectionner des aliments'}
+            {selected.size > 0 ? t('mealGenerator.useFoods', { count: selected.size, s: selected.size > 1 ? 's' : '' }) : t('mealGenerator.selectFoods')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -332,6 +334,7 @@ function SuggestionCategoriesSection({
   onSelectFoodExample: (template: string) => void;
   disabled: boolean;
 }) {
+  const { t } = useTranslation();
   const [activeId, setActiveId] = useState<string | null>(null);
   const active = SUGGESTION_CATEGORIES.find((c) => c.id === activeId);
 
@@ -348,7 +351,7 @@ function SuggestionCategoriesSection({
 
   return (
     <View style={styles.catSection}>
-      <Text style={styles.catLabel}>Exemples de requêtes</Text>
+      <Text style={styles.catLabel}>{t('mealGenerator.exampleQueries')}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catScrollContent}>
         {SUGGESTION_CATEGORIES.map((cat) => (
           <TouchableOpacity
@@ -409,6 +412,7 @@ function MealCard({
   onSave?: (meal: GeneratedMeal) => void;
   saved?: boolean;
 }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
   const totalTime = (meal.prepTime ?? 0) + (meal.cookTime ?? 0);
@@ -475,16 +479,16 @@ function MealCard({
 
           {/* Macros */}
           <View style={styles.macroRow}>
-            <MacroPill label="Prot." value={meal.per_serving.protein} unit="g" color={Colors.ok} />
-            <MacroPill label="Gluc." value={meal.per_serving.carbs} unit="g" color={Colors.signal} />
-            <MacroPill label="Lip." value={meal.per_serving.fat} unit="g" color={Colors.muted} />
+            <MacroPill label={t('mealGenerator.prot')} value={meal.per_serving.protein} unit="g" color={Colors.ok} />
+            <MacroPill label={t('mealGenerator.gluc')} value={meal.per_serving.carbs} unit="g" color={Colors.signal} />
+            <MacroPill label={t('mealGenerator.lip')} value={meal.per_serving.fat} unit="g" color={Colors.muted} />
             {meal.per_serving.fiber != null && (
-              <MacroPill label="Fibres" value={meal.per_serving.fiber} unit="g" color={Colors.ink2} />
+              <MacroPill label={t('mealGenerator.fiber')} value={meal.per_serving.fiber} unit="g" color={Colors.ink2} />
             )}
           </View>
 
           {/* Ingredients */}
-          <Text style={styles.expandLabel}>Ingrédients</Text>
+          <Text style={styles.expandLabel}>{t('mealGenerator.ingredients')}</Text>
           {meal.ingredients.map((ing, i) => (
             <View key={i} style={styles.ingredientRow}>
               <View style={styles.ingredientDot} />
@@ -501,7 +505,7 @@ function MealCard({
           {/* Micronutrients */}
           {meal.micronutrients && meal.micronutrients.length > 0 && (
             <>
-              <Text style={[styles.expandLabel, { marginTop: 16 }]}>Micronutriments clés</Text>
+              <Text style={[styles.expandLabel, { marginTop: 16 }]}>{t('mealGenerator.micronutrients')}</Text>
               <View style={styles.microGrid}>
                 {meal.micronutrients.map((m, i) => (
                   <View key={i} style={styles.microItem}>
@@ -518,7 +522,7 @@ function MealCard({
           {meal.antiInflammatoryScore != null && (
             <View style={styles.scoreRow}>
               <Icon name="zap" size={13} color={Colors.signal} />
-              <Text style={styles.scoreLabel}>Score anti-inflammatoire</Text>
+              <Text style={styles.scoreLabel}>{t('mealGenerator.antiInflamScore')}</Text>
               <View style={styles.scoreBarWrap}>
                 <View
                   style={[
@@ -542,7 +546,7 @@ function MealCard({
           {/* Why good */}
           {meal.whyGood && (
             <View style={styles.whyGoodBlock}>
-              <Text style={styles.whyGoodLabel}>Pourquoi c'est adapté</Text>
+              <Text style={styles.whyGoodLabel}>{t('mealGenerator.whyGood')}</Text>
               <Text style={styles.whyGoodText}>{meal.whyGood}</Text>
             </View>
           )}
@@ -556,7 +560,7 @@ function MealCard({
             >
               <Icon name={saved ? 'check' : 'bookmark'} size={14} color={saved ? Colors.ok : Colors.paper2} />
               <Text style={[styles.saveBtnText, saved && styles.saveBtnTextSaved]}>
-                {saved ? 'Sauvegardé' : 'Sauvegarder ce repas'}
+                {saved ? t('mealGenerator.saved') : t('mealGenerator.saveMeal')}
               </Text>
             </TouchableOpacity>
           )}
@@ -596,6 +600,7 @@ export function MealGeneratorScreen({
   onStartDemo,
 }: MealGeneratorScreenProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<MealGeneratorResult | null>(null);
@@ -674,8 +679,8 @@ export function MealGeneratorScreen({
           <Icon name="back" size={22} />
         </TouchableOpacity>
         <View style={styles.topbarCenter}>
-          <Text style={styles.topbarTitle}>Générateur de repas</Text>
-          <Text style={styles.topbarSub}>IA nutritionniste personnalisée</Text>
+          <Text style={styles.topbarTitle}>{t('mealGenerator.title')}</Text>
+          <Text style={styles.topbarSub}>{t('mealGenerator.eyebrow')}</Text>
         </View>
         {onStartDemo && (
           <TouchableOpacity style={styles.iconBtnSignal} onPress={onStartDemo} activeOpacity={0.7}>
@@ -700,7 +705,7 @@ export function MealGeneratorScreen({
               style={styles.input}
               value={query}
               onChangeText={setQuery}
-              placeholder="3 repas low FODMAP végétariens, petit déj riche en protéines…"
+              placeholder={t('mealGenerator.inputPlaceholder')}
               placeholderTextColor={Colors.muted2}
               multiline
               returnKeyType="done"
@@ -712,7 +717,7 @@ export function MealGeneratorScreen({
             <View style={styles.aiWarning}>
               <Icon name="alert" size={14} color={Colors.signal} />
               <Text style={styles.aiWarningText}>
-                Configure OpenRouter ou Ollama dans les Paramètres pour activer l'IA.
+                {t('mealGenerator.aiNotConfigured')}
               </Text>
             </View>
           )}
@@ -729,7 +734,7 @@ export function MealGeneratorScreen({
               <Icon name="sparkle" size={16} color={Colors.paper2} />
             )}
             <Text style={styles.generateBtnText}>
-              {loading ? 'Génération en cours…' : 'Générer 3 repas'}
+              {loading ? t('mealGenerator.generating') : t('mealGenerator.generateBtn')}
             </Text>
           </TouchableOpacity>
 
@@ -737,7 +742,7 @@ export function MealGeneratorScreen({
             <View style={styles.bgNotice}>
               <Icon name="sparkle" size={13} color={Colors.ok} />
               <Text style={styles.bgNoticeText}>
-                Génération en cours en arrière-plan. L'icône ✦ en haut à droite deviendra verte quand c'est prêt.
+                {t('mealGenerator.bgNotice')}
               </Text>
             </View>
           )}
@@ -758,10 +763,8 @@ export function MealGeneratorScreen({
         {loading && (
           <View style={styles.loadingBlock}>
             <ActivityIndicator color={Colors.ink} size="large" />
-            <Text style={styles.loadingTitle}>L'IA compose vos repas…</Text>
-            <Text style={styles.loadingDesc}>
-              Analyse du profil · Équilibre FODMAP · Calcul macros
-            </Text>
+            <Text style={styles.loadingTitle}>{t('mealGenerator.loadingTitle')}</Text>
+            <Text style={styles.loadingDesc}>{t('mealGenerator.loadingDesc')}</Text>
           </View>
         )}
 
@@ -769,7 +772,7 @@ export function MealGeneratorScreen({
         {error && !loading && (
           <View style={styles.errorBlock}>
             <Icon name="alert-circle" size={20} color={Colors.warn} />
-            <Text style={styles.errorTitle}>Génération échouée</Text>
+            <Text style={styles.errorTitle}>{t('mealGenerator.errorTitle')}</Text>
             <Text style={styles.errorDesc}>{error}</Text>
             <TouchableOpacity
               style={styles.retryBtn}
@@ -777,7 +780,7 @@ export function MealGeneratorScreen({
               activeOpacity={0.8}
             >
               <Icon name="refresh" size={14} color={Colors.ink} />
-              <Text style={styles.retryBtnText}>Réessayer</Text>
+              <Text style={styles.retryBtnText}>{t('mealGenerator.retry')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -786,14 +789,14 @@ export function MealGeneratorScreen({
         {displayResult && !loading && (
           <View style={styles.resultsSection}>
             <View style={styles.resultsHeader}>
-              <Text style={styles.resultsTitle}>{displayResult.meals.length} repas générés</Text>
+              <Text style={styles.resultsTitle}>{t('mealGenerator.mealsGenerated', { count: displayResult.meals.length })}</Text>
               <TouchableOpacity
                 style={styles.regenerateBtn}
                 onPress={() => handleGenerate(query)}
                 activeOpacity={0.8}
               >
                 <Icon name="refresh" size={13} color={Colors.muted} />
-                <Text style={styles.regenerateBtnText}>Régénérer</Text>
+                <Text style={styles.regenerateBtnText}>{t('mealGenerator.regenerate')}</Text>
               </TouchableOpacity>
             </View>
             {displayResult.contextNote && (

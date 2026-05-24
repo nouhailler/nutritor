@@ -4,6 +4,7 @@
  * Chips de catégories, enrichissement optionnel via IA, import direct dans la bibliothèque.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   ScrollView,
@@ -135,6 +136,7 @@ interface Props {
 }
 
 export function CIQUALScreen({ existingIds, onImport, onUpdateFood, onBack, onOpenMenu, settings, initialQuery = '', onStartDemo }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
 
@@ -185,8 +187,8 @@ export function CIQUALScreen({ existingIds, onImport, onUpdateFood, onBack, onOp
           <Icon name="back" size={20} color={Colors.ink} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.eyebrow}>Base officielle française</Text>
-          <Text style={styles.title}>CIQUAL — ANSES</Text>
+          <Text style={styles.eyebrow}>{t('ciqual.eyebrow')}</Text>
+          <Text style={styles.title}>{t('ciqual.title')}</Text>
         </View>
         <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
           <Icon name="menu" size={22} color={Colors.ink} />
@@ -214,7 +216,7 @@ export function CIQUALScreen({ existingIds, onImport, onUpdateFood, onBack, onOp
         <TextInput
           ref={inputRef}
           style={styles.input}
-          placeholder="Rechercher parmi 3 167 aliments…"
+          placeholder={t('ciqual.searchPlaceholder')}
           placeholderTextColor={Colors.muted2}
           value={query}
           onChangeText={(t) => { setQuery(t); if (t) setActiveGroup(null); }}
@@ -225,7 +227,7 @@ export function CIQUALScreen({ existingIds, onImport, onUpdateFood, onBack, onOp
         />
         {query.length > 0 && (
           <TouchableOpacity onPress={() => setQuery('')} activeOpacity={0.7}>
-            <Text style={styles.clearBtn}>Effacer</Text>
+            <Text style={styles.clearBtn}>{t('common.clear')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -280,8 +282,8 @@ export function CIQUALScreen({ existingIds, onImport, onUpdateFood, onBack, onOp
         {/* No results */}
         {!showIntro && results.length === 0 && query.length >= 2 && (
           <View style={styles.emptyBox}>
-            <Text style={styles.emptyTitle}>Aucun résultat</Text>
-            <Text style={styles.emptyDesc}>Essaie un autre terme ou utilise Open Food Facts pour les produits transformés.</Text>
+            <Text style={styles.emptyTitle}>{t('ciqual.noResults')}</Text>
+            <Text style={styles.emptyDesc}>{t('ciqual.searchPrompt')}</Text>
           </View>
         )}
 

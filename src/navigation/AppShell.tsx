@@ -1,4 +1,6 @@
+import '../i18n';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Animated,
@@ -73,13 +75,13 @@ function todayStr() {
 type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile' | 'shopping';
 type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'manualFood' | 'editFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge' | 'shoppingScanner' | 'plateAI' | null;
 
-const TABS: { id: Tab; label: string; icon: 'home' | 'leaf' | 'book' | 'chart' | 'user' | 'shopping-cart' }[] = [
-  { id: 'home',     label: 'Journal',  icon: 'home' },
-  { id: 'foods',    label: 'Aliments', icon: 'leaf' },
-  { id: 'saved',    label: 'Plats',    icon: 'book' },
-  { id: 'stats',    label: 'Stats',    icon: 'chart' },
-  { id: 'profile',  label: 'Profil',   icon: 'user' },
-  { id: 'shopping', label: 'Courses',  icon: 'shopping-cart' },
+const TABS_DEF: { id: Tab; labelKey: string; icon: 'home' | 'leaf' | 'book' | 'chart' | 'user' | 'shopping-cart' }[] = [
+  { id: 'home',     labelKey: 'drawer.journal', icon: 'home' },
+  { id: 'foods',    labelKey: 'drawer.foods',   icon: 'leaf' },
+  { id: 'saved',    labelKey: 'drawer.saved',   icon: 'book' },
+  { id: 'stats',    labelKey: 'stats.title',    icon: 'chart' },
+  { id: 'profile',  labelKey: 'drawer.profile', icon: 'user' },
+  { id: 'shopping', labelKey: 'shopping.title', icon: 'shopping-cart' },
 ];
 
 // ── Toast ─────────────────────────────────────────────────────
@@ -110,6 +112,7 @@ function Toast({ message }: { message: string | null }) {
 
 function DuplicateBanner({ visible }: { visible: boolean }) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const translateY = useRef(new Animated.Value(60)).current;
   const opacity    = useRef(new Animated.Value(0)).current;
   const bottomOffset = insets.bottom + 62 + 8;
@@ -134,7 +137,7 @@ function DuplicateBanner({ visible }: { visible: boolean }) {
       pointerEvents="none"
     >
       <Icon name="layers" size={14} color={Colors.paper2} />
-      <Text style={styles.duplicateBannerText}>Journée d'hier copiée dans le journal</Text>
+      <Text style={styles.duplicateBannerText}>{t('home.yesterdayCopied', "Journée d'hier copiée dans le journal")}</Text>
     </Animated.View>
   );
 }
@@ -165,19 +168,20 @@ function Tabbar({
   onSelect: (tab: Tab) => void;
 }) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   return (
     <View style={[styles.tabbar, { paddingBottom: insets.bottom + 8 }]}>
-      {TABS.map((t) => {
-        const active = t.id === activeTab;
+      {TABS_DEF.map((t_def) => {
+        const active = t_def.id === activeTab;
         return (
           <TouchableOpacity
-            key={t.id}
+            key={t_def.id}
             style={styles.tab}
-            onPress={() => onSelect(t.id)}
+            onPress={() => onSelect(t_def.id)}
             activeOpacity={0.7}
           >
-            <Icon name={t.icon} size={20} color={active ? Colors.ink : Colors.muted} />
-            <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{t.label}</Text>
+            <Icon name={t_def.icon} size={20} color={active ? Colors.ink : Colors.muted} />
+            <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{t(t_def.labelKey)}</Text>
             <View style={[styles.tabDot, active && styles.tabDotActive]} />
           </TouchableOpacity>
         );
@@ -262,6 +266,7 @@ export function AppShell() {
   console.log('[AppShell] render start');
 
   // ── All hooks must be declared before any conditional return ──
+  const { i18n } = useTranslation();
   const [tab, setTab] = useState<Tab>('home');
   const [stack, setStack] = useState<StackScreen>(null);
   const [demoScenario, setDemoScenario] = useState<DemoScenario | null>(null);
@@ -309,6 +314,16 @@ export function AppShell() {
       });
     }
   }, [settingsLoading]);
+
+  // Initialise la langue depuis les settings sauvegardés
+  useEffect(() => {
+    if (!settingsLoading) {
+      const lang = settings.language ?? 'fr';
+      if (i18n.language !== lang) {
+        i18n.changeLanguage(lang);
+      }
+    }
+  }, [settingsLoading, settings.language]);
   const [meals, setMeals, mealsLoading] = usePersistedState<Meal[]>(
     KEYS.meals,
     INITIAL_MEALS,

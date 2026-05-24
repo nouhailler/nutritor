@@ -19,6 +19,7 @@ import {
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { SavedPlate, SavedPlateItem, PlateCategory, PLATE_CATEGORIES } from '../data/saved';
@@ -75,6 +76,7 @@ function ItemRow({ item, onDelete }: { item: DraftItem; onDelete: () => void }) 
 // ── Add ingredient form ───────────────────────────────────────
 
 function AddItemForm({ foodList, onAdd }: { foodList: Food[]; onAdd: (item: DraftItem) => void }) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState<DraftItem>(emptyDraft());
   const [open, setOpen] = useState(false);
   const [showSugg, setShowSugg] = useState(false);
@@ -121,19 +123,19 @@ function AddItemForm({ foodList, onAdd }: { foodList: Food[]; onAdd: (item: Draf
     return (
       <TouchableOpacity style={styles.addIngredientBtn} onPress={() => setOpen(true)} activeOpacity={0.7}>
         <Icon name="plus" size={16} color={Colors.ink} />
-        <Text style={styles.addIngredientText}>Ajouter un ingrédient</Text>
+        <Text style={styles.addIngredientText}>{t('saved.addIngredient')}</Text>
       </TouchableOpacity>
     );
   }
 
   return (
     <View style={styles.addForm}>
-      <Text style={styles.addFormTitle}>Nouvel ingrédient</Text>
+      <Text style={styles.addFormTitle}>{t('saved.newIngredient')}</Text>
 
       {/* Name + autocomplete */}
       <TextInput
         style={styles.fieldInput}
-        placeholder="Nom de l'ingrédient"
+        placeholder={t('saved.ingredientName')}
         placeholderTextColor={Colors.muted2}
         value={draft.name}
         onChangeText={handleNameChange}
@@ -165,7 +167,7 @@ function AddItemForm({ foodList, onAdd }: { foodList: Food[]; onAdd: (item: Draf
 
       <TextInput
         style={styles.fieldInput}
-        placeholder="Quantité (ex: 100 g)"
+        placeholder={t('saved.ingredientQty')}
         placeholderTextColor={Colors.muted2}
         value={draft.qty}
         onChangeText={set('qty')}
@@ -174,7 +176,7 @@ function AddItemForm({ foodList, onAdd }: { foodList: Food[]; onAdd: (item: Draf
 
       <View style={styles.macroRow}>
         <View style={styles.macroField}>
-          <Text style={styles.macroFieldLabel}>Kcal</Text>
+          <Text style={styles.macroFieldLabel}>{t('common.kcal').toUpperCase()}</Text>
           <TextInput
             style={styles.macroFieldInput}
             placeholder="0"
@@ -185,7 +187,7 @@ function AddItemForm({ foodList, onAdd }: { foodList: Food[]; onAdd: (item: Draf
           />
         </View>
         <View style={styles.macroField}>
-          <Text style={styles.macroFieldLabel}>Protéines g</Text>
+          <Text style={styles.macroFieldLabel}>{t('saved.macroProtein')}</Text>
           <TextInput
             style={styles.macroFieldInput}
             placeholder="0"
@@ -196,7 +198,7 @@ function AddItemForm({ foodList, onAdd }: { foodList: Food[]; onAdd: (item: Draf
           />
         </View>
         <View style={styles.macroField}>
-          <Text style={styles.macroFieldLabel}>Glucides g</Text>
+          <Text style={styles.macroFieldLabel}>{t('saved.macroCarbs')}</Text>
           <TextInput
             style={styles.macroFieldInput}
             placeholder="0"
@@ -207,7 +209,7 @@ function AddItemForm({ foodList, onAdd }: { foodList: Food[]; onAdd: (item: Draf
           />
         </View>
         <View style={styles.macroField}>
-          <Text style={styles.macroFieldLabel}>Lipides g</Text>
+          <Text style={styles.macroFieldLabel}>{t('saved.macroFat')}</Text>
           <TextInput
             style={styles.macroFieldInput}
             placeholder="0"
@@ -221,11 +223,11 @@ function AddItemForm({ foodList, onAdd }: { foodList: Food[]; onAdd: (item: Draf
 
       <View style={styles.addFormActions}>
         <TouchableOpacity style={styles.cancelFormBtn} onPress={() => setOpen(false)} activeOpacity={0.7}>
-          <Text style={styles.cancelFormText}>Annuler</Text>
+          <Text style={styles.cancelFormText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.confirmFormBtn} onPress={handleAdd} activeOpacity={0.8}>
           <Icon name="check" size={14} color={Colors.paper2} />
-          <Text style={styles.confirmFormText}>Ajouter</Text>
+          <Text style={styles.confirmFormText}>{t('common.add')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -243,6 +245,7 @@ interface Props {
 }
 
 export function EditSavedPlateScreen({ plate, allPlates, foodList = [], onSave, onBack }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const isNew = plate === null;
 
@@ -271,7 +274,7 @@ export function EditSavedPlateScreen({ plate, allPlates, foodList = [], onSave, 
   const pickFromLibrary = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission requise', 'Autorise l\'accès à ta galerie dans les réglages.');
+      Alert.alert(t('saved.permRequired'), t('saved.galleryPermission'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -290,7 +293,7 @@ export function EditSavedPlateScreen({ plate, allPlates, foodList = [], onSave, 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission requise', 'Autorise l\'accès à la caméra dans les réglages.');
+      Alert.alert(t('saved.permRequired'), t('saved.cameraPermission'));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({

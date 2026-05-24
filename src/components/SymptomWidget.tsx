@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   StyleSheet,
   Text,
@@ -79,17 +80,18 @@ function SymptomRow({
 // ── Summary chip (collapsed state) ───────────────────────────
 
 function SummaryChip({ scores }: { scores: SymptomScores }) {
+  const { t } = useTranslation();
   const aggregate = aggregateDayScore(scores);
-  if (aggregate === null) return <Text style={styles.summaryEmpty}>Non renseigné</Text>;
+  if (aggregate === null) return <Text style={styles.summaryEmpty}>{t('symptom.notLogged')}</Text>;
 
   const tone = aggregate >= 70 ? 'ok' : aggregate >= 45 ? 'mid' : 'warn';
   const color = TONE_COLORS[tone];
-  const label = aggregate >= 70 ? 'Bonne journée' : aggregate >= 45 ? 'Journée moyenne' : 'Journée difficile';
+  const label = t('symptom.score', { score: aggregate });
 
   return (
     <View style={[styles.summaryChip, { backgroundColor: color + '22', borderColor: color + '55' }]}>
       <View style={[styles.summaryDot, { backgroundColor: color }]} />
-      <Text style={[styles.summaryLabel, { color }]}>{label} · {aggregate}/100</Text>
+      <Text style={[styles.summaryLabel, { color }]}>{label}</Text>
     </View>
   );
 }
@@ -104,6 +106,7 @@ interface Props {
 }
 
 export function SymptomWidget({ entry, date, readOnly = false, onSave }: Props) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [scores, setScores] = useState<SymptomScores>(
     entry?.scores ?? UNSET_SCORES,
@@ -133,7 +136,7 @@ export function SymptomWidget({ entry, date, readOnly = false, onSave }: Props) 
       >
         <View style={styles.headerLeft}>
           <Icon name="alert" size={14} color={Colors.muted} />
-          <Text style={styles.headerTitle}>Bien-être du jour</Text>
+          <Text style={styles.headerTitle}>{readOnly ? t('symptom.readOnly') : t('symptom.title')}</Text>
           {filledCount > 0 && (
             <Text style={styles.headerCount}>{filledCount}/6</Text>
           )}

@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, Line, Pattern, Rect } from 'react-native-svg';
 import { Icon } from '../components/Icon';
@@ -117,6 +118,7 @@ function MealSheet({
   onClose: () => void;
   onSelect: (mealId: string) => void;
 }) {
+  const { t } = useTranslation();
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const sheetAnim = useRef(new Animated.Value(300)).current;
   const [mounted, setMounted] = useState(false);
@@ -154,7 +156,7 @@ function MealSheet({
         ]}
       >
         <View style={styles.sheetHandle} />
-        <Text style={styles.sheetTitle}>Ajouter à un repas</Text>
+        <Text style={styles.sheetTitle}>{t('savedDetail.addToMeal')}</Text>
         {meals.map((m) => (
           <TouchableOpacity
             key={m.id}
@@ -189,6 +191,7 @@ interface Props {
 
 export function SavedDetailScreen({ plate, meals, settings, onBack, onAdd, onDelete, onUpdatePlate, onOpenMenu }: Props) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
   const [macroLoading, setMacroLoading] = useState(false);
@@ -248,7 +251,7 @@ export function SavedDetailScreen({ plate, meals, settings, onBack, onAdd, onDel
           <Icon name="back" size={20} color={Colors.ink} />
         </TouchableOpacity>
         <View style={styles.topbarCenter}>
-          <Text style={styles.eyebrow}>Plat sauvegardé</Text>
+          <Text style={styles.eyebrow}>{t('savedDetail.eyebrow')}</Text>
           <Text style={styles.plateTitle} numberOfLines={1}>{plate.name}</Text>
         </View>
         <TouchableOpacity
@@ -256,11 +259,11 @@ export function SavedDetailScreen({ plate, meals, settings, onBack, onAdd, onDel
           activeOpacity={0.7}
           onPress={() =>
             Alert.alert(
-              'Supprimer ce plat ?',
-              `« ${plate.name} » sera supprimé définitivement.`,
+              t('savedDetail.deleteTitle'),
+              t('savedDetail.deleteMsg', { name: plate.name }),
               [
-                { text: 'Annuler', style: 'cancel' },
-                { text: 'Supprimer', style: 'destructive', onPress: onDelete },
+                { text: t('savedDetail.deleteCancel'), style: 'cancel' },
+                { text: t('savedDetail.deleteConfirm'), style: 'destructive', onPress: onDelete },
               ]
             )
           }
@@ -320,7 +323,7 @@ export function SavedDetailScreen({ plate, meals, settings, onBack, onAdd, onDel
 
         {/* Macros */}
         <View style={styles.macrosSectionHeader}>
-          <Text style={styles.macrosSectionTitle}>Macronutriments</Text>
+          <Text style={styles.macrosSectionTitle}>{t('savedDetail.macros')}</Text>
           <TouchableOpacity
             style={[styles.macroAiBtn, macroLoading && styles.macroAiBtnLoading]}
             onPress={handleCalculateMacros}
@@ -333,7 +336,7 @@ export function SavedDetailScreen({ plate, meals, settings, onBack, onAdd, onDel
               <Icon name="sparkle" size={11} color={Colors.paper2} />
             )}
             <Text style={styles.macroAiBtnText}>
-              {macroLoading ? 'Calcul…' : 'Calculer IA'}
+              {macroLoading ? t('savedDetail.calculating') : t('savedDetail.calcMacros')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -342,21 +345,21 @@ export function SavedDetailScreen({ plate, meals, settings, onBack, onAdd, onDel
         )}
         <View style={styles.macrosSection}>
           <MacroBar
-            label="Protéines"
+            label={t('savedDetail.protein')}
             value={plate.macros.protein}
             unit="g"
             color={Colors.ok}
             pct={(plate.macros.protein / totalMacro) * 100}
           />
           <MacroBar
-            label="Glucides"
+            label={t('savedDetail.carbs')}
             value={plate.macros.carbs}
             unit="g"
             color={Colors.signal}
             pct={(plate.macros.carbs / totalMacro) * 100}
           />
           <MacroBar
-            label="Lipides"
+            label={t('savedDetail.fat')}
             value={plate.macros.fat}
             unit="g"
             color={Colors.ink}
@@ -387,7 +390,7 @@ export function SavedDetailScreen({ plate, meals, settings, onBack, onAdd, onDel
               <Icon name="sparkle" size={11} color={Colors.paper2} />
             )}
             <Text style={styles.macroAiBtnText}>
-              {commentLoading ? 'Analyse…' : plate.aiComment ? 'Régénérer' : 'Commentaire IA'}
+              {commentLoading ? t('savedDetail.analyzing') : plate.aiComment ? t('savedDetail.regenerate') : t('savedDetail.aiComment')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -396,8 +399,8 @@ export function SavedDetailScreen({ plate, meals, settings, onBack, onAdd, onDel
 
         {/* Ingredients */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionLabel}>Ingrédients</Text>
-          <Text style={styles.sectionCount}>{plate.recipe.length} aliments</Text>
+          <Text style={styles.sectionLabel}>{t('savedDetail.ingredients')}</Text>
+          <Text style={styles.sectionCount}>{t('savedDetail.foodCount', { count: plate.recipe.length, s: plate.recipe.length > 1 ? 's' : '' })}</Text>
         </View>
         {plate.recipe.map((item, i) => (
           <IngredientRow
@@ -414,7 +417,7 @@ export function SavedDetailScreen({ plate, meals, settings, onBack, onAdd, onDel
         {/* Note if any */}
         {plate.note && (
           <View style={styles.noteBlock}>
-            <Text style={styles.noteLabel}>Note</Text>
+            <Text style={styles.noteLabel}>{t('savedDetail.note')}</Text>
             <Text style={styles.noteText}>{plate.note}</Text>
           </View>
         )}
@@ -428,7 +431,7 @@ export function SavedDetailScreen({ plate, meals, settings, onBack, onAdd, onDel
           activeOpacity={0.85}
         >
           <Icon name="plus" size={18} color={Colors.paper} />
-          <Text style={styles.addBtnText}>Ajouter au journal</Text>
+          <Text style={styles.addBtnText}>{t('savedDetail.addToJournal')}</Text>
         </TouchableOpacity>
       </View>
 

@@ -4,6 +4,7 @@
  * micronutriments, widget symptômes et calendrier de navigation historique.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Modal,
@@ -38,7 +39,9 @@ import { DayTip } from '../types/tips';
 // ── Date helpers ──────────────────────────────────────────────
 
 const DAYS_FR   = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+const DAYS_EN   = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MONTHS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const MONTHS_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 function todayDateStr(): string {
   return new Date().toISOString().slice(0, 10);
@@ -50,16 +53,24 @@ function addDays(dateStr: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-function formatDateLabel(dateStr: string, todayStr: string): { headline: string; sub: string; isPast: boolean; isFuture: boolean } {
+function formatDateLabel(
+  dateStr: string,
+  todayStr: string,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  lang: string,
+): { headline: string; sub: string; isPast: boolean; isFuture: boolean } {
   const diff = Math.round((new Date(dateStr + 'T12:00:00').getTime() - new Date(todayStr + 'T12:00:00').getTime()) / 86400000);
   const d = new Date(dateStr + 'T12:00:00');
-  const sub = `${DAYS_FR[d.getDay()]} ${d.getDate()} ${MONTHS_FR[d.getMonth()]} ${d.getFullYear()}`;
-  if (diff === 0)  return { headline: "Aujourd'hui", sub, isPast: false, isFuture: false };
-  if (diff === -1) return { headline: 'Hier',         sub, isPast: true,  isFuture: false };
-  if (diff === -2) return { headline: 'Avant-hier',   sub, isPast: true,  isFuture: false };
-  if (diff === 1)  return { headline: 'Demain',        sub, isPast: false, isFuture: true };
-  if (diff < 0)    return { headline: `Il y a ${Math.abs(diff)} jours`, sub, isPast: true,  isFuture: false };
-  return             { headline: `Dans ${diff} jours`, sub, isPast: false, isFuture: true };
+  const isFr = lang !== 'en';
+  const days   = isFr ? DAYS_FR   : DAYS_EN;
+  const months = isFr ? MONTHS_FR : MONTHS_EN;
+  const sub = `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  if (diff === 0)  return { headline: t('home.today'),             sub, isPast: false, isFuture: false };
+  if (diff === -1) return { headline: t('home.yesterday'),         sub, isPast: true,  isFuture: false };
+  if (diff === -2) return { headline: t('home.dayBeforeYesterday'),sub, isPast: true,  isFuture: false };
+  if (diff === 1)  return { headline: t('home.tomorrow'),          sub, isPast: false, isFuture: true };
+  if (diff < 0)    return { headline: t('home.daysAgo', { count: Math.abs(diff) }), sub, isPast: true,  isFuture: false };
+  return             { headline: t('home.inDays', { count: diff }), sub, isPast: false, isFuture: true };
 }
 
 // ── Kcal ring ────────────────────────────────────────────────
@@ -163,20 +174,21 @@ function VitaminRow({ v }: { v: Vitamin }) {
 const VIT_ROW_HEIGHT = 39; // paddingVertical(18) + border(1) + content(~20)
 
 function VitaminPanel({ vitamins }: { vitamins: Vitamin[] }) {
+  const { t } = useTranslation();
   const onTarget = vitamins.filter((v) => v.today / v.rda >= 1).length;
   return (
     <View style={styles.vitsCard}>
       <View style={styles.vitsHead}>
         <View>
-          <Text style={styles.vitsTtl}>Vitamines</Text>
-          <Text style={styles.vitsTtlSub}>{vitamins.length} essentielles · % ANR</Text>
+          <Text style={styles.vitsTtl}>{t('home.vitamins')}</Text>
+          <Text style={styles.vitsTtlSub}>{t('home.vitaminsSubtitle', { count: vitamins.length })}</Text>
         </View>
         <View style={styles.vitsMeta}>
           <Text style={styles.vitsMetaBig}>
             {onTarget}
             <Text style={styles.vitsMetaOf}>/{vitamins.length}</Text>
           </Text>
-          <Text style={styles.vitsMetaLabel}>atteintes</Text>
+          <Text style={styles.vitsMetaLabel}>{t('home.vitaminsAchieved')}</Text>
         </View>
       </View>
       <ScrollView
@@ -189,7 +201,7 @@ function VitaminPanel({ vitamins }: { vitamins: Vitamin[] }) {
         ))}
       </ScrollView>
       <View style={styles.vitsFoot}>
-        <Text style={styles.vitsFootLabel}>ANR · adulte 31-50</Text>
+        <Text style={styles.vitsFootLabel}>{t('home.anr')}</Text>
         <View style={styles.vitsLegend}>
           <View style={styles.vitsLegendItem}>
             <View style={[styles.vitsSwatch, { backgroundColor: Colors.warn }]} />
@@ -224,6 +236,7 @@ function EditPortionModal({
   onSave: (newPortion: number) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [value, setValue] = useState(portionNum);
   useEffect(() => { if (visible) setValue(portionNum); }, [visible, portionNum]);
 
@@ -257,10 +270,10 @@ function EditPortionModal({
           <Text style={editStyles.kcalPreview}>≈ {estimatedKcal} kcal</Text>
           <View style={editStyles.btnRow}>
             <TouchableOpacity style={editStyles.cancelBtn} onPress={onCancel} activeOpacity={0.7}>
-              <Text style={editStyles.cancelText}>Annuler</Text>
+              <Text style={editStyles.cancelText}>{t('editPortion.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={editStyles.saveBtn} onPress={() => onSave(value)} activeOpacity={0.85}>
-              <Text style={editStyles.saveText}>Enregistrer</Text>
+              <Text style={editStyles.saveText}>{t('editPortion.save')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -282,6 +295,7 @@ function MealCard({
   onRemoveItem: (mealId: string, itemIdx: number) => void;
   onEditPress: (mealId: string, itemIdx: number) => void;
 }) {
+  const { t } = useTranslation();
   const total = meal.items.reduce((s, i) => s + i.kcal, 0);
   return (
     <View style={styles.mealCard}>
@@ -328,13 +342,13 @@ function MealCard({
       })}
       {meal.items.length === 0 ? (
         <View style={styles.mealEmpty}>
-          <Text style={styles.mealEmptyText}>Aucun aliment enregistré</Text>
+          <Text style={styles.mealEmptyText}>{t('home.noFoodLogged')}</Text>
           <TouchableOpacity
             style={styles.mealEmptyBtn}
             onPress={() => onAdd(meal.id)}
             activeOpacity={0.7}
           >
-            <Text style={styles.mealEmptyBtnText}>Ajouter</Text>
+            <Text style={styles.mealEmptyBtnText}>{t('home.addFood')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -344,7 +358,7 @@ function MealCard({
           activeOpacity={0.7}
         >
           <Icon name="plus" size={12} color={Colors.muted} />
-          <Text style={styles.addMoreText}>Ajouter un aliment</Text>
+          <Text style={styles.addMoreText}>{t('home.addFoodBtn')}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -368,6 +382,7 @@ function DayComment({
   readOnly: boolean;
   onSave: (date: string, text: string) => void;
 }) {
+  const { t } = useTranslation();
   const [text, setText] = useState(value);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -383,10 +398,10 @@ function DayComment({
 
   if (readOnly && !value.trim()) return null;
 
-  const handleChange = (t: string) => {
-    setText(t);
+  const handleChange = (txt: string) => {
+    setText(txt);
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => onSave(date, t), 600);
+    saveTimer.current = setTimeout(() => onSave(date, txt), 600);
   };
 
   const handleBlur = () => {
@@ -403,7 +418,7 @@ function DayComment({
         multiline
         scrollEnabled
         editable={!readOnly}
-        placeholder="Notes du jour, ressenti, observations…"
+        placeholder={t('home.notesPlaceholder')}
         placeholderTextColor={Colors.muted2}
         style={[styles.commentInput, readOnly && styles.commentInputReadOnly]}
         textAlignVertical="top"
@@ -411,7 +426,7 @@ function DayComment({
       />
       {!readOnly && (
         <Text style={styles.commentCounter}>
-          {text.length > 0 ? `${text.length} car.` : ''}
+          {text.length > 0 ? t('home.charCount', { count: text.length }) : ''}
         </Text>
       )}
     </View>
@@ -475,6 +490,7 @@ export function HomeScreen({
   dismissedTipIds,
   onDismissTip,
 }: HomeScreenProps) {
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const [helpVisible, setHelpVisible] = useState(false);
   const [calendarVisible, setCalendarVisible] = useState(false);
@@ -491,7 +507,7 @@ export function HomeScreen({
 
   const todayStr = todayDateStr();
   const effectiveDate = viewingDate ?? todayStr;
-  const { headline, sub: dateSub, isPast, isFuture } = formatDateLabel(effectiveDate, todayStr);
+  const { headline, sub: dateSub, isPast, isFuture } = formatDateLabel(effectiveDate, todayStr, t, i18n.language);
   const isToday = !isPast && !isFuture;
 
   const totals = useMemo(() => {
@@ -540,7 +556,7 @@ export function HomeScreen({
       setAdviceError(
         isConfigError
           ? msg
-          : "Pour l'instant, je ne peux pas fournir d'avis nutritionnel. Réessaie dans quelques instants.",
+          : t('home.adviceError'),
       );
     } finally {
       setAdviceLoading(false);
@@ -613,7 +629,7 @@ export function HomeScreen({
         {/* Hero */}
         <View style={styles.hero}>
           <Text style={styles.heroEyebrow}>
-            {isFuture ? 'Planification' : isPast ? 'Historique' : 'Journal du jour'}
+            {isFuture ? t('home.planning') : isPast ? t('home.history') : t('home.todayJournal')}
           </Text>
           <Text style={styles.heroTitle}>{headline}</Text>
 
@@ -625,13 +641,13 @@ export function HomeScreen({
                 <KcalRing pct={kcalPct} />
                 <View style={styles.ringCenter}>
                   <Text style={styles.ringNum}>{remaining}</Text>
-                  <Text style={styles.ringLabel}>restant</Text>
+                  <Text style={styles.ringLabel}>{t('home.remaining')}</Text>
                 </View>
               </View>
 
               {/* Meta */}
               <View style={styles.kcalMeta}>
-                <Text style={styles.kcalMetaLabel}>Apport · Kcal</Text>
+                <Text style={styles.kcalMetaLabel}>{t('home.calorieIntake')}</Text>
                 <Text style={styles.kcalMetaBig}>
                   {Math.round(totals.kcal)}
                   <Text style={styles.kcalMetaOf}>/ {profile.kcalTarget}</Text>
@@ -639,9 +655,13 @@ export function HomeScreen({
                 <Text style={styles.kcalMetaSub}>
                   {totals.kcal === 0
                     ? isFuture
-                      ? 'Aucun repas planifié pour ce jour.'
-                      : 'Aucun repas enregistré.'
-                    : `${Math.round(kcalPct * 100)}% de l'objectif · ${emptyMeals} créneau${emptyMeals > 1 ? 'x' : ''} vide${emptyMeals > 1 ? 's' : ''}.`
+                      ? t('home.noMealPlanned')
+                      : t('home.noMealLogged')
+                    : t('home.kcalObjective', {
+                        pct: Math.round(kcalPct * 100),
+                        empty: emptyMeals,
+                        s: emptyMeals > 1 ? 's' : '',
+                      })
                   }
                 </Text>
               </View>
@@ -649,17 +669,17 @@ export function HomeScreen({
 
             {/* Macros */}
             <View style={styles.macros}>
-              <MacroBar name="Protéines" value={totals.protein} target={profile.macroTargets.protein} />
-              <MacroBar name="Glucides"  value={totals.carbs}   target={profile.macroTargets.carbs} />
-              <MacroBar name="Lipides"   value={totals.fat}     target={profile.macroTargets.fat} />
+              <MacroBar name={t('home.protein')} value={totals.protein} target={profile.macroTargets.protein} />
+              <MacroBar name={t('home.carbs')}   value={totals.carbs}   target={profile.macroTargets.carbs} />
+              <MacroBar name={t('home.fat')}     value={totals.fat}     target={profile.macroTargets.fat} />
             </View>
           </View>
         </View>
 
         {/* Journal */}
         <View style={styles.sectionHead}>
-          <Text style={styles.sectionTitle}>{isFuture ? 'Planification' : 'Repas'}</Text>
-          <Text style={styles.sectionMeta}>{totalItems} aliment{totalItems > 1 ? 's' : ''}</Text>
+          <Text style={styles.sectionTitle}>{isFuture ? t('home.planning_section') : t('home.meals')}</Text>
+          <Text style={styles.sectionMeta}>{t('home.foodCount', { count: totalItems, s: totalItems > 1 ? 's' : '' })}</Text>
         </View>
         <View style={styles.mealBlock}>
           {meals.map((m) => (
@@ -697,8 +717,8 @@ export function HomeScreen({
         {!isFuture && (autoEvents.length > 0 || isToday) && (
           <>
             <View style={styles.sectionHead}>
-              <Text style={styles.sectionTitle}>Timeline 📊</Text>
-              <Text style={styles.sectionMeta}>physiologique</Text>
+              <Text style={styles.sectionTitle}>{t('home.timeline')}</Text>
+              <Text style={styles.sectionMeta}>{t('home.timelineSubtitle')}</Text>
             </View>
             <PhysioTimeline
               autoEvents={autoEvents}
@@ -719,8 +739,8 @@ export function HomeScreen({
         {isToday && (
           <>
             <View style={styles.sectionHead}>
-              <Text style={styles.sectionTitle}>Micronutriments</Text>
-              <Text style={styles.sectionMeta}>apport du jour</Text>
+              <Text style={styles.sectionTitle}>{t('home.micronutrients')}</Text>
+              <Text style={styles.sectionMeta}>{t('home.dailyIntake')}</Text>
             </View>
             <View style={styles.vitsWrap}>
               <VitaminPanel vitamins={profile.vitamins} />
@@ -732,8 +752,8 @@ export function HomeScreen({
         {!isFuture && totals.kcal > 0 && (
           <>
             <View style={styles.sectionHead}>
-              <Text style={styles.sectionTitle}>Avis Nutritionnel</Text>
-              <Text style={styles.sectionMeta}>analyse IA</Text>
+              <Text style={styles.sectionTitle}>{t('home.nutritionalAdvice')}</Text>
+              <Text style={styles.sectionMeta}>{t('home.aiAnalysis')}</Text>
             </View>
             <View style={styles.adviceWrap}>
               {aiAdvice ? (
@@ -756,7 +776,7 @@ export function HomeScreen({
                   : <Icon name="sparkle" size={13} color={Colors.paper2} />
                 }
                 <Text style={styles.adviceBtnText}>
-                  {adviceLoading ? 'Analyse…' : aiAdvice ? 'Régénérer' : "Générer l'avis IA"}
+                  {adviceLoading ? t('home.analyzing') : aiAdvice ? t('home.regenerateAdvice') : t('home.generateAdvice')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -767,8 +787,8 @@ export function HomeScreen({
         {!isFuture && (
           <>
             <View style={styles.sectionHead}>
-              <Text style={styles.sectionTitle}>Bien-être</Text>
-              <Text style={styles.sectionMeta}>{isToday ? 'comment tu te sens' : 'ressenti du jour'}</Text>
+              <Text style={styles.sectionTitle}>{t('home.wellness')}</Text>
+              <Text style={styles.sectionMeta}>{isToday ? t('home.wellnessToday') : t('home.wellnessPast')}</Text>
             </View>
             <SymptomWidget
               entry={symptomEntry}
@@ -779,8 +799,8 @@ export function HomeScreen({
 
             {/* Notes du jour */}
             <View style={styles.sectionHead}>
-              <Text style={styles.sectionTitle}>Notes</Text>
-              <Text style={styles.sectionMeta}>{isToday ? 'saisie libre' : 'lecture seule'}</Text>
+              <Text style={styles.sectionTitle}>{t('home.notes')}</Text>
+              <Text style={styles.sectionMeta}>{isToday ? t('home.notesEdit') : t('home.notesReadOnly')}</Text>
             </View>
             <View style={styles.commentWrap}>
               <DayComment
@@ -801,7 +821,7 @@ export function HomeScreen({
         activeOpacity={0.85}
       >
         <Icon name="plus" size={20} color={Colors.paper2} />
-        <Text style={styles.fabText}>{isFuture ? 'Planifier un repas' : 'Ajouter un aliment'}</Text>
+        <Text style={styles.fabText}>{isFuture ? t('home.planMeal') : t('home.addFoodBtn')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={[styles.fab, styles.fabSecondary, { bottom: insets.bottom + 158 }]}
@@ -809,7 +829,7 @@ export function HomeScreen({
         activeOpacity={0.85}
       >
         <Icon name="plus" size={20} color={Colors.ink} />
-        <Text style={[styles.fabText, styles.fabSecondaryText]}>Ajouter un aliment aux repas</Text>
+        <Text style={[styles.fabText, styles.fabSecondaryText]}>{t('home.addFoodToMeals')}</Text>
       </TouchableOpacity>
 
       <EditPortionModal

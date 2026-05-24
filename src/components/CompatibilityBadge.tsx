@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   CompatibilityResult,
@@ -93,6 +94,7 @@ export function CompatBadge({ result }: { result: CompatibilityResult }) {
 // ── Full card (detail screen) ─────────────────────────────────
 
 export function CompatCard({ result }: { result: CompatibilityResult }) {
+  const { t } = useTranslation();
   const color = COMPAT_COLORS[result.level];
   const label = COMPAT_LABELS[result.level];
   const pct = result.score;
@@ -102,7 +104,7 @@ export function CompatCard({ result }: { result: CompatibilityResult }) {
       {/* Header row */}
       <View style={styles.cardHeader}>
         <View style={styles.scoreBlock}>
-          <Text style={styles.cardEyebrow}>Compatibilité personnalisée</Text>
+          <Text style={styles.cardEyebrow}>{t('compat.personalizedCompatibility')}</Text>
           <View style={styles.scoreRow}>
             <Text style={[styles.scoreNum, { color }]}>{pct}</Text>
             <Text style={styles.scoreOf}>/100</Text>
@@ -143,7 +145,7 @@ export function CompatCard({ result }: { result: CompatibilityResult }) {
       {/* Reasons */}
       {result.reasons.length > 0 && (
         <View style={styles.reasonsBlock}>
-          <Text style={styles.blockTitle}>Facteurs de risque</Text>
+          <Text style={styles.blockTitle}>{t('compat.riskFactors')}</Text>
           {result.reasons.map((r, i) => {
             const rColor = severityColor(r.severity);
             const icon = severityIcon(r.severity);
@@ -163,7 +165,7 @@ export function CompatCard({ result }: { result: CompatibilityResult }) {
       {/* Positives */}
       {result.positives.length > 0 && (
         <View style={styles.posBlock}>
-          <Text style={styles.blockTitle}>Points positifs</Text>
+          <Text style={styles.blockTitle}>{t('compat.positivePoints')}</Text>
           {result.positives.map((p, i) => (
             <View key={i} style={styles.posRow}>
               <Text style={styles.posIcon}>✓</Text>
@@ -177,10 +179,7 @@ export function CompatCard({ result }: { result: CompatibilityResult }) {
       )}
 
       {/* Footer disclaimer */}
-      <Text style={styles.disclaimer}>
-        Score calculé d'après votre profil allergènes, régimes actifs et objectifs.
-        Consultez un professionnel de santé en cas de doute.
-      </Text>
+      <Text style={styles.disclaimer}>{t('compat.disclaimer')}</Text>
     </View>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AIJobSnapshot } from '../services/aiQueue';
@@ -29,6 +30,7 @@ function PulseDot() {
 }
 
 export function AIQueueBanner({ jobs, hasTabBar, onDismiss, onCancelRunning, onViewResult, doneSubText }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(200)).current;
   const [snoozed, setSnoozed] = useState(false);
@@ -105,13 +107,13 @@ export function AIQueueBanner({ jobs, hasTabBar, onDismiss, onCancelRunning, onV
   if (running) {
     icon = '✦';
     mainText = running.label;
-    const stepPart = running.step ?? 'IA en cours';
+    const stepPart = running.step ?? t('aiQueue.generating');
     const extra = pending.length > 0 ? `  ·  ${pending.length} en attente` : '';
     subText = `${stepPart}  ·  ${elapsedSeconds}s${extra}`;
   } else if (errors.length > 0 && done.length === 0) {
     icon = '!';
     mainText = errors[0].label;
-    subText = errors[0].error ?? 'Erreur';
+    subText = errors[0].error ?? t('aiQueue.error');
     isError = true;
   } else if (allFinished) {
     icon = '✓';
@@ -148,7 +150,7 @@ export function AIQueueBanner({ jobs, hasTabBar, onDismiss, onCancelRunning, onV
       {/* Cancel button while running */}
       {!allFinished && running && (
         <TouchableOpacity onPress={onCancelRunning} style={styles.cancelBtn} activeOpacity={0.7}>
-          <Text style={styles.cancelText}>Annuler</Text>
+          <Text style={styles.cancelText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
       )}
 
@@ -161,11 +163,11 @@ export function AIQueueBanner({ jobs, hasTabBar, onDismiss, onCancelRunning, onV
               style={styles.viewBtn}
               activeOpacity={0.8}
             >
-              <Text style={styles.viewBtnText}>Voir</Text>
+              <Text style={styles.viewBtnText}>{t('aiQueue.tap')}</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity onPress={onDismiss} style={styles.dismissBtn} activeOpacity={0.7}>
-            <Text style={styles.dismissText}>Fermer</Text>
+            <Text style={styles.dismissText}>{t('common.close')}</Text>
           </TouchableOpacity>
         </View>
       )}

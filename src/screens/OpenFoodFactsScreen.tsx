@@ -4,6 +4,7 @@
  * Chips de catégories, compatibilité allergènes en temps réel, enrichissement IA optionnel.
  */
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   ScrollView,
@@ -54,12 +55,6 @@ function HighlightedIngredients({ segments }: { segments: TextSegment[] }) {
 
 // ── Score gauge ────────────────────────────────────────────────
 
-const SCORE_CONFIG = {
-  good:    { color: '#3F5A3A', bg: 'rgba(63,90,58,0.09)',   border: 'rgba(63,90,58,0.3)',   label: 'Digestion facile' },
-  caution: { color: '#6B5A2E', bg: 'rgba(107,90,46,0.09)', border: 'rgba(107,90,46,0.3)',  label: 'Attention à la portion' },
-  bad:     { color: '#8B3A2E', bg: 'rgba(139,58,46,0.09)', border: 'rgba(139,58,46,0.3)',  label: 'Déconseillé Low FODMAP' },
-};
-
 // ── Result card ────────────────────────────────────────────────
 
 function ResultCard({
@@ -73,6 +68,13 @@ function ResultCard({
   profile: UserProfile;
   onImport: () => void;
 }) {
+  const { t } = useTranslation();
+
+  const SCORE_CONFIG = {
+    good:    { color: '#3F5A3A', bg: 'rgba(63,90,58,0.09)',   border: 'rgba(63,90,58,0.3)',   label: t('openFoodFacts.scoreGood') },
+    caution: { color: '#6B5A2E', bg: 'rgba(107,90,46,0.09)', border: 'rgba(107,90,46,0.3)',  label: t('openFoodFacts.scoreCaution') },
+    bad:     { color: '#8B3A2E', bg: 'rgba(139,58,46,0.09)', border: 'rgba(139,58,46,0.3)',  label: t('openFoodFacts.scoreBad') },
+  };
   const [expanded, setExpanded] = useState(false);
 
   const n     = product.nutriments ?? {};
@@ -158,7 +160,7 @@ function ResultCard({
           {/* Score header */}
           <View style={styles.scoreHeader}>
             <View style={{ gap: 2 }}>
-              <Text style={styles.analysisEyebrow}>Score digestif personnalisé</Text>
+              <Text style={styles.analysisEyebrow}>{t('openFoodFacts.digestiveScore')}</Text>
               <View style={styles.scoreRow}>
                 <Text style={[styles.scoreBig, { color: sc.color }]}>{analysis.digestiveScore}</Text>
                 <Text style={styles.scoreOf}>/100</Text>
@@ -176,7 +178,7 @@ function ResultCard({
           {/* Flags */}
           {analysis.flags.length > 0 && (
             <View style={styles.flagsBlock}>
-              <Text style={styles.blockTitle}>Alertes ingrédients</Text>
+              <Text style={styles.blockTitle}>{t('openFoodFacts.ingredientAlerts')}</Text>
               {analysis.flags.map((f, i) => {
                 const fc = FLAG_COLOR[f.level];
                 return (
@@ -204,7 +206,7 @@ function ResultCard({
           {/* Positives */}
           {analysis.positives.length > 0 && (
             <View style={styles.positivesBlock}>
-              <Text style={styles.blockTitle}>Points positifs</Text>
+              <Text style={styles.blockTitle}>{t('openFoodFacts.positivePoints')}</Text>
               <View style={styles.positivesRow}>
                 {analysis.positives.map((p, i) => (
                   <View key={i} style={styles.positivePill}>
@@ -219,7 +221,7 @@ function ResultCard({
           {/* Highlighted ingredients */}
           {hasIngredients && (
             <View style={styles.ingredientsBlock}>
-              <Text style={styles.blockTitle}>Ingrédients</Text>
+              <Text style={styles.blockTitle}>{t('openFoodFacts.ingredients')}</Text>
               <HighlightedIngredients segments={analysis.segments} />
             </View>
           )}
@@ -236,12 +238,12 @@ function ResultCard({
         {imported ? (
           <>
             <Icon name="check" size={14} color={Colors.ok} />
-            <Text style={styles.importBtnDoneText}>Ajouté</Text>
+            <Text style={styles.importBtnDoneText}>{t('openFoodFacts.added')}</Text>
           </>
         ) : (
           <>
             <Icon name="plus" size={14} color={Colors.ink} />
-            <Text style={styles.importBtnText}>Importer</Text>
+            <Text style={styles.importBtnText}>{t('openFoodFacts.import')}</Text>
           </>
         )}
       </TouchableOpacity>
@@ -290,6 +292,7 @@ interface Props {
 }
 
 export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFood, onBack, onOpenMenu, settings, initialQuery = '', onStartDemo }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
   const dropdownPressRef = useRef(false);
@@ -403,8 +406,8 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
           <Icon name="back" size={20} color={Colors.ink} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.eyebrow}>Base de données mondiale</Text>
-          <Text style={styles.title}>Open Food Facts</Text>
+          <Text style={styles.eyebrow}>{t('openFoodFacts.eyebrow')}</Text>
+          <Text style={styles.title}>{t('openFoodFacts.title')}</Text>
         </View>
         <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
           <Icon name="menu" size={22} color={Colors.ink} />
@@ -434,7 +437,7 @@ export function OpenFoodFactsScreen({ existingIds, profile, onImport, onUpdateFo
             <TextInput
               ref={inputRef}
               style={styles.input}
-              placeholder="Rechercher un produit, une marque…"
+              placeholder={t('openFoodFacts.searchPlaceholder')}
               placeholderTextColor={Colors.muted2}
               value={query}
               onChangeText={(t) => { setQuery(t); if (t) setActiveGroup(null); }}

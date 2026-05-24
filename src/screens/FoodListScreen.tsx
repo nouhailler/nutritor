@@ -5,6 +5,7 @@
  * Ajout rapide d'un aliment à un plat sauvegardé via bottom sheet.
  */
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Platform,
@@ -423,6 +424,7 @@ export function FoodListScreen({
   onOpenPhotoAI,
   onStartDemo,
 }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query, 300);
@@ -477,15 +479,15 @@ export function FoodListScreen({
     const doDelete = () => onDeleteFood(food.id);
     if (Platform.OS === 'web') {
       // eslint-disable-next-line no-alert
-      if (window.confirm(`Supprimer « ${food.name} » de ta bibliothèque ?`)) doDelete();
+      if (window.confirm(t('foodList.deleteFoodMsg', { name: food.name }))) doDelete();
       return;
     }
     Alert.alert(
-      'Supprimer cet aliment ?',
-      `« ${food.name} » sera retiré de ta bibliothèque.`,
+      t('foodList.deleteFood'),
+      t('foodList.deleteFoodMsg', { name: food.name }),
       [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Supprimer', style: 'destructive', onPress: doDelete },
+        { text: t('foodList.deleteCancel'), style: 'cancel' },
+        { text: t('foodList.deleteConfirm'), style: 'destructive', onPress: doDelete },
       ],
     );
   };
@@ -504,8 +506,8 @@ export function FoodListScreen({
           <Icon name="menu" size={22} color={Colors.ink} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.eyebrow}>Ma bibliothèque</Text>
-          <Text style={styles.title}>Aliments</Text>
+          <Text style={styles.eyebrow}>{t('foodList.eyebrow')}</Text>
+          <Text style={styles.title}>{t('foodList.title')}</Text>
         </View>
         <View style={styles.countBadge}>
           <Text style={styles.countBadgeText}>{foodList.length}</Text>
@@ -520,7 +522,7 @@ export function FoodListScreen({
         <Icon name="search" size={18} color={Colors.muted2} />
         <TextInput
           style={styles.input}
-          placeholder="Rechercher un aliment…"
+          placeholder={t('foodList.searchPlaceholder')}
           placeholderTextColor={Colors.muted2}
           value={query}
           onChangeText={setQuery}
@@ -530,7 +532,7 @@ export function FoodListScreen({
         />
         {query.length > 0 && (
           <TouchableOpacity onPress={() => setQuery('')} activeOpacity={0.7}>
-            <Text style={styles.clearBtn}>Effacer</Text>
+            <Text style={styles.clearBtn}>{t('common.clear')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -570,14 +572,14 @@ export function FoodListScreen({
         {debouncedQuery ? (
           <>
             <SectionLabel
-              left="Résultats"
-              right={`${filtered.length} aliment${filtered.length !== 1 ? 's' : ''}`}
+              left={t('search.allFoods')}
+              right={t('foodList.foodCount', { count: filtered.length, s: filtered.length > 1 ? 's' : '' })}
             />
             {filtered.length === 0 ? (
               <View style={styles.emptyBox}>
-                <Text style={styles.emptyTitle}>Aucun résultat</Text>
+                <Text style={styles.emptyTitle}>{t('foodList.emptySearch')}</Text>
                 <Text style={styles.emptyDesc}>
-                  Essaie un autre terme ou ajoute un aliment via CIQUAL, Open Food Facts ou l'IA.
+                  {t('foodList.empty')}
                 </Text>
               </View>
             ) : (
@@ -599,7 +601,7 @@ export function FoodListScreen({
             {/* Récemment ajoutés */}
             {sections.recentlyAdded.length > 0 && (
               <>
-                <SectionLabel left="Récemment ajoutés" right={`${sections.recentlyAdded.length}`} />
+                <SectionLabel left={t('search.recentlyAdded')} right={`${sections.recentlyAdded.length}`} />
                 {sections.recentlyAdded.map((food) => (
                   <FoodRow key={food.id} food={food} profile={profile}
                     onPress={() => onPickFood(food)}
@@ -613,7 +615,7 @@ export function FoodListScreen({
             {/* Récemment utilisés */}
             {sections.recentlyUsed.length > 0 && (
               <>
-                <SectionLabel left="Récemment utilisés" right={`${sections.recentlyUsed.length}`} />
+                <SectionLabel left={t('search.recentlyAdded')} right={`${sections.recentlyUsed.length}`} />
                 {sections.recentlyUsed.map((food) => (
                   <FoodRow key={food.id} food={food} profile={profile}
                     onPress={() => onPickFood(food)}
@@ -627,7 +629,7 @@ export function FoodListScreen({
             {/* Récemment consultés */}
             {sections.recentlyViewed.length > 0 && (
               <>
-                <SectionLabel left="Récemment consultés" right={`${sections.recentlyViewed.length}`} />
+                <SectionLabel left={t('search.recentlyAdded')} right={`${sections.recentlyViewed.length}`} />
                 {sections.recentlyViewed.map((food) => (
                   <FoodRow key={food.id} food={food} profile={profile}
                     onPress={() => onPickFood(food)}
@@ -642,7 +644,7 @@ export function FoodListScreen({
             {sections.rest.length > 0 && (
               <>
                 <SectionLabel
-                  left="Tous les aliments"
+                  left={t('search.allFoods')}
                   right={`${foodList.length}`}
                 />
                 {sections.rest.map((food) => (
@@ -657,10 +659,8 @@ export function FoodListScreen({
 
             {foodList.length === 0 && (
               <View style={styles.emptyBox}>
-                <Text style={styles.emptyTitle}>Bibliothèque vide</Text>
-                <Text style={styles.emptyDesc}>
-                  Ajoute ton premier aliment via CIQUAL, Open Food Facts, le scanner ou l'IA.
-                </Text>
+                <Text style={styles.emptyTitle}>{t('foodList.title')}</Text>
+                <Text style={styles.emptyDesc}>{t('foodList.empty')}</Text>
               </View>
             )}
           </>

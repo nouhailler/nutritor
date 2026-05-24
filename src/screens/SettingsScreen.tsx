@@ -5,6 +5,8 @@
  * Import et export JSON de la bibliothèque d'aliments.
  */
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 import {
   ActivityIndicator,
   Alert,
@@ -164,6 +166,7 @@ export function SettingsScreen({
   showToast,
   onStartDemo,
 }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [local, setLocal] = useState<AppSettings>(settings);
   const [loadingModels, setLoadingModels] = useState(false);
@@ -181,13 +184,13 @@ export function SettingsScreen({
 
   const handleCopyLogs = useCallback(async () => {
     await Clipboard.setStringAsync(logText);
-    showToast('Logs copiés dans le presse-papier');
-  }, [logText, showToast]);
+    showToast(t('settings.logsCopied'));
+  }, [logText, showToast, t]);
 
   const handleClearLogs = useCallback(() => {
     aiLogger.clear();
-    showToast('Logs effacés');
-  }, []);
+    showToast(t('settings.logsCleared'));
+  }, [t]);
 
   const update = (patch: Partial<AppSettings>) =>
     setLocal((s) => {
@@ -214,7 +217,7 @@ export function SettingsScreen({
 
   const fetchOpenRouterModels = async () => {
     if (!local.openrouter.apiKey.trim()) {
-      Alert.alert('Clé API manquante', 'Renseigne ta clé OpenRouter avant de rafraîchir.');
+      Alert.alert(t('settings.apiKeyMissing'), t('settings.apiKeyMissingMsg'));
       return;
     }
     setLoadingModels(true);
@@ -229,9 +232,9 @@ export function SettingsScreen({
         .map((m) => ({ id: m.id, name: m.name }))
         .sort((a, b) => a.name.localeCompare(b.name));
       updateOpenRouter({ models: free, model: free[0]?.id ?? local.openrouter.model });
-      showToast(`${free.length} modèles gratuits chargés`);
+      showToast(t('settings.modelsLoaded', { count: free.length }));
     } catch (e: unknown) {
-      Alert.alert('Erreur', `Impossible de charger les modèles.\n${(e as Error).message}`);
+      Alert.alert(t('settings.errorTitle'), t('settings.modelsError', { error: (e as Error).message }));
     } finally {
       setLoadingModels(false);
     }
@@ -251,15 +254,15 @@ export function SettingsScreen({
         name: m.name,
       }));
       if (models.length === 0) {
-        Alert.alert('Aucun modèle', 'Ollama est accessible mais aucun modèle n\'est installé.');
+        Alert.alert(t('settings.ollamaNoModelTitle'), t('settings.ollamaNoModel'));
         return;
       }
       updateOllama({ model: models[0].id });
       showToast(`${models.length} modèles Ollama détectés`);
     } catch {
       Alert.alert(
-        'Ollama inaccessible',
-        `Vérife que Ollama tourne sur :\n${local.ollama.baseUrl}\n\nSur Android, utilise l'IP de ton PC (pas localhost).`,
+        t('settings.ollamaErrorTitle'),
+        t('settings.ollamaError', { url: local.ollama.baseUrl }),
       );
     } finally {
       setLoadingModels(false);
@@ -276,12 +279,12 @@ export function SettingsScreen({
       await FileSystem.writeAsStringAsync(path, json, { encoding: FileSystem.EncodingType.UTF8 });
       const available = await Sharing.isAvailableAsync();
       if (!available) {
-        Alert.alert('Partage non disponible', 'Le partage de fichiers n\'est pas supporté sur cet appareil.');
+        Alert.alert(t('settings.shareNotAvailableTitle'), t('settings.shareNotAvailableMsg'));
         return;
       }
-      await Sharing.shareAsync(path, { mimeType: 'application/json', dialogTitle: 'Exporter les aliments Nutritor' });
+      await Sharing.shareAsync(path, { mimeType: 'application/json', dialogTitle: t('settings.exportFoodsDialog') });
     } catch (e: unknown) {
-      Alert.alert('Erreur export', (e as Error).message);
+      Alert.alert(t('settings.exportErrorTitle'), (e as Error).message);
     } finally {
       setExportLoading(false);
     }
@@ -304,13 +307,13 @@ export function SettingsScreen({
       const parsed = JSON.parse(content);
       const foods: Food[] = Array.isArray(parsed) ? parsed : [parsed];
       if (!foods.every((f) => f.id && f.name && f.per100)) {
-        Alert.alert('Format invalide', 'Le fichier JSON ne contient pas des aliments valides.');
+        Alert.alert(t('settings.importFormatError'), t('settings.importFoodsFormatMsg'));
         return;
       }
       onImportFoods(foods);
-      showToast(`${foods.length} aliment${foods.length > 1 ? 's' : ''} importé${foods.length > 1 ? 's' : ''}`);
+      showToast(t('settings.importedFoods', { count: foods.length, s: foods.length > 1 ? 's' : '' }));
     } catch (e: unknown) {
-      Alert.alert('Erreur import', (e as Error).message);
+      Alert.alert(t('settings.importErrorTitle'), (e as Error).message);
     } finally {
       setImportLoading(false);
     }
@@ -326,12 +329,12 @@ export function SettingsScreen({
       await FileSystem.writeAsStringAsync(path, json, { encoding: FileSystem.EncodingType.UTF8 });
       const available = await Sharing.isAvailableAsync();
       if (!available) {
-        Alert.alert('Partage non disponible', 'Le partage de fichiers n\'est pas supporté sur cet appareil.');
+        Alert.alert(t('settings.shareNotAvailableTitle'), t('settings.shareNotAvailableMsg'));
         return;
       }
-      await Sharing.shareAsync(path, { mimeType: 'application/json', dialogTitle: 'Exporter les plats Nutritor' });
+      await Sharing.shareAsync(path, { mimeType: 'application/json', dialogTitle: t('settings.exportPlatesDialog') });
     } catch (e: unknown) {
-      Alert.alert('Erreur export', (e as Error).message);
+      Alert.alert(t('settings.exportErrorTitle'), (e as Error).message);
     } finally {
       setExportPlatesLoading(false);
     }
@@ -354,13 +357,13 @@ export function SettingsScreen({
       const parsed = JSON.parse(content);
       const plates: SavedPlate[] = Array.isArray(parsed) ? parsed : [parsed];
       if (!plates.every((p) => p.id && p.name && typeof p.kcal === 'number')) {
-        Alert.alert('Format invalide', 'Le fichier JSON ne contient pas des plats valides.');
+        Alert.alert(t('settings.importFormatError'), t('settings.importPlatesFormatMsg'));
         return;
       }
       onImportPlates(plates);
-      showToast(`${plates.length} plat${plates.length > 1 ? 's' : ''} importé${plates.length > 1 ? 's' : ''}`);
+      showToast(t('settings.importedPlates', { count: plates.length, s: plates.length > 1 ? 's' : '' }));
     } catch (e: unknown) {
-      Alert.alert('Erreur import', (e as Error).message);
+      Alert.alert(t('settings.importErrorTitle'), (e as Error).message);
     } finally {
       setImportPlatesLoading(false);
     }
@@ -379,8 +382,8 @@ export function SettingsScreen({
           <Icon name="back" size={20} color={Colors.ink} />
         </TouchableOpacity>
         <View>
-          <Text style={styles.eyebrow}>Application</Text>
-          <Text style={styles.title}>Paramètres</Text>
+          <Text style={styles.eyebrow}>{t('settings.eyebrow')}</Text>
+          <Text style={styles.title}>{t('settings.title')}</Text>
         </View>
         <TouchableOpacity style={styles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
           <Icon name="menu" size={22} color={Colors.ink} />
@@ -400,11 +403,11 @@ export function SettingsScreen({
         contentContainerStyle={styles.content}
       >
         {/* ── IA ─────────────────────────────────────────────── */}
-        <SectionHeader icon="cpu" label="Intelligence artificielle" />
+        <SectionHeader icon="cpu" label={t('settings.sectionAI')} />
         <Card>
           <View style={styles.providerSection}>
-            <Text style={styles.rowLabel}>Fournisseur</Text>
-            <Text style={styles.rowDesc}>Moteur utilisé pour enrichir les aliments</Text>
+            <Text style={styles.rowLabel}>{t('settings.provider')}</Text>
+            <Text style={styles.rowDesc}>{t('settings.providerDesc')}</Text>
             <View style={styles.pillGroup}>
               <ProviderPill label="OpenRouter" active={isOpenRouter}  onPress={() => setProvider('openrouter')} />
               <ProviderPill label="Anthropic"  active={isAnthropic}   onPress={() => setProvider('anthropic')} />
@@ -431,11 +434,11 @@ export function SettingsScreen({
               </View>
               <View style={styles.rowDivider} />
               <Row
-                label="Modèles gratuits"
+                label={t('settings.freeModels')}
                 description={
                   local.openrouter.models.length > 0
-                    ? `${local.openrouter.models.length} modèles disponibles`
-                    : 'Appuie sur Actualiser pour charger la liste'
+                    ? t('settings.freeModelsAvailable', { count: local.openrouter.models.length })
+                    : t('settings.freeModelsEmpty')
                 }
                 borderBottom={local.openrouter.models.length === 0}
                 right={
@@ -486,8 +489,8 @@ export function SettingsScreen({
               </View>
               <View style={styles.rowDivider} />
               <Row
-                label="Modèle Claude"
-                description="Sélectionne le modèle à utiliser"
+                label={t('settings.claudeModel')}
+                description={t('settings.modelSelectDesc')}
                 borderBottom={true}
               />
               <View style={styles.modelList}>
@@ -521,8 +524,8 @@ export function SettingsScreen({
               </View>
               <View style={styles.rowDivider} />
               <Row
-                label="Modèle GPT"
-                description="Sélectionne le modèle à utiliser"
+                label={t('settings.gptModel')}
+                description={t('settings.modelSelectDesc')}
                 borderBottom={true}
               />
               <View style={styles.modelList}>
@@ -556,11 +559,11 @@ export function SettingsScreen({
               </View>
               <View style={styles.rowDivider} />
               <Row
-                label="Tester la connexion"
+                label={t('settings.testConnection')}
                 description={
                   local.ollama.model
-                    ? `Modèle actif : ${local.ollama.model}`
-                    : 'Vérifie qu\'Ollama est accessible'
+                    ? t('settings.ollamaConnected', { model: local.ollama.model })
+                    : t('settings.ollamaCheck')
                 }
                 borderBottom={false}
                 onPress={fetchOllamaModels}
@@ -577,11 +580,11 @@ export function SettingsScreen({
         </Card>
 
         {/* ── Base de données ─────────────────────────────────── */}
-        <SectionHeader icon="database" label="Base de données" />
+        <SectionHeader icon="database" label={t('settings.sectionDB')} />
         <Card>
           <Row
-            label="Importer des aliments"
-            description="Fichier JSON — fusionné avec la liste existante"
+            label={t('settings.importFoods')}
+            description={t('settings.importFoodsDesc')}
             borderBottom={true}
             onPress={handleImport}
             right={
@@ -593,8 +596,8 @@ export function SettingsScreen({
             }
           />
           <Row
-            label="Exporter les aliments"
-            description={`${foodList.length} aliment${foodList.length > 1 ? 's' : ''} dans ta base`}
+            label={t('settings.exportFoods')}
+            description={t('settings.exportFoodsDesc', { count: foodList.length, s: foodList.length > 1 ? 's' : '' })}
             borderBottom={false}
             onPress={handleExport}
             right={
@@ -608,11 +611,11 @@ export function SettingsScreen({
         </Card>
 
         {/* ── Bibliothèque de plats ───────────────────────────── */}
-        <SectionHeader icon="layers" label="Bibliothèque de plats" />
+        <SectionHeader icon="layers" label={t('settings.sectionPlates')} />
         <Card>
           <Row
-            label="Importer des plats"
-            description="Fichier JSON — fusionne avec ta bibliothèque existante"
+            label={t('settings.importPlates')}
+            description={t('settings.importPlatesDesc')}
             borderBottom={true}
             onPress={handleImportPlates}
             right={
@@ -624,8 +627,8 @@ export function SettingsScreen({
             }
           />
           <Row
-            label="Exporter les plats"
-            description={`${savedPlates.length} plat${savedPlates.length > 1 ? 's' : ''} dans ta bibliothèque`}
+            label={t('settings.exportPlates')}
+            description={t('settings.exportPlatesDesc', { count: savedPlates.length, s: savedPlates.length > 1 ? 's' : '' })}
             borderBottom={false}
             onPress={handleExportPlates}
             right={
@@ -639,19 +642,45 @@ export function SettingsScreen({
         </Card>
 
         {/* ── Onboarding ──────────────────────────────────────── */}
-        <SectionHeader icon="info" label="Visite guidée" />
+        <SectionHeader icon="info" label={t('settings.sectionOnboarding')} />
         <Card>
           <Row
-            label="Revoir l'introduction"
-            description="Relance les écrans de démarrage et les conseils contextuels"
+            label={t('settings.seeIntro')}
+            description={t('settings.seeIntroDesc')}
             borderBottom={false}
             onPress={onResetOnboarding}
             right={<Icon name="arrow-right" size={18} color={Colors.muted} />}
           />
         </Card>
 
+        {/* ── Langue ───────────────────────────────────────────── */}
+        <SectionHeader icon="menu" label={t('settings.sectionLanguage')} />
+        <Card>
+          <View style={styles.providerSection}>
+            <Text style={styles.rowLabel}>{t('settings.languageLabel')}</Text>
+            <View style={styles.pillGroup}>
+              <ProviderPill
+                label={t('settings.languageFr')}
+                active={(local.language ?? 'fr') === 'fr'}
+                onPress={() => {
+                  update({ language: 'fr' });
+                  i18n.changeLanguage('fr');
+                }}
+              />
+              <ProviderPill
+                label={t('settings.languageEn')}
+                active={(local.language ?? 'fr') === 'en'}
+                onPress={() => {
+                  update({ language: 'en' });
+                  i18n.changeLanguage('en');
+                }}
+              />
+            </View>
+          </View>
+        </Card>
+
         {/* ── À propos ─────────────────────────────────────────── */}
-        <SectionHeader icon="info" label="À propos de Nutritor" />
+        <SectionHeader icon="info" label={t('settings.sectionAbout')} />
         <Card>
           <View style={styles.aboutRow}>
             <Text style={styles.aboutAppName}>Nutritor</Text>
@@ -660,24 +689,24 @@ export function SettingsScreen({
             </View>
           </View>
           <View style={[styles.row, styles.rowNoBorder]}>
-            <Text style={styles.rowDesc}>Base de données locale · données stockées sur l'appareil</Text>
+            <Text style={styles.rowDesc}>{t('settings.aboutDesc')}</Text>
           </View>
         </Card>
 
         {/* ── Diagnostic IA ────────────────────────────────────── */}
-        <SectionHeader icon="cpu" label="Diagnostic enrichissement IA" />
+        <SectionHeader icon="cpu" label={t('settings.sectionDiagnostic')} />
         <Card>
           <View style={styles.diagHeader}>
             <Text style={styles.diagHint}>
-              Logs des appels IA — copie et colle dans un chat pour analyser
+              {t('settings.diagHint')}
             </Text>
             <View style={styles.diagActions}>
               <TouchableOpacity style={styles.diagBtn} onPress={handleCopyLogs} activeOpacity={0.7}>
                 <Icon name="upload" size={13} color={Colors.ink} />
-                <Text style={styles.diagBtnText}>Copier</Text>
+                <Text style={styles.diagBtnText}>{t('settings.copyLogs')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.diagBtn} onPress={handleClearLogs} activeOpacity={0.7}>
-                <Text style={styles.diagBtnText}>Effacer</Text>
+                <Text style={styles.diagBtnText}>{t('settings.clearLogs')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -689,16 +718,16 @@ export function SettingsScreen({
         </Card>
 
         {/* ── Dev / Test ───────────────────────────────────────── */}
-        <SectionHeader icon="alert" label="Développement" />
+        <SectionHeader icon="alert" label={t('settings.sectionDev')} />
         <Card>
           <Row
-            label="Simuler passage au lendemain"
-            description="Réinitialise la date du journal à hier — redémarre l'app pour déclencher la duplication"
+            label={t('settings.simulateNextDay')}
+            description={t('settings.simulateNextDayDesc')}
             borderBottom={false}
             onPress={() => {
               const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
               save(KEYS.mealsDate, yesterday).then(() => {
-                showToast('Date réinitialisée à hier — ferme et rouvre l\'app');
+                showToast(t('settings.dateReset'));
               });
             }}
             right={<Icon name="layers" size={18} color={Colors.muted} />}

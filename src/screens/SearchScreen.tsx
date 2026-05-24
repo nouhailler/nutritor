@@ -5,6 +5,7 @@
  * à CIQUAL, Open Food Facts, scanner code-barres et ajout via IA.
  */
 import React, { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Platform,
@@ -152,6 +153,7 @@ interface Props {
 }
 
 export function SearchScreen({ foodList, profile, recentFoodIds, onBack, onPickItem, onDeleteFood, onAddWithAI, onOpenFoodFacts, onOpenCIQUAL, onOpenScanner, onOpenMenu }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
@@ -220,17 +222,17 @@ export function SearchScreen({ foodList, profile, recentFoodIds, onBack, onPickI
   const confirmDelete = (food: Food) => {
     if (Platform.OS === 'web') {
       // eslint-disable-next-line no-alert
-      if (window.confirm(`Supprimer « ${food.name} » de ta liste ?`)) {
+      if (window.confirm(t('search.deleteFoodConfirmWeb', { name: food.name }))) {
         onDeleteFood(food.id);
       }
       return;
     }
     Alert.alert(
-      'Supprimer cet aliment ?',
-      `« ${food.name} » sera retiré de ta liste.`,
+      t('search.deleteFood'),
+      t('search.deleteFoodConfirm', { name: food.name }),
       [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Supprimer', style: 'destructive', onPress: () => onDeleteFood(food.id) },
+        { text: t('search.deleteCancel'), style: 'cancel' },
+        { text: t('search.deleteConfirm'), style: 'destructive', onPress: () => onDeleteFood(food.id) },
       ]
     );
   };
@@ -244,8 +246,8 @@ export function SearchScreen({ foodList, profile, recentFoodIds, onBack, onPickI
             <Icon name="back" size={20} color={Colors.ink} />
           </TouchableOpacity>
           <View>
-            <Text style={styles.eyebrow}>Étape 1 sur 3</Text>
-            <Text style={styles.title}>Ajouter un aliment</Text>
+            <Text style={styles.eyebrow}>{t('search.stepLabel')}</Text>
+            <Text style={styles.title}>{t('search.title')}</Text>
           </View>
         </View>
         <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={onOpenScanner}>
@@ -265,7 +267,7 @@ export function SearchScreen({ foodList, profile, recentFoodIds, onBack, onPickI
           <TextInput
             ref={inputRef}
             style={styles.input}
-            placeholder="Pain sans gluten, snack low FODMAP…"
+            placeholder={t('search.placeholder')}
             placeholderTextColor={Colors.muted2}
             value={query}
             onChangeText={setQuery}
@@ -275,7 +277,7 @@ export function SearchScreen({ foodList, profile, recentFoodIds, onBack, onPickI
           />
           {query.length > 0 && (
             <TouchableOpacity onPress={() => setQuery('')} activeOpacity={0.7}>
-              <Text style={styles.clearBtn}>Effacer</Text>
+              <Text style={styles.clearBtn}>{t('search.clear')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -285,7 +287,7 @@ export function SearchScreen({ foodList, profile, recentFoodIds, onBack, onPickI
       {hasNLPContent && (
         <View style={styles.nlpStrip}>
           <Icon name="sparkle" size={11} color={Colors.ok} />
-          <Text style={styles.nlpLabel}>Compris :</Text>
+          <Text style={styles.nlpLabel}>{t('search.understood')}</Text>
           {nlpOnlyFilters.map((id) => (
             <View key={id} style={styles.nlpChip}>
               <Text style={styles.nlpChipText}>{NLP_FILTER_LABELS[id]}</Text>
@@ -293,22 +295,22 @@ export function SearchScreen({ foodList, profile, recentFoodIds, onBack, onPickI
           ))}
           {intent.minProteinG !== undefined && (
             <View style={styles.nlpChip}>
-              <Text style={styles.nlpChipText}>Protéines ≥{intent.minProteinG} g</Text>
+              <Text style={styles.nlpChipText}>{t('search.proteinFilter', { g: intent.minProteinG })}</Text>
             </View>
           )}
           {intent.lowFodmap && (
             <View style={styles.nlpChip}>
-              <Text style={styles.nlpChipText}>Low FODMAP</Text>
+              <Text style={styles.nlpChipText}>{t('search.lowFodmap')}</Text>
             </View>
           )}
           {intent.highFiber && (
             <View style={styles.nlpChip}>
-              <Text style={styles.nlpChipText}>Riche en fibres</Text>
+              <Text style={styles.nlpChipText}>{t('search.highFiber')}</Text>
             </View>
           )}
           {intent.maxKcalPortion !== undefined && !allActiveFilterIds.has('low') && (
             <View style={styles.nlpChip}>
-              <Text style={styles.nlpChipText}>{'<'}{intent.maxKcalPortion} kcal</Text>
+              <Text style={styles.nlpChipText}>{t('search.maxKcal', { kcal: intent.maxKcalPortion })}</Text>
             </View>
           )}
         </View>
@@ -339,7 +341,7 @@ export function SearchScreen({ foodList, profile, recentFoodIds, onBack, onPickI
       >
         <TouchableOpacity style={styles.chip} activeOpacity={0.7}>
           <Icon name="sliders" size={14} color={Colors.ink2} />
-          <Text style={styles.chipText}>Filtres</Text>
+          <Text style={styles.chipText}>{t('search.filters')}</Text>
         </TouchableOpacity>
         {filters.map((f) => (
           <TouchableOpacity
@@ -365,7 +367,7 @@ export function SearchScreen({ foodList, profile, recentFoodIds, onBack, onPickI
         {recentCompatible.length > 0 && (
           <>
             <SectionLabel
-              left="Récemment ajoutés"
+              left={t('search.recentlyAdded')}
               right={`${recentCompatible.length}`}
             />
             {recentCompatible.map((food) => {
@@ -393,8 +395,8 @@ export function SearchScreen({ foodList, profile, recentFoodIds, onBack, onPickI
         {otherCompatible.length > 0 && (
           <>
             <SectionLabel
-              left={activeFilters.length ? 'Compatible avec tes filtres' : 'Tous les aliments'}
-              right={`${otherCompatible.length} aliment${otherCompatible.length !== 1 ? 's' : ''}`}
+              left={activeFilters.length ? t('search.compatibleFoods') : t('search.allFoods')}
+              right={t('search.foodCount', { count: otherCompatible.length, s: otherCompatible.length !== 1 ? 's' : '' })}
             />
             {otherCompatible.map((food) => {
               const sr = foodToSearchResult(food);
@@ -420,7 +422,7 @@ export function SearchScreen({ foodList, profile, recentFoodIds, onBack, onPickI
         {/* Incompatible (only shown when filters active) */}
         {incompatible.length > 0 && (
           <>
-            <SectionLabel left="Filtré · ne correspond pas aux critères actifs" />
+            <SectionLabel left={t('search.filteredOut')} />
             <View style={{ opacity: 0.5 }}>
               {incompatible.map((food) => {
                 const sr = foodToSearchResult(food);

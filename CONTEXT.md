@@ -4,16 +4,16 @@
 
 ---
 
-## État actuel (2026-05-23)
+## État actuel (2026-05-24)
 
 ### Derniers commits
+- `993ce5b` — docs: mise à jour CONTEXT, Changelog et README (v0.33.1)
 - `188804b` — feat: import/export de la bibliothèque de plats dans les paramètres (v0.33.1)
 - `e73bf4a` — feat: journal symptômes, moteur corrélation et formulaire bio/médicaments (v0.33.0)
 - `b992be3` — feat: photo de profil + menu hamburger cliquable vers Profil (v0.32.0)
 - `08d12aa` — feat: export professionnel HTML pour médecins et diététiciens (v0.31.0)
-- `cd4256d` — fix: badge Compatible sur plusieurs lignes + bandeau erreur IA (v0.30.1)
 
-### Version courante : 0.33.1 (app.json : 0.30.0)
+### Version courante : 0.34.0 (app.json : 0.30.0)
 
 Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été ajoutées (voir CHANGELOG.md pour le détail complet) :
 
@@ -122,6 +122,14 @@ Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été
 **v0.33.1 — Import/export bibliothèque de plats**
 - `SettingsScreen` : nouvelle section "Bibliothèque de plats" avec export JSON (`nutritor_plats.json`) et import avec fusion (déduplication par `id`)
 - `AppShell` : câblage `savedPlates` + handler `onImportPlates`
+
+**v0.34.0 — Internationalisation complète (i18n)**
+- `src/i18n/fr.ts` + `src/i18n/en.ts` : ~900 clés de traduction couvrant les 20 écrans, composants, alertes et labels
+- `src/i18n/index.ts` : initialisation `i18next` + `react-i18next`, fallback `fr`
+- Tous les écrans migrés vers `useTranslation()` / `t('...')` — plus aucune chaîne codée en dur
+- `SettingsScreen` : nouvelle section "Langue" avec pills FR / EN, persistée dans `AppSettings.language`
+- `AppShell` : recharge la langue sauvegardée au démarrage (`i18n.changeLanguage(lang)`)
+- Dépendances ajoutées : `i18next`, `react-i18next`
 
 ### Dernier build APK
 - **Build ID** : `8fc6725c-7e2b-484a-9e06-1ddb494e4840`

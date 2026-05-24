@@ -4,6 +4,7 @@
  * corrélations symptômes/alimentation, heatmap conformité régime.
  */
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ScrollView,
   StyleSheet,
@@ -106,6 +107,7 @@ function ChartCard({
 // ── Score ring ────────────────────────────────────────────────
 
 function ScoreRing({ score, loggedDays }: { score: number; loggedDays: number }) {
+  const { t } = useTranslation();
   const pct = score / 100;
   const cx = BIG_RING_SIZE / 2;
   const cy = BIG_RING_SIZE / 2;
@@ -141,8 +143,8 @@ function ScoreRing({ score, loggedDays }: { score: number; loggedDays: number })
       </View>
       {/* Label */}
       <View style={styles.scoreLabel}>
-        <Text style={styles.scoreLabelTitle}>Score semaine</Text>
-        <Text style={styles.scoreLabelSub}>{loggedDays} jour{loggedDays > 1 ? 's' : ''} enregistré{loggedDays > 1 ? 's' : ''}</Text>
+        <Text style={styles.scoreLabelTitle}>{t('stats.scoreWeek')}</Text>
+        <Text style={styles.scoreLabelSub}>{t('stats.daysLogged', { count: loggedDays, s: loggedDays > 1 ? 's' : '' })}</Text>
       </View>
     </View>
   );
@@ -151,26 +153,27 @@ function ScoreRing({ score, loggedDays }: { score: number; loggedDays: number })
 // ── KPI strip ─────────────────────────────────────────────────
 
 function KpiStrip({ stats, profile }: { stats: WeekStats; profile: UserProfile }) {
+  const { t } = useTranslation();
   const items = [
     {
-      label: 'Moy. kcal',
+      label: t('stats.avgKcal'),
       value: stats.loggedDays > 0 ? `${stats.avgKcal}` : '—',
       sub: `/ ${profile.kcalTarget}`,
     },
     {
-      label: 'Cible kcal',
+      label: t('stats.kcalTarget'),
       value: `${stats.daysOnKcalTarget}/7`,
-      sub: 'jours',
+      sub: t('stats.days'),
     },
     {
-      label: 'Série',
+      label: t('stats.streak'),
       value: `${stats.currentStreak}`,
-      sub: 'j consécutifs',
+      sub: t('stats.consecutiveDays'),
     },
     {
-      label: 'Aliments',
+      label: t('stats.uniqueFoods'),
       value: `${stats.uniqueFoodsWeek}`,
-      sub: 'uniques / sem.',
+      sub: t('stats.uniqueFoodsPerWeek'),
     },
   ];
 
@@ -285,6 +288,7 @@ function StackedMacroBars({ days, target }: { days: WeekDayData[]; target: numbe
 // ── Caloric distribution bar ──────────────────────────────────
 
 function MacroCalorieBar({ avgP, avgC, avgF }: { avgP: number; avgC: number; avgF: number }) {
+  const { t } = useTranslation();
   const pKcal = avgP * 4;
   const cKcal = avgC * 4;
   const fKcal = avgF * 9;
@@ -297,7 +301,7 @@ function MacroCalorieBar({ avgP, avgC, avgF }: { avgP: number; avgC: number; avg
 
   return (
     <View style={styles.calorieBarWrap}>
-      <Text style={styles.calorieBarTitle}>Répartition calorique</Text>
+      <Text style={styles.calorieBarTitle}>{t('stats.calorieDistribution')}</Text>
       <View style={styles.calorieBarTrack}>
         <View style={[styles.calorieBarSeg, {
           flex: pKcal, backgroundColor: MACRO_COLORS.p,
@@ -310,9 +314,9 @@ function MacroCalorieBar({ avgP, avgC, avgF }: { avgP: number; avgC: number; avg
         }]} />
       </View>
       <View style={styles.calorieBarLabels}>
-        <Text style={[styles.calorieBarLabel, { color: MACRO_COLORS.p }]}>Prot. {pPct}%</Text>
-        <Text style={[styles.calorieBarLabel, { color: MACRO_COLORS.c }]}>Gluc. {cPct}%</Text>
-        <Text style={[styles.calorieBarLabel, { color: MACRO_COLORS.f }]}>Lip. {fPct}%</Text>
+        <Text style={[styles.calorieBarLabel, { color: MACRO_COLORS.p }]}>{t('stats.prot')} {pPct}%</Text>
+        <Text style={[styles.calorieBarLabel, { color: MACRO_COLORS.c }]}>{t('stats.gluc')} {cPct}%</Text>
+        <Text style={[styles.calorieBarLabel, { color: MACRO_COLORS.f }]}>{t('stats.lip')} {fPct}%</Text>
       </View>
     </View>
   );
@@ -333,6 +337,7 @@ function MacroRing({
   unit: string;
   color: string;
 }) {
+  const { t } = useTranslation();
   const pct = target > 0 ? Math.min(1, avg / target) : 0;
   const cx = RING_SIZE / 2;
   const cy = RING_SIZE / 2;
@@ -364,7 +369,7 @@ function MacroRing({
       </View>
       <Text style={styles.macroRingAvg}>{avg}{unit}</Text>
       <Text style={styles.macroRingLabel}>{label}</Text>
-      <Text style={styles.macroRingTarget}>obj. {target}{unit}</Text>
+      <Text style={styles.macroRingTarget}>{t('stats.objectiveTarget', { value: target, unit })}</Text>
     </View>
   );
 }
@@ -415,14 +420,15 @@ function MacroSparkline({
 }
 
 function MacroSparklines({ days }: { days: WeekDayData[] }) {
+  const { t } = useTranslation();
   const p = days.map((d) => d.log?.p ?? 0);
   const c = days.map((d) => d.log?.c ?? 0);
   const f = days.map((d) => d.log?.f ?? 0);
 
   const rows = [
-    { label: 'Protéines', values: p, color: MACRO_COLORS.p, max: Math.max(...p, 1) * 1.2, id: 'sg-p' },
-    { label: 'Glucides',  values: c, color: MACRO_COLORS.c, max: Math.max(...c, 1) * 1.2, id: 'sg-c' },
-    { label: 'Lipides',   values: f, color: MACRO_COLORS.f, max: Math.max(...f, 1) * 1.2, id: 'sg-f' },
+    { label: t('stats.protein'), values: p, color: MACRO_COLORS.p, max: Math.max(...p, 1) * 1.2, id: 'sg-p' },
+    { label: t('stats.carbs'),  values: c, color: MACRO_COLORS.c, max: Math.max(...c, 1) * 1.2, id: 'sg-c' },
+    { label: t('stats.fat'),   values: f, color: MACRO_COLORS.f, max: Math.max(...f, 1) * 1.2, id: 'sg-f' },
   ];
 
   return (
@@ -501,10 +507,11 @@ function FourWeekTrendsCard({
   todayMeals: Meal[];
   profile: UserProfile;
 }) {
+  const { t } = useTranslation();
   const trends = computeMultiWeekTrends(journal, todayMeals, profile, 4);
 
   return (
-    <ChartCard title="Tendances" sub="4 dernières semaines">
+    <ChartCard title={t('stats.trends')} sub={t('stats.last4Weeks')}>
       {/* Score bars */}
       <View style={styles.trendBarsRow}>
         {trends.map((week, i) => {
@@ -535,9 +542,9 @@ function FourWeekTrendsCard({
       <View style={styles.sparkSep} />
       <View style={styles.sparkRows}>
         {([
-          { label: 'Protéines', values: trends.map((w) => w.avgP), color: MACRO_COLORS.p, id: 'tw-p' },
-          { label: 'Glucides',  values: trends.map((w) => w.avgC), color: MACRO_COLORS.c, id: 'tw-c' },
-          { label: 'Lipides',   values: trends.map((w) => w.avgF), color: MACRO_COLORS.f, id: 'tw-f' },
+          { label: t('stats.protein'), values: trends.map((w) => w.avgP), color: MACRO_COLORS.p, id: 'tw-p' },
+          { label: t('stats.carbs'),  values: trends.map((w) => w.avgC), color: MACRO_COLORS.c, id: 'tw-c' },
+          { label: t('stats.fat'),   values: trends.map((w) => w.avgF), color: MACRO_COLORS.f, id: 'tw-f' },
         ] as const).map((row) => (
           <View key={row.id} style={styles.sparkRow}>
             <Text style={styles.sparkLabel}>{row.label}</Text>
@@ -578,6 +585,7 @@ function MonthCalendar({
   target: number;
   startWeekday: number;
 }) {
+  const { t } = useTranslation();
   const monOffset = (startWeekday + 6) % 7;
   const grid: (MonthDayData | null)[] = [...Array(monOffset).fill(null), ...days];
   while (grid.length % 7 !== 0) grid.push(null);
@@ -625,9 +633,9 @@ function MonthCalendar({
       ))}
       <View style={styles.monthCalLegend}>
         {([
-          { color: Colors.ok,     label: 'Dans la cible' },
-          { color: Colors.signal, label: '±25%' },
-          { color: Colors.warn,   label: 'Hors cible' },
+          { color: Colors.ok,     label: t('stats.withinTarget') },
+          { color: Colors.signal, label: t('stats.within25') },
+          { color: Colors.warn,   label: t('stats.offTarget') },
         ] as const).map((item) => (
           <View key={item.label} style={styles.monthCalLegendItem}>
             <View style={[styles.monthCalLegendDot, { backgroundColor: item.color + '55' }]} />
@@ -642,11 +650,6 @@ function MonthCalendar({
 // ── View toggle ───────────────────────────────────────────────
 
 type ViewMode = 'week' | 'month' | 'wellness';
-const VIEW_LABELS: Record<ViewMode, string> = {
-  week:     'Semaine',
-  month:    'Mois',
-  wellness: 'Bien-être',
-};
 
 function ViewToggle({
   mode,
@@ -655,6 +658,12 @@ function ViewToggle({
   mode: ViewMode;
   onToggle: (m: ViewMode) => void;
 }) {
+  const { t } = useTranslation();
+  const VIEW_LABELS: Record<ViewMode, string> = {
+    week:     t('stats.weekView'),
+    month:    t('stats.monthView'),
+    wellness: t('stats.wellnessView'),
+  };
   return (
     <View style={styles.viewToggleWrap}>
       <View style={styles.viewToggle}>
@@ -756,6 +765,7 @@ function WellnessView({
   journal: JournalEntry[];
   foodList: Food[];
 }) {
+  const { t } = useTranslation();
   const stats = computeWellnessStats(symptoms, journal, foodList);
 
   // Build sparkline values (last 14 days)
@@ -766,9 +776,9 @@ function WellnessView({
       {/* KPI strip */}
       <View style={styles.kpiStrip}>
         {[
-          { label: 'Jours saisis',    value: `${stats.daysWithSymptoms}`,    sub: 'total' },
-          { label: 'Avec repas',      value: `${stats.daysWithBoth}`,        sub: 'corrélables' },
-          { label: 'Min. requis',     value: `${Math.max(0, 7 - stats.daysWithBoth)}`, sub: 'jours restants' },
+          { label: t('stats.daysSaved'),    value: `${stats.daysWithSymptoms}`,    sub: t('stats.total') },
+          { label: t('stats.withMeals'),    value: `${stats.daysWithBoth}`,        sub: t('stats.correlatable') },
+          { label: t('stats.minRequired'),  value: `${Math.max(0, 7 - stats.daysWithBoth)}`, sub: t('stats.daysRemaining') },
         ].map((item, i) => (
           <React.Fragment key={item.label}>
             {i > 0 && <View style={styles.kpiDivider} />}
@@ -786,9 +796,9 @@ function WellnessView({
         <View style={styles.card}>
           <View style={styles.cardHead}>
             <View>
-              <Text style={styles.cardTitle}>Symptômes</Text>
+              <Text style={styles.cardTitle}>{t('stats.symptoms')}</Text>
               <Text style={styles.cardSub}>
-                {last14.length} derniers jours enregistrés
+                {t('stats.lastNDays', { count: last14.length })}
               </Text>
             </View>
           </View>
@@ -806,19 +816,17 @@ function WellnessView({
         <View style={styles.card}>
           <View style={styles.emptyWellness}>
             <Icon name="alert" size={22} color={Colors.muted2} />
-            <Text style={styles.emptyWellnessTitle}>Commence à saisir tes symptômes</Text>
-            <Text style={styles.emptyWellnessSub}>
-              Renseigne le widget "Bien-être" dans l'onglet Journal chaque jour. Les graphiques apparaîtront après 2 jours de données.
-            </Text>
+            <Text style={styles.emptyWellnessTitle}>{t('stats.startSymptoms')}</Text>
+            <Text style={styles.emptyWellnessSub}>{t('stats.startSymptomsDesc')}</Text>
           </View>
         </View>
       )}
 
       {/* Correlations */}
       <View style={styles.insightsHead}>
-        <Text style={styles.insightsTitle}>Corrélations</Text>
+        <Text style={styles.insightsTitle}>{t('stats.correlations')}</Text>
         {!stats.needsMoreData && (
-          <Text style={styles.insightsMeta}>{stats.daysWithBoth} j de données</Text>
+          <Text style={styles.insightsMeta}>{t('stats.daysData', { count: stats.daysWithBoth })}</Text>
         )}
       </View>
 
@@ -826,12 +834,10 @@ function WellnessView({
         <View style={styles.corrProgress}>
           <Text style={styles.corrProgressTitle}>
             {stats.daysUntilCorrelations === 0
-              ? 'Calcul des corrélations...'
-              : `Encore ${stats.daysUntilCorrelations} jour${stats.daysUntilCorrelations > 1 ? 's' : ''} nécessaire${stats.daysUntilCorrelations > 1 ? 's' : ''}`}
+              ? t('stats.calculating')
+              : t('stats.moreNeeded', { count: stats.daysUntilCorrelations, s: stats.daysUntilCorrelations > 1 ? 's' : '' })}
           </Text>
-          <Text style={styles.corrProgressSub}>
-            Les corrélations se calculent à partir de 7 jours avec repas ET symptômes enregistrés simultanément.
-          </Text>
+          <Text style={styles.corrProgressSub}>{t('stats.correlationsNeeded')}</Text>
           <View style={styles.corrProgressBar}>
             <View
               style={[
@@ -841,24 +847,20 @@ function WellnessView({
             />
           </View>
           <Text style={styles.corrProgressCount}>
-            {stats.daysWithBoth} / 7 jours
+            {t('stats.progress', { count: stats.daysWithBoth })}
           </Text>
         </View>
       ) : stats.insights.length === 0 ? (
         <View style={[styles.corrProgress, { marginBottom: 8 }]}>
-          <Text style={styles.corrProgressTitle}>Aucune corrélation significative détectée</Text>
-          <Text style={styles.corrProgressSub}>
-            Continue à enregistrer tes repas et symptômes. Les patterns apparaîtront avec plus de données.
-          </Text>
+          <Text style={styles.corrProgressTitle}>{t('stats.noCorrelation')}</Text>
+          <Text style={styles.corrProgressSub}>{t('stats.noCorrelationDesc')}</Text>
         </View>
       ) : (
         <View style={[styles.card, { paddingBottom: 4 }]}>
           {stats.insights.map((ins, i) => (
             <InsightCorrelationRow key={i} insight={ins} />
           ))}
-          <Text style={styles.corrDisclaimer}>
-            Ces corrélations sont indicatives. Consulte un professionnel de santé pour tout trouble persistant.
-          </Text>
+          <Text style={styles.corrDisclaimer}>{t('stats.correlationDisclaimer')}</Text>
         </View>
       )}
     </>
@@ -902,6 +904,7 @@ interface Props {
 }
 
 export function StatsScreen({ journal, todayMeals, profile, symptoms, foodList, onOpenMenu, onStartDemo }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [weekOffset, setWeekOffset] = useState(0);
@@ -924,9 +927,9 @@ export function StatsScreen({ journal, todayMeals, profile, symptoms, foodList, 
           </TouchableOpacity>
           <View style={styles.topbarLeft}>
             <Text style={styles.eyebrow}>
-              {viewMode === 'week' ? `Semaine ${stats.weekLabel}` : viewMode === 'month' ? monthStats.monthLabel : 'Journal'}
+              {viewMode === 'week' ? t('stats.weekLabel', { label: stats.weekLabel }) : viewMode === 'month' ? monthStats.monthLabel : t('stats.journal')}
             </Text>
-            <Text style={styles.title}>Statistiques</Text>
+            <Text style={styles.title}>{t('stats.title')}</Text>
           </View>
           {onStartDemo && (
             <TouchableOpacity style={styles.iconBtn} onPress={onStartDemo} activeOpacity={0.7}>
@@ -968,42 +971,42 @@ export function StatsScreen({ journal, todayMeals, profile, symptoms, foodList, 
               <View style={styles.scoreDivider} />
               <View style={styles.streakBlock}>
                 <Text style={styles.streakValue}>{stats.currentStreak}</Text>
-                <Text style={styles.streakLabel}>jours{'\n'}consécutifs</Text>
+                <Text style={styles.streakLabel}>{t('stats.days')}{'\n'}{t('stats.consecutiveDays')}</Text>
               </View>
             </View>
             <KpiStrip stats={stats} profile={profile} />
 
             {/* Apport calorique — barres macros empilées */}
             <ChartCard
-              title="Apport calorique"
-              sub="macros · 7 jours"
-              legend={`Objectif : ${profile.kcalTarget} kcal`}
+              title={t('stats.calorieIntake')}
+              sub={t('stats.macros7Days')}
+              legend={t('stats.kcalObjective', { kcal: profile.kcalTarget })}
             >
               <StackedMacroBars days={stats.days} target={profile.kcalTarget} />
             </ChartCard>
 
             {/* Objectifs macros */}
             <ChartCard
-              title="Objectifs macros"
-              sub="Moyenne semaine vs cibles"
+              title={t('stats.macroObjectives')}
+              sub={t('stats.weekAverage')}
             >
               <View style={styles.macroRingsRow}>
                 <MacroRing
-                  label="Protéines"
+                  label={t('stats.protein')}
                   avg={stats.avgP}
                   target={profile.macroTargets.protein}
                   unit="g"
                   color={MACRO_COLORS.p}
                 />
                 <MacroRing
-                  label="Glucides"
+                  label={t('stats.carbs')}
                   avg={stats.avgC}
                   target={profile.macroTargets.carbs}
                   unit="g"
                   color={MACRO_COLORS.c}
                 />
                 <MacroRing
-                  label="Lipides"
+                  label={t('stats.fat')}
                   avg={stats.avgF}
                   target={profile.macroTargets.fat}
                   unit="g"
@@ -1018,17 +1021,17 @@ export function StatsScreen({ journal, todayMeals, profile, symptoms, foodList, 
 
             {/* Adhérence repas */}
             <ChartCard
-              title="Adhérence repas"
-              sub="Créneaux remplis par jour"
+              title={t('stats.mealAdherence')}
+              sub={t('stats.slotsPerDay')}
             >
               <MealGrid days={stats.days} />
               <View style={styles.gridLegend}>
                 <View style={[styles.gridDot, styles.gridDotFilled]} />
-                <Text style={styles.gridLegendText}>Enregistré</Text>
+                <Text style={styles.gridLegendText}>{t('stats.logged')}</Text>
                 <View style={[styles.gridDot, styles.gridDotNoData, { marginLeft: 12 }]} />
-                <Text style={styles.gridLegendText}>Non rempli</Text>
+                <Text style={styles.gridLegendText}>{t('stats.notFilled')}</Text>
                 <View style={[styles.gridDot, styles.gridDotFuture, { marginLeft: 12 }]} />
-                <Text style={styles.gridLegendText}>À venir</Text>
+                <Text style={styles.gridLegendText}>{t('stats.upcoming')}</Text>
               </View>
             </ChartCard>
 
@@ -1037,10 +1040,10 @@ export function StatsScreen({ journal, todayMeals, profile, symptoms, foodList, 
 
             {/* À noter */}
             <View style={styles.insightsHead}>
-              <Text style={styles.insightsTitle}>À noter</Text>
+              <Text style={styles.insightsTitle}>{t('stats.toNote')}</Text>
               {stats.prevWeekAvgKcal !== null && stats.kcalDeltaPct !== null && (
                 <Text style={styles.insightsMeta}>
-                  vs semaine préc. {stats.kcalDeltaPct > 0 ? '+' : ''}{stats.kcalDeltaPct}%
+                  {t('stats.vsPrevWeek', { delta: (stats.kcalDeltaPct > 0 ? '+' : '') + stats.kcalDeltaPct })}
                 </Text>
               )}
             </View>
@@ -1073,9 +1076,9 @@ export function StatsScreen({ journal, todayMeals, profile, symptoms, foodList, 
             {/* Month KPI strip */}
             <View style={styles.kpiStrip}>
               {[
-                { label: 'Moy. kcal', value: monthStats.loggedDays > 0 ? `${monthStats.avgKcal}` : '—', sub: `/ ${profile.kcalTarget}` },
-                { label: 'Jours log.', value: `${monthStats.loggedDays}`, sub: `/ ${monthStats.totalPastDays}` },
-                { label: 'Couvert.', value: monthStats.totalPastDays > 0 ? `${Math.round((monthStats.loggedDays / monthStats.totalPastDays) * 100)}%` : '—', sub: 'du mois' },
+                { label: t('stats.avgKcalMonth'), value: monthStats.loggedDays > 0 ? `${monthStats.avgKcal}` : '—', sub: `/ ${profile.kcalTarget}` },
+                { label: t('stats.daysLogged_month'), value: `${monthStats.loggedDays}`, sub: `/ ${monthStats.totalPastDays}` },
+                { label: t('stats.coverage'), value: monthStats.totalPastDays > 0 ? `${Math.round((monthStats.loggedDays / monthStats.totalPastDays) * 100)}%` : '—', sub: t('stats.coverageMonth') },
               ].map((item, i) => (
                 <React.Fragment key={item.label}>
                   {i > 0 && <View style={styles.kpiDivider} />}
@@ -1089,7 +1092,7 @@ export function StatsScreen({ journal, todayMeals, profile, symptoms, foodList, 
             </View>
 
             {/* Calendrier mensuel */}
-            <ChartCard title="Calendrier" sub={monthStats.monthLabel}>
+            <ChartCard title={t('stats.monthCalendar')} sub={monthStats.monthLabel}>
               <MonthCalendar
                 days={monthStats.days}
                 target={profile.kcalTarget}
@@ -1099,26 +1102,26 @@ export function StatsScreen({ journal, todayMeals, profile, symptoms, foodList, 
 
             {/* Macros du mois */}
             <ChartCard
-              title="Macros du mois"
-              sub="Moyenne mensuelle vs cibles"
+              title={t('stats.monthMacros')}
+              sub={t('stats.monthAverage')}
             >
               <View style={styles.macroRingsRow}>
                 <MacroRing
-                  label="Protéines"
+                  label={t('stats.protein')}
                   avg={monthStats.avgP}
                   target={profile.macroTargets.protein}
                   unit="g"
                   color={MACRO_COLORS.p}
                 />
                 <MacroRing
-                  label="Glucides"
+                  label={t('stats.carbs')}
                   avg={monthStats.avgC}
                   target={profile.macroTargets.carbs}
                   unit="g"
                   color={MACRO_COLORS.c}
                 />
                 <MacroRing
-                  label="Lipides"
+                  label={t('stats.fat')}
                   avg={monthStats.avgF}
                   target={profile.macroTargets.fat}
                   unit="g"

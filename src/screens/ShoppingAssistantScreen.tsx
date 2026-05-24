@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { Colors, Fonts } from '../theme/tokens';
@@ -21,15 +22,17 @@ import { severityColor, verdictColor, verdictLabel } from '../services/compatibi
 
 // ── Helpers ────────────────────────────────────────────────────
 
-function timeAgo(ts: number): string {
+type TFn = (key: string, opts?: Record<string, unknown>) => string;
+
+function timeAgo(ts: number, t: TFn): string {
   const diff = Date.now() - ts;
   const min  = Math.floor(diff / 60_000);
   const hr   = Math.floor(diff / 3_600_000);
   const day  = Math.floor(diff / 86_400_000);
-  if (min < 2)  return 'à l\'instant';
-  if (min < 60) return `il y a ${min} min`;
-  if (hr < 24)  return `il y a ${hr}h`;
-  return `il y a ${day}j`;
+  if (min < 2)  return t('shopping.timeJustNow');
+  if (min < 60) return t('shopping.timeMinutesAgo', { min });
+  if (hr < 24)  return t('shopping.timeHoursAgo', { hr });
+  return t('shopping.timeDaysAgo', { day });
 }
 
 // ── Score badge ────────────────────────────────────────────────
@@ -88,6 +91,7 @@ function StatsRow({
   activeFilter: VerdictFilter;
   onFilter: (v: VerdictFilter) => void;
 }) {
+  const { t } = useTranslation();
   if (history.length === 0) return null;
   const counts = {
     good:    history.filter((h) => h.verdict === 'good').length,
@@ -96,9 +100,9 @@ function StatsRow({
   };
 
   const cells: { verdict: 'good' | 'caution' | 'bad'; label: string }[] = [
-    { verdict: 'good',    label: 'Compatible' },
-    { verdict: 'caution', label: 'À vérifier' },
-    { verdict: 'bad',     label: 'Déconseillé' },
+    { verdict: 'good',    label: t('shopping.verdictGood') },
+    { verdict: 'caution', label: t('shopping.verdictCaution') },
+    { verdict: 'bad',     label: t('shopping.verdictBad') },
   ];
 
   return (
@@ -158,6 +162,7 @@ function HistoryItem({
   onPress: () => void;
   onToggleShoppingList: () => void;
 }) {
+  const { t } = useTranslation();
   const vColor = verdictColor(entry.verdict);
   const vLabel = verdictLabel(entry.verdict);
 
@@ -170,7 +175,7 @@ function HistoryItem({
           <Text style={hitem.name} numberOfLines={1}>{entry.productName}</Text>
           <View style={hitem.meta}>
             {entry.brand ? <Text style={hitem.brand}>{entry.brand} · </Text> : null}
-            <Text style={hitem.time}>{timeAgo(entry.ts)}</Text>
+            <Text style={hitem.time}>{timeAgo(entry.ts, t)}</Text>
           </View>
         </View>
         <View style={hitem.right}>
@@ -187,18 +192,18 @@ function HistoryItem({
           {entry.ultraProcessed && (
             <View style={hitem.ultraBadge}>
               <Icon name="alert-triangle" size={12} color="#c47d0a" />
-              <Text style={hitem.ultraText}>Produit ultra-transformé (NOVA 4)</Text>
+              <Text style={hitem.ultraText}>{t('shopping.ultraProcessed')}</Text>
             </View>
           )}
           {entry.issues.length > 0 && (
             <View style={hitem.section}>
-              <Text style={hitem.sectionTitle}>Problèmes détectés</Text>
+              <Text style={hitem.sectionTitle}>{t('shopping.issuesDetected')}</Text>
               {entry.issues.map((issue, i) => <IssueRow key={i} issue={issue} />)}
             </View>
           )}
           {entry.positives.length > 0 && (
             <View style={hitem.section}>
-              <Text style={hitem.sectionTitle}>Points positifs</Text>
+              <Text style={hitem.sectionTitle}>{t('shopping.positivePoints')}</Text>
               {entry.positives.map((p, i) => (
                 <View key={i} style={detail.positiveRow}>
                   <Icon name="check" size={12} color="#2d8a4e" />
@@ -219,7 +224,7 @@ function HistoryItem({
               color={inShoppingList ? '#2d8a4e' : Colors.ink}
             />
             <Text style={[hitem.addBtnText, inShoppingList && { color: '#2d8a4e' }]}>
-              {inShoppingList ? 'Dans la liste de courses' : 'Ajouter à la liste de courses'}
+              {inShoppingList ? t('shopping.inShoppingList') : t('shopping.addToShoppingList')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -294,6 +299,7 @@ function ShoppingItem({
   onRemove: () => void;
   loading: boolean;
 }) {
+  const { t } = useTranslation();
   const vColor = verdictColor(item.verdict);
   return (
     <View style={sl.wrap}>
@@ -308,7 +314,7 @@ function ShoppingItem({
         {item.addedToNutritor ? (
           <View style={sl.doneTag}>
             <Icon name="check" size={11} color="#2d8a4e" />
-            <Text style={sl.doneText}>Ajouté</Text>
+            <Text style={sl.doneText}>{t('shopping.addedToNutritor')}</Text>
           </View>
         ) : (
           <TouchableOpacity style={sl.addBtn} onPress={onAddToNutritor} activeOpacity={0.8} disabled={loading}>
@@ -387,6 +393,7 @@ export function ShoppingAssistantScreen({
   onStartDemo,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -409,8 +416,8 @@ export function ShoppingAssistantScreen({
       {/* Topbar */}
       <View style={styles.topbar}>
         <View>
-          <Text style={styles.eyebrow}>Assistant</Text>
-          <Text style={styles.title}>Courses</Text>
+          <Text style={styles.eyebrow}>{t('shopping.eyebrow')}</Text>
+          <Text style={styles.title}>{t('shopping.title')}</Text>
         </View>
         <View style={styles.topbarActions}>
           {onStartDemo && (
@@ -430,8 +437,8 @@ export function ShoppingAssistantScreen({
         {scanHistory.length > 0 && (
           <>
             <Text style={styles.sectionLabel}>
-              Résumé · {scanHistory.length} scan{scanHistory.length > 1 ? 's' : ''}
-              {verdictFilter ? ` · filtre actif` : ''}
+              {t('shopping.summary', { count: scanHistory.length, s: scanHistory.length > 1 ? 's' : '' })}
+              {verdictFilter ? t('shopping.filterActive') : ''}
             </Text>
             <StatsRow
               history={scanHistory}
@@ -439,9 +446,7 @@ export function ShoppingAssistantScreen({
               onFilter={setVerdictFilter}
             />
             {verdictFilter && (
-              <Text style={styles.filterHint}>
-                Appuie à nouveau sur le bouton pour annuler le filtre
-              </Text>
+              <Text style={styles.filterHint}>{t('shopping.filterHint')}</Text>
             )}
           </>
         )}
@@ -452,8 +457,8 @@ export function ShoppingAssistantScreen({
             <Icon name="scan" size={26} color={Colors.paper2} />
           </View>
           <View style={styles.scanBtnText}>
-            <Text style={styles.scanBtnTitle}>Scanner un produit</Text>
-            <Text style={styles.scanBtnSub}>Analyse instantanée selon votre profil</Text>
+            <Text style={styles.scanBtnTitle}>{t('shopping.scanTitle')}</Text>
+            <Text style={styles.scanBtnSub}>{t('shopping.scanSub')}</Text>
           </View>
           <Icon name="chevron-right" size={18} color="rgba(255,255,255,0.5)" />
         </TouchableOpacity>
@@ -464,12 +469,12 @@ export function ShoppingAssistantScreen({
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionLabel}>
                 {verdictFilter
-                  ? `${verdictLabel(verdictFilter)} · ${filtered.length} produit${filtered.length > 1 ? 's' : ''}`
-                  : 'Historique'}
+                  ? t('shopping.summaryFiltered', { label: verdictLabel(verdictFilter), count: filtered.length, s: filtered.length > 1 ? 's' : '' })
+                  : t('shopping.history')}
               </Text>
               {!verdictFilter && (
                 <TouchableOpacity onPress={onClearHistory} activeOpacity={0.7}>
-                  <Text style={styles.clearText}>Effacer</Text>
+                  <Text style={styles.clearText}>{t('shopping.clear')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -489,14 +494,12 @@ export function ShoppingAssistantScreen({
         ) : sorted.length === 0 ? (
           <View style={styles.emptyState}>
             <Icon name="shopping-cart" size={36} color={Colors.muted2} />
-            <Text style={styles.emptyTitle}>Aucun scan pour l'instant</Text>
-            <Text style={styles.emptyDesc}>
-              Scanne un produit pendant tes courses pour savoir immédiatement s'il est compatible avec ton profil.
-            </Text>
+            <Text style={styles.emptyTitle}>{t('shopping.emptyTitle')}</Text>
+            <Text style={styles.emptyDesc}>{t('shopping.emptyDesc')}</Text>
           </View>
         ) : (
           <View style={styles.emptyFilter}>
-            <Text style={styles.emptyFilterText}>Aucun produit dans cette catégorie</Text>
+            <Text style={styles.emptyFilterText}>{t('shopping.emptyFilter')}</Text>
           </View>
         )}
 
@@ -505,7 +508,7 @@ export function ShoppingAssistantScreen({
           <>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionLabel}>
-                Liste de courses · {shoppingList.length} article{shoppingList.length > 1 ? 's' : ''}
+                {t('shopping.shoppingListTitle', { count: shoppingList.length, s: shoppingList.length > 1 ? 's' : '' })}
               </Text>
             </View>
             <View style={styles.card}>

@@ -9,6 +9,19 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [0.34.0] — 2026-05-24
+
+### Ajouté
+- **Internationalisation complète (i18n)** — toute l'interface est maintenant traduite en français et en anglais via `i18next` / `react-i18next`
+  - `src/i18n/fr.ts` et `src/i18n/en.ts` : ~900 clés de traduction couvrant les 20 écrans, les composants, les messages d'alerte, les labels et les descriptions
+  - `src/i18n/index.ts` : initialisation `i18next` avec détection automatique et fallback `fr`
+- **Sélecteur de langue dans les Paramètres** — nouvelle section "Langue" avec deux pills FR / EN
+  - Le choix est persisté dans `AppSettings.language` (AsyncStorage)
+  - `AppShell` recharge la langue sauvegardée au démarrage via `i18n.changeLanguage()`
+  - Le changement de langue est instantané (rechargement reactif de tous les composants)
+
+---
+
 ## [0.33.1] — 2026-05-23
 
 ### Ajouté
