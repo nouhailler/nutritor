@@ -9,6 +9,7 @@
 [![Platform](https://img.shields.io/badge/📱%20Android%20%7C%20iOS%20%7C%20Web-lightgrey?style=for-the-badge)](.)
 [![Version](https://img.shields.io/badge/version-0.34.0-4CAF50?style=for-the-badge)](.)
 [![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020?style=for-the-badge&logo=expo)](.)
+[![Download APK](https://img.shields.io/github/v/release/nouhailler/nutritor?label=Download%20APK&logo=android&color=3F5A3A&style=for-the-badge)](https://github.com/nouhailler/nutritor/releases/latest)
 
 </div>
 
