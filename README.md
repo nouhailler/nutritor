@@ -44,7 +44,17 @@ C'est un **compagnon de connaissance nutritionnelle** — conçu pour les person
 </div>
 
 ---
+## 🎬 Démo
 
+<div align="center">
+
+*Journal · Aliments · Timeline physiologique · Scanner · Profil*
+
+![Démo Nutritor](docs/screenshots/demo.gif)
+
+</div>
+
+---
 
 ## 🎯 Pour qui ?
 
