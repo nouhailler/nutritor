@@ -24,6 +24,28 @@ C'est un **compagnon de connaissance nutritionnelle** — conçu pour les person
 
 ---
 
+
+## 📸 Aperçu
+
+<div align="center">
+
+| Journal du jour | Bibliothèque Aliments |
+|:-:|:-:|
+| ![Journal](docs/screenshots/journal.png) | ![Aliments](docs/screenshots/aliments.png) |
+
+| Statistiques | Profil & Allergènes |
+|:-:|:-:|
+| ![Statistiques](docs/screenshots/statistiques.png) | ![Profil](docs/screenshots/profil.png) |
+
+| Paramètres IA |
+|:-:|
+| ![Paramètres](docs/screenshots/parametres.png) |
+
+</div>
+
+---
+
+
 ## 🎯 Pour qui ?
 
 | Profil | Ce que Nutritor apporte |
