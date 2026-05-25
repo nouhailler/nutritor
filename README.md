@@ -369,6 +369,14 @@ Chaque écran principal dispose d'un bouton **◉** (ambre, topbar) qui lance un
 
 <div align="center">
 
+## 🤝 Contribuer
+
+Nutritor est un projet open source et les contributions sont les bienvenues — que ce soit une correction de bug, une traduction, un test sur ton appareil, ou une idée de fonctionnalité. Consulte le guide de contribution pour savoir par où commencer.
+
+👉 [**CONTRIBUTING.md**](CONTRIBUTING.md)
+
+---
+
 *Fait avec 🌿 pour les estomacs sensibles*
 
 </div>
