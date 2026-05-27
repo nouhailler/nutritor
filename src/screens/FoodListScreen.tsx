@@ -403,6 +403,7 @@ interface Props {
   onOpenScanner: () => void;
   onOpenPhotoAI: () => void;
   onStartDemo:   () => void;
+  onOpenComparateur?: (f1: Food, f2: Food) => void;
 }
 
 export function FoodListScreen({
@@ -423,6 +424,7 @@ export function FoodListScreen({
   onOpenScanner,
   onOpenPhotoAI,
   onStartDemo,
+  onOpenComparateur,
 }: Props) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -430,6 +432,17 @@ export function FoodListScreen({
   const debouncedQuery = useDebounce(query, 300);
   const [platePickerFood, setPlatePickerFood] = useState<Food | null>(null);
   const [journalPickerFood, setJournalPickerFood] = useState<Food | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareSelected, setCompareSelected] = useState<Food[]>([]);
+
+  function handleFoodPress(food: Food) {
+    if (!compareMode) { onPickFood(food); return; }
+    setCompareSelected((prev) => {
+      if (prev.find((f) => f.id === food.id)) return prev.filter((f) => f.id !== food.id);
+      if (prev.length >= 2) return [prev[1], food];
+      return [...prev, food];
+    });
+  }
 
   const reversedList = useMemo(() => [...foodList].reverse(), [foodList]);
 
@@ -512,10 +525,41 @@ export function FoodListScreen({
         <View style={styles.countBadge}>
           <Text style={styles.countBadgeText}>{foodList.length}</Text>
         </View>
+        {onOpenComparateur && (
+          <TouchableOpacity
+            style={[styles.iconBtn, compareMode && styles.iconBtnActive]}
+            onPress={() => { setCompareMode((v) => !v); setCompareSelected([]); }}
+            activeOpacity={0.7}
+          >
+            <Icon name="columns" size={18} color={compareMode ? Colors.ok : Colors.ink} />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={styles.iconBtn} onPress={onStartDemo} activeOpacity={0.7}>
           <Icon name="activity" size={17} color={Colors.signal} />
         </TouchableOpacity>
       </View>
+
+      {/* Compare mode banner */}
+      {compareMode && (
+        <View style={styles.compareBanner}>
+          <Text style={styles.compareBannerText}>
+            {compareSelected.length === 0
+              ? 'Sélectionnez 2 aliments à comparer'
+              : compareSelected.length === 1
+              ? `${compareSelected[0].name} — sélectionnez un 2e aliment`
+              : `${compareSelected[0].name}  ↔  ${compareSelected[1].name}`}
+          </Text>
+          {compareSelected.length === 2 && (
+            <TouchableOpacity
+              style={styles.compareLaunchBtn}
+              onPress={() => { onOpenComparateur!(compareSelected[0], compareSelected[1]); setCompareMode(false); setCompareSelected([]); }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.compareLaunchText}>Comparer</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {/* Search input */}
       <View style={styles.searchWrap}>
@@ -588,7 +632,7 @@ export function FoodListScreen({
                   key={food.id}
                   food={food}
                   profile={profile}
-                  onPress={() => onPickFood(food)}
+                  onPress={() => handleFoodPress(food)}
                   onAddToJournal={() => setJournalPickerFood(food)}
                   onAddToPlate={() => setPlatePickerFood(food)}
                   onDelete={() => confirmDelete(food)}
@@ -604,7 +648,7 @@ export function FoodListScreen({
                 <SectionLabel left={t('search.recentlyAdded')} right={`${sections.recentlyAdded.length}`} />
                 {sections.recentlyAdded.map((food) => (
                   <FoodRow key={food.id} food={food} profile={profile}
-                    onPress={() => onPickFood(food)}
+                    onPress={() => handleFoodPress(food)}
                     onAddToJournal={() => setJournalPickerFood(food)}
                     onAddToPlate={() => setPlatePickerFood(food)}
                     onDelete={() => confirmDelete(food)} />
@@ -618,7 +662,7 @@ export function FoodListScreen({
                 <SectionLabel left={t('search.recentlyAdded')} right={`${sections.recentlyUsed.length}`} />
                 {sections.recentlyUsed.map((food) => (
                   <FoodRow key={food.id} food={food} profile={profile}
-                    onPress={() => onPickFood(food)}
+                    onPress={() => handleFoodPress(food)}
                     onAddToJournal={() => setJournalPickerFood(food)}
                     onAddToPlate={() => setPlatePickerFood(food)}
                     onDelete={() => confirmDelete(food)} />
@@ -632,7 +676,7 @@ export function FoodListScreen({
                 <SectionLabel left={t('search.recentlyAdded')} right={`${sections.recentlyViewed.length}`} />
                 {sections.recentlyViewed.map((food) => (
                   <FoodRow key={food.id} food={food} profile={profile}
-                    onPress={() => onPickFood(food)}
+                    onPress={() => handleFoodPress(food)}
                     onAddToJournal={() => setJournalPickerFood(food)}
                     onAddToPlate={() => setPlatePickerFood(food)}
                     onDelete={() => confirmDelete(food)} />
@@ -649,7 +693,7 @@ export function FoodListScreen({
                 />
                 {sections.rest.map((food) => (
                   <FoodRow key={food.id} food={food} profile={profile}
-                    onPress={() => onPickFood(food)}
+                    onPress={() => handleFoodPress(food)}
                     onAddToJournal={() => setJournalPickerFood(food)}
                     onAddToPlate={() => setPlatePickerFood(food)}
                     onDelete={() => confirmDelete(food)} />
@@ -723,6 +767,41 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconBtnActive: {
+    backgroundColor: 'rgba(63,90,58,0.12)',
+  },
+  compareBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(63,90,58,0.08)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(63,90,58,0.2)',
+    gap: 10,
+  },
+  compareBannerText: {
+    flex: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.ink,
+    lineHeight: 18,
+  },
+  compareLaunchBtn: {
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: Colors.ok,
+  },
+  compareLaunchText: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 13,
+    color: Colors.paper2,
   },
   eyebrow: {
     fontFamily: Fonts.mono,

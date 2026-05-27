@@ -7,6 +7,8 @@
 ## État actuel (2026-05-27)
 
 ### Derniers commits
+- WIP — feat: Nutri-Score Perso, Comparateur, Sommeil, CSV (v0.37.0)
+- WIP — feat: Mode Débutant / Expert global (v0.36.0)
 - WIP — feat: Mode Défi 30 jours (v0.35.0)
 - `993ce5b` — docs: mise à jour CONTEXT, Changelog et README (v0.33.1)
 - `188804b` — feat: import/export de la bibliothèque de plats dans les paramètres (v0.33.1)
@@ -14,7 +16,7 @@
 - `b992be3` — feat: photo de profil + menu hamburger cliquable vers Profil (v0.32.0)
 - `08d12aa` — feat: export professionnel HTML pour médecins et diététiciens (v0.31.0)
 
-### Version courante : 0.35.0 (app.json : 0.30.0)
+### Version courante : 0.37.0 (app.json : 0.30.0)
 
 Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été ajoutées (voir CHANGELOG.md pour le détail complet) :
 
@@ -123,6 +125,34 @@ Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été
 **v0.33.1 — Import/export bibliothèque de plats**
 - `SettingsScreen` : nouvelle section "Bibliothèque de plats" avec export JSON (`nutritor_plats.json`) et import avec fusion (déduplication par `id`)
 - `AppShell` : câblage `savedPlates` + handler `onImportPlates`
+
+**v0.37.0 — Nutri-Score Perso · Comparateur · Sommeil · Export CSV**
+- `src/utils/nutriScorePerso.ts` (nouveau) : wrapper de `computeCompatibilityScore()` → grade A-E (≥80/60/40/20), blockers, positives, explanation
+- `src/components/NutriScoreBadge.tsx` (nouveau) : badge circulaire score + lettre, couleur par grade + modal détail (blockers/positives)
+- `src/screens/ComparateurScreen.tsx` (nouveau) : comparaison côte à côte de 2 aliments — NutriScore, macros/100g (gagnant surligné), FODMAP, Allergènes — footer ajout au journal
+- `FoodListScreen` : mode Comparer activé par bouton `columns` dans topbar — sélection 2 aliments → lance `ComparateurScreen`
+- `src/types/symptoms.ts` : `SymptomEntry` enrichi de `sleepDuration?: number` (4-12 h, pas 0.5)
+- `src/components/SymptomWidget.tsx` : stepper durée sommeil (4-12 h) + emoji picker qualité sommeil (😴/😐/😊 mappés sur `scores.sleep`)
+- `StatsScreen` : section "Sommeil & digestion" (Expert, ≥7 entrées) — courbes durée/énergie/douleurs abdominales + texte de corrélation automatique
+- `src/services/csvService.ts` (nouveau) : exports journal/symptômes/aliments en CSV UTF-8 BOM + import journal CSV avec matching repas
+- `SettingsScreen` : section "Export / Import CSV" avec 3 boutons export + 1 import
+- `DetailScreen` : `NutriScoreBadge` affiché à côté de la `CompatCard` dans la fiche aliment
+- Icon : 5 nouvelles icônes (`x`, `check-circle`, `arrow-left`, `columns`, `file-text`)
+
+**v0.36.0 — Mode Débutant / Expert global**
+- `src/contexts/ModeContext.tsx` (nouveau) : `AppMode = 'beginner' | 'expert'`, `ModeProvider`, `useMode()` hook — persisté via `usePersistedState` sur `KEYS.appMode`
+- `src/components/ModeOnboarding.tsx` (nouveau) : overlay plein-écran (absoluteFill, zIndex 100) — affiché une seule fois après l'onboarding regular, deux cartes cliquables 🙂 Débutant / 🤸 Expert
+- `src/storage/store.ts` : deux nouvelles clés `appMode: 'nutritor:app_mode'` et `modeSelected: 'nutritor:mode_selected'`
+- `App.tsx` : `ModeProvider` enveloppe toute l'arborescence
+- `AppShell` : badge flottant `🙂 Débutant` / `🔬 Expert` (left 12, absolutePositioned, zIndex 200, cliquable → Paramètres) + rendu de `ModeOnboarding` après `OnboardingFlow`
+- `SettingsScreen` : nouvelle section "Interface" avec pills Débutant/Expert et description contextuelle
+- `HomeScreen` : en mode débutant, `autoEvents` filtrés sur 4 types (`glycemic`, `digestion`, `satiety`, `anabolic`), `miniMetrics = []`
+- `PhysioTimeline` / `EventDetailModal` : section "Et si…" (simulation) cachée en mode débutant
+- `DetailScreen` : débutant cache ProteinSection, CarbSection, LipidSection, NutriTableSection, BioactiveSection, MetabolicSection, SensorySection — garde Apports, FODMAP, Allergènes, Composition, CompatCard
+- `KnowledgeScreen` : toggle local initialisé depuis le mode global
+- `StatsScreen` / `ViewToggle` : débutant limite les onglets à `['week']` seulement (cache Mois et Bien-être)
+- `ProfileScreen` : débutant cache bouton export, carte FODMAP, mémoire digestive, section labo
+- Traductions : clés `mode.*` et `settings.sectionInterface` dans `fr.ts` + `en.ts`
 
 **v0.35.0 — Mode Défi 30 jours**
 - `src/types/challenge.ts` : types `ProtocolId`, `DailyObjective`, `DailyCheckIn`, `Challenge`

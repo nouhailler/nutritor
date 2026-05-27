@@ -25,6 +25,8 @@ export const KEYS = {
   scanHistory:            'nutritor:scan_history',
   shoppingList:           'nutritor:shopping_list',
   challenge:              'nutritor:challenge',
+  appMode:                'nutritor:app_mode',
+  modeSelected:           'nutritor:mode_selected',
 };
 
 export async function load<T>(key: string): Promise<T | null> {

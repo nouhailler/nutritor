@@ -22,6 +22,7 @@ import { HELP } from '../data/helpContent';
 import { AllergenLevel, UserProfile, computeDietLabel } from '../data/user';
 import { Colors, Fonts } from '../theme/tokens';
 import { LabScores, LabStatus } from '../types/labScores';
+import { useMode } from '../contexts/ModeContext';
 
 // ── Severity pill ────────────────────────────────────────────
 
@@ -104,6 +105,7 @@ export function ProfileScreen({
 }: ProfileScreenProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { isExpert } = useMode();
   const [helpVisible, setHelpVisible] = useState(false);
   const dietLabel = computeDietLabel(profile.diets);
 
@@ -184,24 +186,28 @@ export function ProfileScreen({
           <Text style={styles.activity}>{profile.activity}</Text>
         </View>
 
-        {/* Export professionnel */}
-        <TouchableOpacity style={styles.exportBtn} onPress={onExportReport} activeOpacity={0.8}>
-          <Text style={styles.exportEmoji}>👨‍⚕️</Text>
-          <View style={styles.exportText}>
-            <Text style={styles.exportTitle}>{t('profile.professionalExport')}</Text>
-            <Text style={styles.exportDesc}>{t('profile.professionalExportDesc')}</Text>
-          </View>
-          <Icon name="upload" size={16} color={Colors.ok} />
-        </TouchableOpacity>
+        {/* Export professionnel — expert only */}
+        {isExpert && (
+          <TouchableOpacity style={styles.exportBtn} onPress={onExportReport} activeOpacity={0.8}>
+            <Text style={styles.exportEmoji}>👨‍⚕️</Text>
+            <View style={styles.exportText}>
+              <Text style={styles.exportTitle}>{t('profile.professionalExport')}</Text>
+              <Text style={styles.exportDesc}>{t('profile.professionalExportDesc')}</Text>
+            </View>
+            <Icon name="upload" size={16} color={Colors.ok} />
+          </TouchableOpacity>
+        )}
 
-        {/* Section: Mode Low FODMAP */}
-        <TouchableOpacity style={styles.fodmapCard} onPress={onOpenFodmap} activeOpacity={0.85}>
-          <View style={styles.fodmapLeft}>
-            <Text style={styles.fodmapTitle}>{t('profile.fodmapMode')}</Text>
-            <Text style={styles.fodmapDesc}>{t('profile.fodmapDesc')}</Text>
-          </View>
-          <Icon name="activity" size={18} color={Colors.ok} />
-        </TouchableOpacity>
+        {/* Section: Mode Low FODMAP — expert only */}
+        {isExpert && (
+          <TouchableOpacity style={styles.fodmapCard} onPress={onOpenFodmap} activeOpacity={0.85}>
+            <View style={styles.fodmapLeft}>
+              <Text style={styles.fodmapTitle}>{t('profile.fodmapMode')}</Text>
+              <Text style={styles.fodmapDesc}>{t('profile.fodmapDesc')}</Text>
+            </View>
+            <Icon name="activity" size={18} color={Colors.ok} />
+          </TouchableOpacity>
+        )}
 
         {/* Section: Allergènes */}
         <View style={styles.section}>
@@ -242,8 +248,8 @@ export function ProfileScreen({
           </View>
         </View>
 
-        {/* Section: Mémoire digestive */}
-        <View style={styles.section}>
+        {/* Section: Mémoire digestive — expert only */}
+        {isExpert && <View style={styles.section}>
           <Text style={styles.sectionEyebrow}>{t('profile.digestiveMemory')}</Text>
           <Text style={styles.sectionDesc}>{t('profile.digestiveMemoryDesc')}</Text>
 
@@ -295,10 +301,10 @@ export function ProfileScreen({
                 : digestiveMemory ? t('profile.updateMemory') : t('profile.analyzeData')}
             </Text>
           </TouchableOpacity>
-        </View>
+        </View>}
 
-        {/* Section: Laboratoire nutritionnel */}
-        <View style={styles.section}>
+        {/* Section: Laboratoire nutritionnel — expert only */}
+        {isExpert && <View style={styles.section}>
           <Text style={styles.sectionEyebrow}>{t('profile.lab')}</Text>
           <Text style={styles.sectionDesc}>{t('profile.labDesc')}</Text>
 
@@ -356,7 +362,7 @@ export function ProfileScreen({
                 : labScores ? t('profile.labReanalyze') : t('profile.labAnalyze')}
             </Text>
           </TouchableOpacity>
-        </View>
+        </View>}
 
         {/* Section: Objectifs */}
         <View style={[styles.section, { paddingBottom: 40 }]}>

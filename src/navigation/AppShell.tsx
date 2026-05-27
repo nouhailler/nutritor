@@ -50,6 +50,7 @@ import { KnowledgeScreen } from '../screens/KnowledgeScreen';
 import { ShoppingAssistantScreen } from '../screens/ShoppingAssistantScreen';
 import { ShoppingScannerScreen } from '../screens/ShoppingScannerScreen';
 import { ChallengeScreen } from '../screens/ChallengeScreen';
+import { ComparateurScreen } from '../screens/ComparateurScreen';
 import { Challenge } from '../types/challenge';
 import { ScanHistoryEntry, ShoppingListItem } from '../types/shopping';
 import { getOFFByBarcode, offProductToFood } from '../services/openFoodFacts';
@@ -65,17 +66,20 @@ import { SymptomEntry, SymptomScores } from '../types/symptoms';
 import { computeDayTips } from '../services/tipsEngine';
 import { DayTip } from '../types/tips';
 import { DemoOverlay, DemoScenario } from '../components/DemoOverlay';
+import { ModeOnboarding } from '../components/ModeOnboarding';
+import { useMode, AppMode } from '../contexts/ModeContext';
 import { generateProfessionalReport } from '../services/professionalReport';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as ImagePicker from 'expo-image-picker';
+import { exportJournalCSV, exportSymptomsCSV, exportFoodsCSV, importJournalCSV } from '../services/csvService';
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
 type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile' | 'shopping';
-type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'manualFood' | 'editFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge' | 'shoppingScanner' | 'plateAI' | 'challenge' | null;
+type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'manualFood' | 'editFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge' | 'shoppingScanner' | 'plateAI' | 'challenge' | 'comparateur' | null;
 
 const TABS_DEF: { id: Tab; labelKey: string; icon: 'home' | 'leaf' | 'book' | 'chart' | 'user' | 'shopping-cart' }[] = [
   { id: 'home',     labelKey: 'drawer.journal', icon: 'home' },
@@ -406,6 +410,12 @@ export function AppShell() {
     KEYS.challenge,
     null,
   );
+  const [modeSelected, setModeSelected] = usePersistedState<boolean>(
+    KEYS.modeSelected,
+    false,
+  );
+  const { mode, setMode } = useMode();
+  const [comparateurFoods, setComparateurFoods] = useState<[Food, Food] | null>(null);
   const [viewingDate, setViewingDate] = useState<string | null>(null); // null = today
   const [showDuplicateBanner, setShowDuplicateBanner] = useState(false);
 
@@ -566,11 +576,51 @@ export function AppShell() {
 
   // ── Symptom helpers ──────────────────────────────────────────
 
-  const handleSaveSymptom = (date: string, scores: SymptomScores) => {
+  const handleSaveSymptom = (date: string, scores: SymptomScores, sleepDuration?: number) => {
     setSymptoms((prev) => {
       const without = prev.filter((e) => e.date !== date);
-      return [...without, { date, scores }].sort((a, b) => a.date.localeCompare(b.date));
+      const entry: SymptomEntry = { date, scores };
+      if (sleepDuration !== undefined) entry.sleepDuration = sleepDuration;
+      return [...without, entry].sort((a, b) => a.date.localeCompare(b.date));
     });
+  };
+
+  // ── CSV handlers ────────────────────────────────────────────
+
+  const handleExportJournalCSV = async () => {
+    const csv = exportJournalCSV(journal);
+    const path = FileSystem.cacheDirectory + 'journal_nutritor.csv';
+    await FileSystem.writeAsStringAsync(path, csv, { encoding: FileSystem.EncodingType.UTF8 });
+    const available = await Sharing.isAvailableAsync();
+    if (available) await Sharing.shareAsync(path, { mimeType: 'text/csv', dialogTitle: 'Exporter le journal CSV' });
+  };
+
+  const handleExportSymptomsCSV = async () => {
+    const csv = exportSymptomsCSV(symptoms);
+    const path = FileSystem.cacheDirectory + 'symptomes_nutritor.csv';
+    await FileSystem.writeAsStringAsync(path, csv, { encoding: FileSystem.EncodingType.UTF8 });
+    const available = await Sharing.isAvailableAsync();
+    if (available) await Sharing.shareAsync(path, { mimeType: 'text/csv', dialogTitle: 'Exporter les symptômes CSV' });
+  };
+
+  const handleExportFoodsCSV = async () => {
+    const csv = exportFoodsCSV(foodList);
+    const path = FileSystem.cacheDirectory + 'aliments_nutritor.csv';
+    await FileSystem.writeAsStringAsync(path, csv, { encoding: FileSystem.EncodingType.UTF8 });
+    const available = await Sharing.isAvailableAsync();
+    if (available) await Sharing.shareAsync(path, { mimeType: 'text/csv', dialogTitle: 'Exporter les aliments CSV' });
+  };
+
+  const handleImportJournalCSV = async (csvContent: string) => {
+    const result = importJournalCSV(csvContent, foodList);
+    setJournal((prev) => {
+      const byDate = new Map(prev.map((e) => [e.date, e]));
+      for (const entry of result.entries) {
+        byDate.set(entry.date, entry);
+      }
+      return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+    });
+    return result;
   };
 
   const handleSaveComment = (date: string, text: string) => {
@@ -1212,11 +1262,25 @@ export function AppShell() {
         onSaveChallenge={setChallenge}
         onAbandon={() => {
           setChallenge(null);
-          setStack(null);
+          showTab('home');
         }}
         onBack={() => setStack(null)}
         onOpenMenu={openMenu}
         onOpenFodmap={() => setStack('fodmap')}
+      />
+    );
+  } else if (stack === 'comparateur' && comparateurFoods) {
+    screen = (
+      <ComparateurScreen
+        food1={comparateurFoods[0]}
+        food2={comparateurFoods[1]}
+        profile={profile}
+        onBack={() => { setStack(null); setComparateurFoods(null); }}
+        onAddToJournal={(food) => {
+          setStack(null);
+          setComparateurFoods(null);
+          openDetail(food, null);
+        }}
       />
     );
   } else if (stack === 'mealGenerator') {
@@ -1303,6 +1367,10 @@ export function AppShell() {
           setTimeout(() => setToast(null), 2600);
         }}
         onStartDemo={() => setDemoScenario('settings')}
+        onExportJournalCSV={handleExportJournalCSV}
+        onExportSymptomsCSV={handleExportSymptomsCSV}
+        onExportFoodsCSV={handleExportFoodsCSV}
+        onImportJournalCSV={handleImportJournalCSV}
       />
     );
   } else {
@@ -1364,6 +1432,7 @@ export function AppShell() {
             onOpenCIQUAL={(q) => { setPendingQuery(q); setLastImportedFood(null); setImportScreenOrigin(null); setStack('ciqual'); }}
             onOpenScanner={() => { setLastImportedFood(null); setImportScreenOrigin(null); setStack('scanner'); }}
             onOpenPhotoAI={() => setStack('foodPhoto')}
+            onOpenComparateur={(f1, f2) => { setComparateurFoods([f1, f2]); setStack('comparateur'); }}
             onStartDemo={() => setDemoScenario('foods')}
           />
         );
@@ -1495,6 +1564,17 @@ export function AppShell() {
           onPress={() => setStack('mealGenerator')}
         />
       )}
+      {modeSelected && (
+        <TouchableOpacity
+          style={[styles.modeBadge, { top: insets.top + 8 }]}
+          onPress={() => setStack('settings')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.modeBadgeText, { color: mode === 'expert' ? Colors.ok : Colors.signal }]}>
+            {mode === 'expert' ? '🔬' : '🙂'} {mode === 'expert' ? 'Expert' : 'Débutant'}
+          </Text>
+        </TouchableOpacity>
+      )}
       <DrawerMenu
         visible={drawerOpen}
         activeTab={tab}
@@ -1515,6 +1595,13 @@ export function AppShell() {
         onComplete={(updatedProfile) => {
           setProfile(updatedProfile);
           setOnboardingDone(true);
+        }}
+      />
+      <ModeOnboarding
+        visible={!appLoading && onboardingDone && !modeSelected}
+        onSelect={(m: AppMode) => {
+          setMode(m);
+          setModeSelected(true);
         }}
       />
       <DemoOverlay scenario={demoScenario} onClose={() => setDemoScenario(null)} />
@@ -1541,6 +1628,23 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     zIndex: 200,
+  },
+
+  modeBadge: {
+    position: 'absolute',
+    left: 12,
+    zIndex: 200,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+  },
+  modeBadgeText: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    letterSpacing: 0.5,
   },
   aiGenIconBtn: {
     width: 34,

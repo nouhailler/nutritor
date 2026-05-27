@@ -17,6 +17,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
+import { useMode } from '../contexts/ModeContext';
 import { Colors, Fonts } from '../theme/tokens';
 import {
   KnowledgeCategory,
@@ -87,7 +88,8 @@ function EntryView({
 }) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const [mode, setMode] = useState<'simple' | 'expert'>('simple');
+  const { isExpert: globalExpert } = useMode();
+  const [mode, setMode] = useState<'simple' | 'expert'>(globalExpert ? 'expert' : 'simple');
   const meta = CATEGORY_META[entry.category];
   const related = getRelated(entry);
 

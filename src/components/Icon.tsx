@@ -54,7 +54,12 @@ type IconName =
   | 'chevron-up'
   | 'shopping-cart'
   | 'heart'
-  | 'x-circle';
+  | 'x-circle'
+  | 'x'
+  | 'check-circle'
+  | 'arrow-left'
+  | 'columns'
+  | 'file-text';
 
 const FEATHER_MAP: Record<IconName, keyof typeof Feather.glyphMap> = {
   menu: 'menu',
@@ -109,6 +114,11 @@ const FEATHER_MAP: Record<IconName, keyof typeof Feather.glyphMap> = {
   'shopping-cart':  'shopping-cart',
   'heart':          'heart',
   'x-circle':       'x-circle',
+  'x':              'x',
+  'check-circle':   'check-circle',
+  'arrow-left':     'arrow-left',
+  'columns':        'columns',
+  'file-text':      'file-text',
 };
 
 interface IconProps {

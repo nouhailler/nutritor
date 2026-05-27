@@ -7,7 +7,7 @@
 *Comprendre ce que vous mangez. Manger ce qui vous convient.*
 
 [![Platform](https://img.shields.io/badge/📱%20Android%20%7C%20iOS%20%7C%20Web-lightgrey?style=for-the-badge)](.)
-[![Version](https://img.shields.io/badge/version-0.34.0-4CAF50?style=for-the-badge)](.)
+[![Version](https://img.shields.io/badge/version-0.37.0-4CAF50?style=for-the-badge)](.)
 [![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020?style=for-the-badge&logo=expo)](.)
 [![Download APK](https://img.shields.io/github/v/release/nouhailler/nutritor?label=Download%20APK&logo=android&color=3F5A3A&style=for-the-badge)](https://github.com/nouhailler/nutritor/releases/latest)
 
@@ -138,6 +138,10 @@ C'est un **compagnon de connaissance nutritionnelle** — conçu pour les person
 - 🔗 Corrélations aliment → symptômes (automatique)
 - ⚙️ Config IA (OpenRouter / Ollama / Anthropic / OpenAI)
 - 📤 Import / export bibliothèque de plats (JSON)
+- 📊 Export CSV journal, symptômes & aliments + import CSV
+- ⚖️ Comparateur de produits côte à côte
+- 🏅 Nutri-Score Perso (A–E selon votre profil)
+- 🙂/🔬 Mode Débutant / Expert (personnalise la profondeur de l'interface)
 - 🌐 Interface multilingue (Français / English)
 
 </td>
@@ -247,7 +251,7 @@ React Native + Expo SDK 54  ·  TypeScript strict
 - ✅ Duplication automatique de la journée précédente au démarrage
 - ✅ Commentaire libre par journée (2 000 caractères max)
 - ✅ Avis nutritionnel IA quotidien (P/G/L, conseils persistés par date)
-- ✅ Widget symptômes quotidiens (fatigue, ballonnements, énergie…)
+- ✅ Widget symptômes quotidiens (fatigue, ballonnements, énergie…) + durée de sommeil + qualité sommeil (emoji picker)
 - ✅ Journal historique 365 jours avec navigation par calendrier
 - ✅ Modification des portions dans le journal (+/− 10g, estimation kcal temps réel)
 
@@ -290,6 +294,8 @@ React Native + Expo SDK 54  ·  TypeScript strict
 - ✅ Saisie libre d'aliment (création manuelle complète sans IA)
 - ✅ Bouton ⚡IA dans la fiche aliment pour enrichissement à la demande
 - ✅ Import rapide depuis le journal (retour direct sur la fiche détail)
+- ✅ **Nutri-Score Perso** — score 0–100 + grade A–E calculé selon votre profil (badge dans la fiche et le comparateur)
+- ✅ **Comparateur de produits** — côte à côte : score, macros/100g avec gagnant surligné, FODMAP, allergènes
 
 </details>
 

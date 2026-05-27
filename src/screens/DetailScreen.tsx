@@ -26,6 +26,9 @@ import { INITIAL_MEALS } from '../data/food';
 import { UserProfile } from '../data/user';
 import { computeCompatibilityScore } from '../data/compatibilityScore';
 import { CompatCard } from '../components/CompatibilityBadge';
+import { calculateNutriScorePerso } from '../utils/nutriScorePerso';
+import { NutriScoreBadge } from '../components/NutriScoreBadge';
+import { useMode } from '../contexts/ModeContext';
 import { OnboardingTip } from '../components/OnboardingTip';
 import { TIPS } from '../data/onboarding';
 import { Colors, FA_COLORS, Fonts } from '../theme/tokens';
@@ -850,6 +853,7 @@ export function DetailScreen({
 }: DetailScreenProps) {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { isExpert } = useMode();
   const [portion, setPortion] = useState(food.defaultPortion);
   const [showSheet, setShowSheet] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
@@ -923,7 +927,12 @@ export function DetailScreen({
 
         {/* Personalized compatibility card */}
         {profile && (
-          <CompatCard result={computeCompatibilityScore(food, profile)} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingBottom: 4 }}>
+            <NutriScoreBadge result={calculateNutriScorePerso(food, profile)} size="md" />
+            <View style={{ flex: 1 }}>
+              <CompatCard result={computeCompatibilityScore(food, profile)} />
+            </View>
+          </View>
         )}
 
         {/* Compat strip (static food properties) */}
@@ -941,16 +950,16 @@ export function DetailScreen({
           portion={portion}
           onEditKcal={onUpdateFood ? () => setKcalModalVisible(true) : undefined}
         />
-        {food.proteinDetail && <ProteinSection p={food.proteinDetail} />}
-        {food.carbDetail && <CarbSection c={food.carbDetail} />}
-        {food.lipidDetail && <LipidSection l={food.lipidDetail} />}
-        {food.minerals && (
+        {isExpert && food.proteinDetail && <ProteinSection p={food.proteinDetail} />}
+        {isExpert && food.carbDetail && <CarbSection c={food.carbDetail} />}
+        {isExpert && food.lipidDetail && <LipidSection l={food.lipidDetail} />}
+        {isExpert && food.minerals && (
           <NutriTableSection num="05" title={t('detail.section05')} right={t('detail.anrAdult')} items={food.minerals} />
         )}
-        {food.vitamins && (
+        {isExpert && food.vitamins && (
           <NutriTableSection num="06" title={t('detail.section06')} right={t('detail.anrAdult')} items={food.vitamins} />
         )}
-        {food.trace && (
+        {isExpert && food.trace && (
           <NutriTableSection
             num="06b"
             title={t('detail.section06b')}
@@ -959,9 +968,9 @@ export function DetailScreen({
           />
         )}
         {food.fodmap && <FodmapSection f={food.fodmap} />}
-        {food.bioactives && <BioactiveSection items={food.bioactives} />}
-        {food.metabolic && <MetabolicSection items={food.metabolic} />}
-        {food.sensory && <SensorySection s={food.sensory} />}
+        {isExpert && food.bioactives && <BioactiveSection items={food.bioactives} />}
+        {isExpert && food.metabolic && <MetabolicSection items={food.metabolic} />}
+        {isExpert && food.sensory && <SensorySection s={food.sensory} />}
         <AllergenSection allergens={food.allergens ?? []} />
         <CompositionSection
           text={food.ingredients ?? ''}

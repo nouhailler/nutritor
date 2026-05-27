@@ -24,6 +24,7 @@ export const UNSET_SCORES: SymptomScores = {
 export interface SymptomEntry {
   date: string;           // 'YYYY-MM-DD'
   scores: SymptomScores;
+  sleepDuration?: number; // heures (4–12, pas 0.5) — saisie manuelle
 }
 
 export interface SymptomConfig {

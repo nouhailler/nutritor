@@ -25,6 +25,7 @@ import {
 import { Meal } from '../types';
 import { UserProfile } from '../data/user';
 import { addMinutes, buildEventDetail } from '../services/timelineService';
+import { useMode } from '../contexts/ModeContext';
 
 // ── Category color palette ─────────────────────────────────────
 
@@ -356,6 +357,7 @@ function BulletRow({ text, color }: { text: string; color?: string }) {
 }
 
 function EventDetailModal({ detail, onClose }: { detail: EventDetailData | null; onClose: () => void }) {
+  const { isExpert } = useMode();
   if (!detail) return null;
   const col = detail.intensityColor;
   const confColor = detail.confidence === 'élevée' ? Colors.ok : detail.confidence === 'modérée' ? Colors.signal : Colors.muted;
@@ -442,8 +444,8 @@ function EventDetailModal({ detail, onClose }: { detail: EventDetailData | null;
               </DetailSection>
             )}
 
-            {/* Simulation */}
-            {detail.simulation && (
+            {/* Simulation — expert only */}
+            {isExpert && detail.simulation && (
               <DetailSection label="🔮 Et si…">
                 <View style={[s.simulationBox, { borderColor: col + '44' }]}>
                   <Text style={[s.simulationText, { color: col }]}>{detail.simulation}</Text>

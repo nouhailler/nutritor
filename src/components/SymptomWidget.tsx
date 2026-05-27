@@ -98,11 +98,104 @@ function SummaryChip({ scores }: { scores: SymptomScores }) {
 
 // ── Widget ────────────────────────────────────────────────────
 
+// ── Sleep duration stepper ────────────────────────────────────
+
+const SLEEP_MIN = 4;
+const SLEEP_MAX = 12;
+const SLEEP_STEP = 0.5;
+
+function SleepDurationStepper({
+  value,
+  readOnly,
+  onChange,
+}: {
+  value: number | undefined;
+  readOnly: boolean;
+  onChange: (v: number | undefined) => void;
+}) {
+  const display = value !== undefined ? `${value} h` : '—';
+  const dec = () => {
+    if (value === undefined) { onChange(SLEEP_MAX); return; }
+    const next = Math.max(SLEEP_MIN, value - SLEEP_STEP);
+    onChange(next);
+  };
+  const inc = () => {
+    if (value === undefined) { onChange(SLEEP_MIN); return; }
+    const next = Math.min(SLEEP_MAX, value + SLEEP_STEP);
+    onChange(next);
+  };
+  const reset = () => onChange(undefined);
+
+  return (
+    <View style={styles.sleepRow}>
+      <Text style={styles.rowLabel}>Durée sommeil</Text>
+      <View style={styles.stepper}>
+        {!readOnly && (
+          <TouchableOpacity style={styles.stepBtn} onPress={dec} activeOpacity={0.7}>
+            <Text style={styles.stepBtnText}>−</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity onPress={!readOnly ? reset : undefined} activeOpacity={readOnly ? 1 : 0.6}>
+          <Text style={styles.stepValue}>{display}</Text>
+        </TouchableOpacity>
+        {!readOnly && (
+          <TouchableOpacity style={styles.stepBtn} onPress={inc} activeOpacity={0.7}>
+            <Text style={styles.stepBtnText}>+</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+}
+
+// ── Sleep quality emoji buttons ───────────────────────────────
+
+const SLEEP_QUALITIES = [
+  { emoji: '😴', label: 'Mauvaise', score: 0 },
+  { emoji: '😐', label: 'Moyenne',  score: 2 },
+  { emoji: '😊', label: 'Bonne',    score: 4 },
+] as const;
+
+function SleepQualityPicker({
+  score,
+  readOnly,
+  onChange,
+}: {
+  score: number;
+  readOnly: boolean;
+  onChange: (s: number) => void;
+}) {
+  const active = score < 0 ? null : score <= 1 ? 0 : score <= 2 ? 2 : 4;
+  return (
+    <View style={styles.sleepRow}>
+      <Text style={styles.rowLabel}>Qualité sommeil</Text>
+      <View style={styles.qualityBtns}>
+        {SLEEP_QUALITIES.map((q) => {
+          const isActive = active === q.score;
+          return (
+            <TouchableOpacity
+              key={q.score}
+              style={[styles.qualityBtn, isActive && styles.qualityBtnActive]}
+              onPress={() => !readOnly && onChange(active === q.score ? -1 : q.score)}
+              activeOpacity={readOnly ? 1 : 0.7}
+            >
+              <Text style={styles.qualityEmoji}>{q.emoji}</Text>
+              <Text style={[styles.qualityLabel, isActive && styles.qualityLabelActive]}>{q.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+// ── Widget ────────────────────────────────────────────────────
+
 interface Props {
   entry: SymptomEntry | null;
   date: string;
   readOnly?: boolean;
-  onSave: (scores: SymptomScores) => void;
+  onSave: (scores: SymptomScores, sleepDuration?: number) => void;
 }
 
 export function SymptomWidget({ entry, date, readOnly = false, onSave }: Props) {
@@ -111,17 +204,24 @@ export function SymptomWidget({ entry, date, readOnly = false, onSave }: Props) 
   const [scores, setScores] = useState<SymptomScores>(
     entry?.scores ?? UNSET_SCORES,
   );
+  const [sleepDuration, setSleepDuration] = useState<number | undefined>(entry?.sleepDuration);
 
   // Sync if entry changes (e.g. navigating between days)
   React.useEffect(() => {
     setScores(entry?.scores ?? UNSET_SCORES);
+    setSleepDuration(entry?.sleepDuration);
     setExpanded(false);
   }, [date]);
 
   function handleChange(key: SymptomKey, score: number) {
     const next = { ...scores, [key]: score };
     setScores(next);
-    onSave(next);
+    onSave(next, sleepDuration);
+  }
+
+  function handleDurationChange(v: number | undefined) {
+    setSleepDuration(v);
+    onSave(scores, v);
   }
 
   const filledCount = SYMPTOM_KEYS.filter((k) => scores[k] >= 0).length;
@@ -163,7 +263,7 @@ export function SymptomWidget({ entry, date, readOnly = false, onSave }: Props) 
               Appuyez sur un point pour noter chaque symptôme (0 = aucun, 4 = intense). Appuyez à nouveau pour effacer.
             </Text>
           )}
-          {SYMPTOM_KEYS.map((k) => (
+          {SYMPTOM_KEYS.filter((k) => k !== 'sleep').map((k) => (
             <SymptomRow
               key={k}
               symptomKey={k}
@@ -172,7 +272,21 @@ export function SymptomWidget({ entry, date, readOnly = false, onSave }: Props) 
               onChange={(s) => handleChange(k, s)}
             />
           ))}
-          {readOnly && filledCount === 0 && (
+          {/* Sommeil — section dédiée */}
+          <View style={styles.sleepSection}>
+            <Text style={styles.sleepSectionTitle}>Sommeil</Text>
+            <SleepQualityPicker
+              score={scores.sleep}
+              readOnly={readOnly}
+              onChange={(s) => handleChange('sleep', s)}
+            />
+            <SleepDurationStepper
+              value={sleepDuration}
+              readOnly={readOnly}
+              onChange={handleDurationChange}
+            />
+          </View>
+          {readOnly && filledCount === 0 && sleepDuration === undefined && (
             <Text style={styles.emptyHint}>Aucun symptôme enregistré ce jour.</Text>
           )}
         </View>
@@ -315,5 +429,89 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     textAlign: 'center',
     paddingVertical: 8,
+  },
+
+  sleepSection: {
+    marginTop: 8,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.hairline2,
+    gap: 4,
+  },
+  sleepSectionTitle: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 11,
+    color: Colors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 4,
+  },
+  sleepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline2,
+    gap: 10,
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  stepBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.paper2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepBtnText: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 16,
+    color: Colors.ink,
+    lineHeight: 18,
+  },
+  stepValue: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 14,
+    color: Colors.ink,
+    minWidth: 40,
+    textAlign: 'center',
+  },
+  qualityBtns: {
+    flexDirection: 'row',
+    gap: 8,
+    flex: 1,
+  },
+  qualityBtn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.paper2,
+    gap: 2,
+  },
+  qualityBtnActive: {
+    borderColor: Colors.ok,
+    backgroundColor: 'rgba(63,90,58,0.08)',
+  },
+  qualityEmoji: {
+    fontSize: 18,
+  },
+  qualityLabel: {
+    fontFamily: Fonts.sans,
+    fontSize: 9,
+    color: Colors.muted,
+    letterSpacing: 0.3,
+  },
+  qualityLabelActive: {
+    color: Colors.ok,
   },
 });

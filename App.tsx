@@ -18,6 +18,7 @@ import { useCallback, Component } from 'react';
 import { Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppShell } from './src/navigation/AppShell';
+import { ModeProvider } from './src/contexts/ModeContext';
 import { Colors } from './src/theme/tokens';
 
 SplashScreen.preventAutoHideAsync();
@@ -87,9 +88,11 @@ export default function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <View style={{ flex: 1, backgroundColor: Colors.paper }} onLayout={onLayout}>
-          <AppShell />
-        </View>
+        <ModeProvider>
+          <View style={{ flex: 1, backgroundColor: Colors.paper }} onLayout={onLayout}>
+            <AppShell />
+          </View>
+        </ModeProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
   );

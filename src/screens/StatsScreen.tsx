@@ -18,10 +18,12 @@ import {
   Line,
   LinearGradient,
   Path,
+  Polyline,
   Stop,
   Svg,
 } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useMode } from '../contexts/ModeContext';
 import { Icon } from '../components/Icon';
 import { HelpButton, HelpModal } from '../components/HelpModal';
 import { HELP } from '../data/helpContent';
@@ -659,15 +661,17 @@ function ViewToggle({
   onToggle: (m: ViewMode) => void;
 }) {
   const { t } = useTranslation();
+  const { isExpert } = useMode();
   const VIEW_LABELS: Record<ViewMode, string> = {
     week:     t('stats.weekView'),
     month:    t('stats.monthView'),
     wellness: t('stats.wellnessView'),
   };
+  const availableModes: ViewMode[] = isExpert ? ['week', 'month', 'wellness'] : ['week'];
   return (
     <View style={styles.viewToggleWrap}>
       <View style={styles.viewToggle}>
-        {(['week', 'month', 'wellness'] as ViewMode[]).map((m) => (
+        {availableModes.map((m) => (
           <TouchableOpacity
             key={m}
             style={[styles.viewToggleBtn, mode === m && styles.viewToggleBtnActive]}
@@ -863,6 +867,90 @@ function WellnessView({
           <Text style={styles.corrDisclaimer}>{t('stats.correlationDisclaimer')}</Text>
         </View>
       )}
+
+      {/* Sommeil & digestion — Expert only, needs ≥7 sleep entries */}
+      <SleepDigestionSection symptoms={symptoms} />
+    </>
+  );
+}
+
+// ── Sleep & digestion section ─────────────────────────────────
+
+function SleepDigestionSection({ symptoms }: { symptoms: SymptomEntry[] }) {
+  const [width, setWidth] = useState(0);
+
+  const withSleep = symptoms
+    .filter((s) => s.sleepDuration != null)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-14);
+
+  if (withSleep.length < 7) return null;
+
+  const durations = withSleep.map((s) => s.sleepDuration!);
+  const energies  = withSleep.map((s) => s.scores.energy);
+  const abdos     = withSleep.map((s) => s.scores.abdominal);
+
+  const minDur = Math.min(...durations);
+  const maxDur = Math.max(...durations);
+  const durRange = maxDur - minDur || 1;
+  const n = withSleep.length;
+  const H = 52;
+
+  const buildPts = (values: number[], maxVal: number) =>
+    values.map((v, i) => `${(i / (n - 1)) * width},${H - (v / maxVal) * H}`).join(' ');
+
+  const durPts = durations
+    .map((v, i) => `${(i / (n - 1)) * width},${H - ((v - minDur) / durRange) * H}`)
+    .join(' ');
+
+  const avgDur = durations.reduce((s, v) => s + v, 0) / n;
+  const highSleepEnergy = durations
+    .map((d, i) => ({ d, e: energies[i] }))
+    .filter((x) => x.d >= avgDur)
+    .reduce((s, x, _, arr) => s + x.e / arr.length, 0);
+  const lowSleepEnergy = durations
+    .map((d, i) => ({ d, e: energies[i] }))
+    .filter((x) => x.d < avgDur)
+    .reduce((s, x, _, arr) => s + x.e / arr.length, 0);
+  const energyDiff = highSleepEnergy - lowSleepEnergy;
+  const corrText =
+    Math.abs(energyDiff) < 0.3
+      ? 'Pas de lien clair entre durée de sommeil et énergie sur cette période.'
+      : energyDiff > 0
+      ? `Les nuits ≥ ${avgDur.toFixed(1)} h semblent associées à une énergie plus élevée.`
+      : `Les nuits courtes ne semblent pas impacter l'énergie sur cette période.`;
+
+  return (
+    <>
+      <View style={styles.insightsHead}>
+        <Text style={styles.insightsTitle}>Sommeil &amp; digestion</Text>
+        <Text style={styles.insightsMeta}>{n} nuits</Text>
+      </View>
+      <View style={styles.card}>
+        <Text style={[styles.cardSub, { marginBottom: 8 }]}>Durée de sommeil · Énergie · Douleurs abdominales</Text>
+        <View onLayout={(e) => setWidth(e.nativeEvent.layout.width - 32)} style={{ paddingHorizontal: 16 }}>
+          {width > 0 && (
+            <Svg width={width} height={H + 4}>
+              <Polyline points={durPts} fill="none" stroke={Colors.muted2} strokeWidth="1.5" strokeDasharray="4,2" />
+              <Polyline points={buildPts(energies, 4)} fill="none" stroke={Colors.ok} strokeWidth="2" />
+              <Polyline points={buildPts(abdos, 4)} fill="none" stroke={Colors.warn} strokeWidth="1.5" strokeOpacity="0.7" />
+            </Svg>
+          )}
+        </View>
+        <View style={{ flexDirection: 'row', gap: 14, marginTop: 10, paddingHorizontal: 4, flexWrap: 'wrap' }}>
+          {[
+            { color: Colors.muted2, label: 'Sommeil (h)' },
+            { color: Colors.ok,     label: 'Énergie' },
+            { color: Colors.warn,   label: 'Douleurs abd.' },
+          ].map((item) => (
+            <View key={item.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <View style={{ width: 16, height: 2, backgroundColor: item.color, borderRadius: 1 }} />
+              <Text style={[styles.cardSub, { fontSize: 10 }]}>{item.label}</Text>
+            </View>
+          ))}
+        </View>
+        <Text style={[styles.corrDisclaimer, { marginTop: 10 }]}>{corrText}</Text>
+      </View>
     </>
   );
 }

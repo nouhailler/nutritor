@@ -9,6 +9,64 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [0.37.0] — 2026-05-27
+
+### Ajouté
+- **Nutri-Score Perso** — score personnalisé A-E calculé selon le profil utilisateur
+  - `src/utils/nutriScorePerso.ts` : wrapper de `computeCompatibilityScore()`, grades A (≥80) à E (<20), blockers, positives, texte d'explication
+  - `src/components/NutriScoreBadge.tsx` : badge circulaire compact (score + lettre, couleur par grade) + modal détail avec blockers (rouge) et positives (vert)
+  - `DetailScreen` : `NutriScoreBadge` affiché à côté de la `CompatCard` dans la fiche aliment
+- **Comparateur de produits** — comparaison côte à côte de 2 aliments
+  - `src/screens/ComparateurScreen.tsx` : NutriScore Perso, macros/100g (gagnant surligné en vert), FODMAP, Allergènes, footer ajout au journal
+  - `FoodListScreen` : bouton `columns` dans la topbar → mode sélection → 2 aliments → `ComparateurScreen`
+  - `AppShell` : routing `'comparateur'` + état `comparateurFoods`
+- **Suivi du sommeil enrichi**
+  - `SymptomEntry.sleepDuration?: number` (4-12 h, pas 0.5 h) dans `src/types/symptoms.ts`
+  - `SymptomWidget` : stepper durée de sommeil + emoji picker qualité (😴/😐/😊 → `scores.sleep`)
+  - `StatsScreen` : section "Sommeil & digestion" (Expert uniquement, ≥7 nuits) — courbes superposées durée sommeil / énergie / douleurs abdominales + corrélation textuelle automatique
+- **Export / Import CSV**
+  - `src/services/csvService.ts` : exports journal, symptômes, aliments en CSV UTF-8 BOM + import journal avec parsing complet (champs quotés, matching repas par nom)
+  - `SettingsScreen` : section "Export / Import CSV" avec 3 exports + 1 import
+- `Icon` : 5 nouvelles icônes (`x`, `check-circle`, `arrow-left`, `columns`, `file-text`)
+- Traductions : clés `settings.sectionCSV`, `exportJournalCSV`, `exportSymptomsCSV`, `exportFoodsCSV`, `importJournalCSV` (+ `Desc`) dans `fr.ts` + `en.ts`
+
+---
+
+## [0.36.0] — 2026-05-27
+
+### Ajouté
+- **Mode Débutant / Expert global** — bascule persistante appliquée à toute l'application
+  - `src/contexts/ModeContext.tsx` : `AppMode = 'beginner' | 'expert'`, `ModeProvider`, `useMode()` hook — persisté via `usePersistedState` sur `KEYS.appMode`
+  - `src/components/ModeOnboarding.tsx` : overlay plein-écran affiché une seule fois après l'onboarding — deux cartes 🙂 Débutant / 🤸 Expert
+  - Badge flottant gauche dans `AppShell` : `🙂 Débutant` (couleur signal) ou `🔬 Expert` (couleur ok), cliquable vers les Paramètres
+  - `SettingsScreen` : section "Interface" avec toggle Débutant / Expert et description contextuelle
+  - `src/storage/store.ts` : clés `appMode` et `modeSelected`
+
+### Modifié (adaptations par écran en mode débutant)
+- **HomeScreen** : timeline filtrée sur 4 événements principaux, mini-métriques masquées
+- **PhysioTimeline** : section "Et si…" (simulation nutritionnelle) masquée
+- **DetailScreen** : sections micronutriments, bioactifs, métabolique et sensorielle masquées — apports, FODMAP, allergènes et composition restent visibles
+- **KnowledgeScreen** : toggle local initialisé depuis le mode global
+- **StatsScreen** : onglets "Mois" et "Bien-être" masqués — seul l'onglet "Semaine" reste
+- **ProfileScreen** : export professionnel, carte FODMAP, mémoire digestive et résultats biologiques masqués
+- **i18n** : clés `mode.*` et `settings.sectionInterface` ajoutées dans `fr.ts` + `en.ts`
+
+---
+
+## [0.35.0] — 2026-05-27
+
+### Ajouté
+- **Mode Défi 30 jours** — 3 protocoles intégrés avec suivi quotidien
+  - `src/types/challenge.ts` : types `ProtocolId`, `DailyObjective`, `DailyCheckIn`, `Challenge`
+  - `src/data/challenge.ts` : protocoles FODMAP 28j, Anti-inflammatoire 30j, Sans gluten 21j + helpers (`getDayNumber`, `getStreak`, `getCompletionPct`, `createChallenge`)
+  - `ChallengeScreen` : picker protocoles → dashboard (anneau progression, checklist objectifs du jour, calendrier historique, streak, abandon)
+  - `HomeScreen` : widget `ChallengeWidget` compact (barre progression + count objectifs) visible quand défi actif
+  - `DrawerMenu` : section "Protocoles" avec liens Challenge et FODMAP, icône verte si défi actif
+  - Persistance : `KEYS.challenge = 'nutritor:challenge'`
+  - Intégration FODMAP : le protocole `fodmap-elimination` ouvre automatiquement `FodmapScreen` au démarrage
+
+---
+
 ## [0.34.0] — 2026-05-24
 
 ### Ajouté

@@ -34,6 +34,7 @@ import {
 import { SavedPlate } from '../data/saved';
 import { KEYS, save } from '../storage/store';
 import { aiLogger } from '../services/aiLogger';
+import { useMode } from '../contexts/ModeContext';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const APP_VERSION: string = require('../../package.json').version;
@@ -151,6 +152,10 @@ interface Props {
   onResetOnboarding: () => Promise<void>;
   showToast: (msg: string) => void;
   onStartDemo?: () => void;
+  onExportJournalCSV?: () => Promise<void>;
+  onExportSymptomsCSV?: () => Promise<void>;
+  onExportFoodsCSV?: () => Promise<void>;
+  onImportJournalCSV?: (csv: string) => Promise<{ importedCount: number; createdFoodsCount: number; ignoredCount: number }>;
 }
 
 export function SettingsScreen({
@@ -165,15 +170,22 @@ export function SettingsScreen({
   onResetOnboarding,
   showToast,
   onStartDemo,
+  onExportJournalCSV,
+  onExportSymptomsCSV,
+  onExportFoodsCSV,
+  onImportJournalCSV,
 }: Props) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { mode, setMode } = useMode();
   const [local, setLocal] = useState<AppSettings>(settings);
   const [loadingModels, setLoadingModels] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [importPlatesLoading, setImportPlatesLoading] = useState(false);
   const [exportPlatesLoading, setExportPlatesLoading] = useState(false);
+  const [csvExportLoading, setCsvExportLoading] = useState(false);
+  const [csvImportLoading, setCsvImportLoading] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
   const [logText, setLogText] = useState(() => aiLogger.export());
 
@@ -641,6 +653,65 @@ export function SettingsScreen({
           />
         </Card>
 
+        {/* ── CSV Export / Import ─────────────────────────────── */}
+        <SectionHeader icon="file-text" label={t('settings.sectionCSV')} />
+        <Card>
+          <Row
+            label={t('settings.exportJournalCSV')}
+            description={t('settings.exportJournalCSVDesc')}
+            borderBottom={true}
+            onPress={async () => {
+              if (!onExportJournalCSV) return;
+              setCsvExportLoading(true);
+              try { await onExportJournalCSV(); } finally { setCsvExportLoading(false); }
+            }}
+            right={csvExportLoading ? <ActivityIndicator size="small" color={Colors.ink} /> : <Icon name="download" size={18} color={Colors.muted} />}
+          />
+          <Row
+            label={t('settings.exportSymptomsCSV')}
+            description={t('settings.exportSymptomsCSVDesc')}
+            borderBottom={true}
+            onPress={async () => {
+              if (!onExportSymptomsCSV) return;
+              setCsvExportLoading(true);
+              try { await onExportSymptomsCSV(); } finally { setCsvExportLoading(false); }
+            }}
+            right={csvExportLoading ? <ActivityIndicator size="small" color={Colors.ink} /> : <Icon name="download" size={18} color={Colors.muted} />}
+          />
+          <Row
+            label={t('settings.exportFoodsCSV')}
+            description={t('settings.exportFoodsCSVDesc')}
+            borderBottom={true}
+            onPress={async () => {
+              if (!onExportFoodsCSV) return;
+              setCsvExportLoading(true);
+              try { await onExportFoodsCSV(); } finally { setCsvExportLoading(false); }
+            }}
+            right={csvExportLoading ? <ActivityIndicator size="small" color={Colors.ink} /> : <Icon name="download" size={18} color={Colors.muted} />}
+          />
+          <Row
+            label={t('settings.importJournalCSV')}
+            description={t('settings.importJournalCSVDesc')}
+            borderBottom={false}
+            onPress={async () => {
+              if (!onImportJournalCSV) return;
+              setCsvImportLoading(true);
+              try {
+                const pick = await DocumentPicker.getDocumentAsync({ type: ['text/csv', 'text/comma-separated-values', '*/*'] });
+                if (pick.canceled || !pick.assets?.[0]) return;
+                const content = await FileSystem.readAsStringAsync(pick.assets[0].uri, { encoding: FileSystem.EncodingType.UTF8 });
+                const result = await onImportJournalCSV(content);
+                showToast(`${result.importedCount} repas importés · ${result.createdFoodsCount} aliments créés`);
+              } catch {
+                showToast(t('settings.importFormatError'));
+              } finally {
+                setCsvImportLoading(false);
+              }
+            }}
+            right={csvImportLoading ? <ActivityIndicator size="small" color={Colors.ink} /> : <Icon name="upload" size={18} color={Colors.muted} />}
+          />
+        </Card>
+
         {/* ── Onboarding ──────────────────────────────────────── */}
         <SectionHeader icon="info" label={t('settings.sectionOnboarding')} />
         <Card>
@@ -651,6 +722,66 @@ export function SettingsScreen({
             onPress={onResetOnboarding}
             right={<Icon name="arrow-right" size={18} color={Colors.muted} />}
           />
+        </Card>
+
+        {/* ── Interface ────────────────────────────────────────── */}
+        <SectionHeader icon="sliders" label={t('settings.sectionInterface')} />
+        <Card>
+          <View style={styles.providerSection}>
+            <Text style={styles.rowLabel}>{t('mode.label')}</Text>
+            <Text style={styles.rowDesc}>
+              {mode === 'expert' ? t('mode.expertDesc') : t('mode.beginnerDesc')}
+            </Text>
+            <View style={styles.pillGroup}>
+              <ProviderPill
+                label={`🙂 ${t('mode.beginner')}`}
+                active={mode === 'beginner'}
+                onPress={() => setMode('beginner')}
+              />
+              <ProviderPill
+                label={`🔬 ${t('mode.expert')}`}
+                active={mode === 'expert'}
+                onPress={() => setMode('expert')}
+              />
+            </View>
+          </View>
+        </Card>
+
+        {/* ── Mode comparison table ────────────────────────────── */}
+        <Card>
+          <View style={styles.modeTableHeader}>
+            <Text style={styles.modeTableTitle}>{t('mode.comparisonTitle')}</Text>
+          </View>
+          <View style={styles.modeTableColHeaders}>
+            <View style={styles.modeTableScreenCol} />
+            <View style={styles.modeTableDataCol}>
+              <Text style={[styles.modeTableColLabel, { color: Colors.signal }]}>{t('mode.comparisonBeginner')}</Text>
+            </View>
+            <View style={styles.modeTableDataCol}>
+              <Text style={[styles.modeTableColLabel, { color: Colors.ok }]}>{t('mode.comparisonExpert')}</Text>
+            </View>
+          </View>
+          {([
+            { key: 'journal',   icon: '📔' },
+            { key: 'stats',     icon: '📊' },
+            { key: 'detail',    icon: '🥦' },
+            { key: 'timeline',  icon: '⚡' },
+            { key: 'knowledge', icon: '📖' },
+            { key: 'profile',   icon: '👤' },
+          ] as const).map(({ key, icon }, i, arr) => (
+            <View key={key} style={[styles.modeTableRow, i === arr.length - 1 && styles.modeTableRowLast]}>
+              <View style={styles.modeTableScreenCol}>
+                <Text style={styles.modeTableScreenIcon}>{icon}</Text>
+                <Text style={styles.modeTableScreenName}>{t(`mode.${key}Screen`)}</Text>
+              </View>
+              <View style={styles.modeTableDataCol}>
+                <Text style={styles.modeTableCellBeginner}>{t(`mode.${key}Beginner`)}</Text>
+              </View>
+              <View style={styles.modeTableDataCol}>
+                <Text style={styles.modeTableCellExpert}>{t(`mode.${key}Expert`)}</Text>
+              </View>
+            </View>
+          ))}
         </Card>
 
         {/* ── Langue ───────────────────────────────────────────── */}
@@ -970,6 +1101,74 @@ const styles = StyleSheet.create({
     color: '#a8e6a3',
     lineHeight: 16,
     letterSpacing: 0.2,
+  },
+
+  modeTableHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline2,
+  },
+  modeTableTitle: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 12,
+    color: Colors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  modeTableColHeaders: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline2,
+    backgroundColor: Colors.paper2,
+  },
+  modeTableColLabel: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 11,
+    letterSpacing: 0.3,
+  },
+  modeTableRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline2,
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  modeTableRowLast: { borderBottomWidth: 0 },
+  modeTableScreenCol: {
+    width: 72,
+    alignItems: 'center',
+    gap: 2,
+  },
+  modeTableScreenIcon: {
+    fontSize: 18,
+  },
+  modeTableScreenName: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 10,
+    color: Colors.ink2,
+    textAlign: 'center',
+  },
+  modeTableDataCol: {
+    flex: 1,
+    paddingHorizontal: 4,
+  },
+  modeTableCellBeginner: {
+    fontFamily: Fonts.sans,
+    fontSize: 11,
+    color: Colors.ink2,
+    lineHeight: 16,
+  },
+  modeTableCellExpert: {
+    fontFamily: Fonts.sans,
+    fontSize: 11,
+    color: Colors.ok,
+    lineHeight: 16,
   },
 
   aboutRow: {

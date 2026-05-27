@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -187,16 +186,7 @@ export function ChallengeScreen({
     }
   };
 
-  const handleAbandon = () => {
-    Alert.alert(
-      t('challenge.abandonConfirm'),
-      t('challenge.abandonMsg'),
-      [
-        { text: t('challenge.abandonCancel'), style: 'cancel' },
-        { text: t('challenge.abandonOk'), style: 'destructive', onPress: onAbandon },
-      ],
-    );
-  };
+  const [confirmingAbandon, setConfirmingAbandon] = useState(false);
 
   const handleToggleObjective = (objId: string) => {
     if (!challenge) return;
@@ -310,7 +300,7 @@ export function ChallengeScreen({
             <View style={styles.streakRow}>
               <Icon name="zap" size={13} color={Colors.signal} />
               <Text style={styles.streakText}>
-                {t('challenge.streak', { count: streak })}
+                {t('challenge.streak', { count: streak, s: streak !== 1 ? 's' : '' })}
               </Text>
             </View>
           </View>
@@ -369,10 +359,24 @@ export function ChallengeScreen({
         )}
 
         {/* Abandon */}
-        <TouchableOpacity style={styles.abandonBtn} onPress={handleAbandon} activeOpacity={0.7}>
-          <Icon name="x-circle" size={15} color={Colors.warn} />
-          <Text style={styles.abandonText}>{t('challenge.abandon')}</Text>
-        </TouchableOpacity>
+        {confirmingAbandon ? (
+          <View style={styles.abandonConfirm}>
+            <Text style={styles.abandonConfirmText}>{t('challenge.abandonConfirm')}</Text>
+            <View style={styles.abandonConfirmRow}>
+              <TouchableOpacity style={styles.abandonCancelBtn} onPress={() => setConfirmingAbandon(false)} activeOpacity={0.7}>
+                <Text style={styles.abandonCancelText}>{t('challenge.abandonCancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.abandonOkBtn} onPress={onAbandon} activeOpacity={0.7}>
+                <Text style={styles.abandonOkText}>{t('challenge.abandonOk')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity style={styles.abandonBtn} onPress={() => setConfirmingAbandon(true)} activeOpacity={0.7}>
+            <Icon name="x-circle" size={15} color={Colors.warn} />
+            <Text style={styles.abandonText}>{t('challenge.abandon')}</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </View>
   );
@@ -587,4 +591,42 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   abandonText: { fontFamily: Fonts.sans, fontSize: 13, color: Colors.warn },
+
+  abandonConfirm: {
+    marginTop: 8,
+    backgroundColor: Colors.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.warn + '40',
+    padding: 16,
+    gap: 12,
+  },
+  abandonConfirmText: {
+    fontFamily: Fonts.sans,
+    fontSize: 13.5,
+    color: Colors.ink2,
+    textAlign: 'center',
+  },
+  abandonConfirmRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  abandonCancelBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: Colors.hairline2,
+    alignItems: 'center',
+  },
+  abandonCancelText: { fontFamily: Fonts.sans, fontSize: 13.5, color: Colors.ink2, fontWeight: '500' },
+  abandonOkBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: Colors.warn + '18',
+    borderWidth: 1,
+    borderColor: Colors.warn + '60',
+    alignItems: 'center',
+  },
+  abandonOkText: { fontFamily: Fonts.sans, fontSize: 13.5, color: Colors.warn, fontWeight: '600' },
 });

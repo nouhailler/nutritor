@@ -37,6 +37,7 @@ import { AutoTimelineEvent, UserTimelineEvent } from '../types/timeline';
 import { computeAutoEvents, computeMiniMetrics, computeDaySummary } from '../services/timelineService';
 import { TipsSection } from '../components/TipsSection';
 import { DayTip } from '../types/tips';
+import { useMode } from '../contexts/ModeContext';
 
 // ── Date helpers ──────────────────────────────────────────────
 
@@ -506,7 +507,7 @@ interface HomeScreenProps {
   onDateChange: (date: string | null) => void;
   onRemoveItem: (mealId: string, itemIdx: number) => void;
   onEditItem: (mealId: string, itemIdx: number, newPortion: number) => void;
-  onSaveSymptom: (date: string, scores: SymptomScores) => void;
+  onSaveSymptom: (date: string, scores: SymptomScores, sleepDuration?: number) => void;
   onSaveComment: (date: string, text: string) => void;
   onSaveAdvice: (date: string, text: string) => void;
   onAddTimelineEvent: (event: Omit<UserTimelineEvent, 'id' | 'kind'>) => void;
@@ -554,6 +555,7 @@ export function HomeScreen({
 }: HomeScreenProps) {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { isExpert } = useMode();
   const [helpVisible, setHelpVisible] = useState(false);
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [adviceLoading, setAdviceLoading] = useState(false);
@@ -590,8 +592,12 @@ export function HomeScreen({
   const emptyMeals = meals.filter((m) => m.items.length === 0).length;
   const totalItems = meals.reduce((n, m) => n + m.items.length, 0);
 
-  const autoEvents  = useMemo(() => computeAutoEvents(meals, profile),    [meals, profile]);
-  const miniMetrics = useMemo(() => computeMiniMetrics(autoEvents),        [autoEvents]);
+  const allAutoEvents = useMemo(() => computeAutoEvents(meals, profile), [meals, profile]);
+  const autoEvents  = useMemo(
+    () => isExpert ? allAutoEvents : allAutoEvents.filter((e) => ['glycemic', 'digestion', 'satiety', 'anabolic'].includes(e.type)),
+    [allAutoEvents, isExpert],
+  );
+  const miniMetrics = useMemo(() => isExpert ? computeMiniMetrics(autoEvents) : [], [autoEvents, isExpert]);
   const daySummary  = useMemo(() => computeDaySummary(autoEvents),         [autoEvents]);
 
   const goToPrev = () => onDateChange(addDays(effectiveDate, -1) === todayStr ? null : addDays(effectiveDate, -1));
@@ -861,7 +867,7 @@ export function HomeScreen({
               entry={symptomEntry}
               date={effectiveDate}
               readOnly={!isToday}
-              onSave={(scores) => onSaveSymptom(effectiveDate, scores)}
+              onSave={(scores, sleepDuration) => onSaveSymptom(effectiveDate, scores, sleepDuration)}
             />
 
             {/* Notes du jour */}
