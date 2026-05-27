@@ -4,16 +4,17 @@
 
 ---
 
-## État actuel (2026-05-24)
+## État actuel (2026-05-27)
 
 ### Derniers commits
+- WIP — feat: Mode Défi 30 jours (v0.35.0)
 - `993ce5b` — docs: mise à jour CONTEXT, Changelog et README (v0.33.1)
 - `188804b` — feat: import/export de la bibliothèque de plats dans les paramètres (v0.33.1)
 - `e73bf4a` — feat: journal symptômes, moteur corrélation et formulaire bio/médicaments (v0.33.0)
 - `b992be3` — feat: photo de profil + menu hamburger cliquable vers Profil (v0.32.0)
 - `08d12aa` — feat: export professionnel HTML pour médecins et diététiciens (v0.31.0)
 
-### Version courante : 0.34.0 (app.json : 0.30.0)
+### Version courante : 0.35.0 (app.json : 0.30.0)
 
 Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été ajoutées (voir CHANGELOG.md pour le détail complet) :
 
@@ -123,6 +124,17 @@ Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été
 - `SettingsScreen` : nouvelle section "Bibliothèque de plats" avec export JSON (`nutritor_plats.json`) et import avec fusion (déduplication par `id`)
 - `AppShell` : câblage `savedPlates` + handler `onImportPlates`
 
+**v0.35.0 — Mode Défi 30 jours**
+- `src/types/challenge.ts` : types `ProtocolId`, `DailyObjective`, `DailyCheckIn`, `Challenge`
+- `src/data/challenge.ts` : 3 protocoles intégrés (FODMAP 28j, Anti-inflammatoire 30j, Sans gluten 21j) + helpers (`getDayNumber`, `getStreak`, `getCompletionPct`, `createChallenge`)
+- `ChallengeScreen` : picker de protocoles → dashboard (anneau progression J/total, checklist objectifs du jour avec toggle, calendrier historique des jours, streak consécutif, abandon)
+- `HomeScreen` : widget compact `ChallengeWidget` (barre progression + count objectifs) visible quand un défi est actif — tap → `ChallengeScreen`
+- `DrawerMenu` : section "Protocoles" avec Challenge (icône target) + FODMAP (icône shield), icône target verte si défi actif
+- `AppShell` : state persisté `challenge`, `stack('challenge')`, handlers save/abandon
+- Persistance : `KEYS.challenge = 'nutritor:challenge'`
+- Traductions : clés `challenge.*` dans `fr.ts` + `en.ts`, clés drawer `protocols`, `challenge`, `fodmap`
+- Intégration FODMAP : le protocole `fodmap-elimination` ouvre automatiquement `FodmapScreen` après démarrage
+
 **v0.34.0 — Internationalisation complète (i18n)**
 - `src/i18n/fr.ts` + `src/i18n/en.ts` : ~900 clés de traduction couvrant les 20 écrans, composants, alertes et labels
 - `src/i18n/index.ts` : initialisation `i18next` + `react-i18next`, fallback `fr`
@@ -183,7 +195,7 @@ type StackScreen =
   | 'settings' | 'addFood' | 'manualFood' | 'editFood'
   | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate'
   | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge'
-  | 'shoppingScanner' | 'plateAI' | null;
+  | 'shoppingScanner' | 'plateAI' | 'challenge' | null;
 ```
 
 - `stack === null` → écran de l'onglet actif, tabbar visible
@@ -228,6 +240,7 @@ KEYS = {
   migrationV1:    'nutritor:migration_v1',
   scanHistory:    'nutritor:scan_history',     // historique scans assistant courses
   shoppingList:   'nutritor:shopping_list',    // liste de courses persistée
+  challenge:      'nutritor:challenge',        // défi 30 jours actif
 }
 ```
 
@@ -456,6 +469,7 @@ interface KnowledgeEntry {
 | Assistant courses | `ShoppingAssistantScreen.tsx` | tab `shopping` |
 | Scanner courses | `ShoppingScannerScreen.tsx` | stack `'shoppingScanner'` |
 | Cuisine IA | `PlateAIScreen.tsx` | stack `'plateAI'` (bouton ✦ de SavedScreen) |
+| Défi 30 jours | `ChallengeScreen.tsx` | stack `'challenge'` (drawer Protocoles) |
 
 ---
 
@@ -597,6 +611,8 @@ python3 scripts/gen_icon.py
 ---
 
 ## Prochaines étapes suggérées
+
+### Autres évolutions
 
 - [ ] Thème dark / thème sage
 - [ ] Notifications de repas (rappels)

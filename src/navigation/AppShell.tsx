@@ -49,6 +49,8 @@ import { PlateAIScreen } from '../screens/PlateAIScreen';
 import { KnowledgeScreen } from '../screens/KnowledgeScreen';
 import { ShoppingAssistantScreen } from '../screens/ShoppingAssistantScreen';
 import { ShoppingScannerScreen } from '../screens/ShoppingScannerScreen';
+import { ChallengeScreen } from '../screens/ChallengeScreen';
+import { Challenge } from '../types/challenge';
 import { ScanHistoryEntry, ShoppingListItem } from '../types/shopping';
 import { getOFFByBarcode, offProductToFood } from '../services/openFoodFacts';
 import { AppSettings, DEFAULT_SETTINGS } from '../types/settings';
@@ -73,7 +75,7 @@ function todayStr() {
 }
 
 type Tab = 'home' | 'foods' | 'saved' | 'stats' | 'profile' | 'shopping';
-type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'manualFood' | 'editFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge' | 'shoppingScanner' | 'plateAI' | null;
+type StackScreen = 'search' | 'detail' | 'savedDetail' | 'editProfile' | 'settings' | 'addFood' | 'manualFood' | 'editFood' | 'openFoodFacts' | 'ciqual' | 'scanner' | 'editSavedPlate' | 'foodPhoto' | 'fodmap' | 'mealGenerator' | 'knowledge' | 'shoppingScanner' | 'plateAI' | 'challenge' | null;
 
 const TABS_DEF: { id: Tab; labelKey: string; icon: 'home' | 'leaf' | 'book' | 'chart' | 'user' | 'shopping-cart' }[] = [
   { id: 'home',     labelKey: 'drawer.journal', icon: 'home' },
@@ -399,6 +401,10 @@ export function AppShell() {
   const [shoppingList, setShoppingList] = usePersistedState<ShoppingListItem[]>(
     KEYS.shoppingList,
     [],
+  );
+  const [challenge, setChallenge] = usePersistedState<Challenge | null>(
+    KEYS.challenge,
+    null,
   );
   const [viewingDate, setViewingDate] = useState<string | null>(null); // null = today
   const [showDuplicateBanner, setShowDuplicateBanner] = useState(false);
@@ -1199,6 +1205,20 @@ export function AppShell() {
         onOpenMenu={openMenu}
       />
     );
+  } else if (stack === 'challenge') {
+    screen = (
+      <ChallengeScreen
+        challenge={challenge}
+        onSaveChallenge={setChallenge}
+        onAbandon={() => {
+          setChallenge(null);
+          setStack(null);
+        }}
+        onBack={() => setStack(null)}
+        onOpenMenu={openMenu}
+        onOpenFodmap={() => setStack('fodmap')}
+      />
+    );
   } else if (stack === 'mealGenerator') {
     screen = (
       <MealGeneratorScreen
@@ -1320,6 +1340,8 @@ export function AppShell() {
             onSaveAdvice={handleSaveAdvice}
             onAddTimelineEvent={handleAddTimelineEvent}
             onDeleteTimelineEvent={handleDeleteTimelineEvent}
+            challenge={challenge}
+            onOpenChallenge={() => setStack('challenge')}
           />
         );
         break;
@@ -1481,8 +1503,11 @@ export function AppShell() {
         onOpenSettings={() => setStack('settings')}
         onOpenMealGenerator={() => setStack('mealGenerator')}
         onOpenKnowledge={() => setStack('knowledge')}
+        onOpenChallenge={() => setStack('challenge')}
+        onOpenFodmap={() => setStack('fodmap')}
         onClose={() => setDrawerOpen(false)}
         onStartDemo={() => setDemoScenario('drawer')}
+        activeChallenge={!!(challenge?.active)}
       />
       <OnboardingFlow
         visible={!onboardingDone}

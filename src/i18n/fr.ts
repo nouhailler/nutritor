@@ -57,6 +57,11 @@ export default {
     settings: 'Paramètres',
     brand: 'Nutritor',
     tagline: 'Allergies & micronutriments',
+    protocols: 'Protocoles',
+    challenge: 'Défi 30 jours',
+    challengeDesc: 'Protocoles guidés personnalisés',
+    fodmap: 'Protocole FODMAP',
+    fodmapDesc: 'Élimination & réintroduction',
   },
 
   // ── Home Screen ───────────────────────────────────────────────
@@ -864,6 +869,53 @@ export default {
     riskFactors: 'Facteurs de risque',
     positivePoints: 'Points positifs',
     disclaimer: 'Score calculé d\'après votre profil allergènes, régimes actifs et objectifs. Consultez un professionnel de santé en cas de doute.',
+  },
+
+  // ── Challenge / Défi 30 jours ─────────────────────────────────
+  challenge: {
+    title: 'Défi',
+    subtitle: 'Protocole guidé',
+    noChallengeTitle: 'Choisir un protocole',
+    noChallengeDesc: 'Démarrez un défi guidé de 21 à 30 jours pour améliorer votre alimentation étape par étape.',
+    start: 'Démarrer',
+    days: '{{count}} jours',
+    dayLabel: 'Progression',
+    dayOf: 'Jour {{day}} / {{total}}',
+    streak: '{{count}} jour{{s}} consécutif{{s}}',
+    objectives: 'Objectifs du jour',
+    objectivesDone: '{{done}} / {{total}} complétés',
+    history: 'Historique',
+    dayDone: 'Journée complète ! Tous les objectifs atteints.',
+    abandon: 'Abandonner le défi',
+    abandonConfirm: 'Abandonner ce défi ?',
+    abandonMsg: 'Ta progression sera perdue.',
+    abandonCancel: 'Continuer',
+    abandonOk: 'Abandonner',
+    openFodmap: 'Ouvrir le protocole FODMAP',
+    categories: {
+      food: 'Alimentation',
+      habit: 'Habitude',
+      tracking: 'Suivi',
+    },
+    protocols: {
+      'fodmap-elimination': {
+        label: 'Élimination FODMAP',
+        desc: 'Protocole strict 28 jours pour identifier les FODMAP problématiques et retrouver un confort digestif.',
+      },
+      'anti-inflammatory': {
+        label: 'Anti-inflammatoire',
+        desc: 'Adopter une alimentation anti-inflammatoire pendant 30 jours pour réduire inflammation et fatigue.',
+      },
+      'gluten-free-21': {
+        label: 'Sans gluten 21 jours',
+        desc: 'Élimination complète du gluten pour évaluer son impact sur la santé digestive et l\'énergie.',
+      },
+    },
+    widget: {
+      day: 'Jour {{day}} / {{total}}',
+      objectives: '{{done}} / {{total}} objectifs',
+      tap: 'Voir le défi →',
+    },
   },
 
   savedDetail: {

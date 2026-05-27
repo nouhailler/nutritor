@@ -43,8 +43,11 @@ interface DrawerMenuProps {
   onOpenSettings: () => void;
   onOpenMealGenerator: () => void;
   onOpenKnowledge: () => void;
+  onOpenChallenge: () => void;
+  onOpenFodmap: () => void;
   onClose: () => void;
   onStartDemo?: () => void;
+  activeChallenge?: boolean;
 }
 
 export function DrawerMenu({
@@ -55,8 +58,11 @@ export function DrawerMenu({
   onOpenSettings,
   onOpenMealGenerator,
   onOpenKnowledge,
+  onOpenChallenge,
+  onOpenFodmap,
   onClose,
   onStartDemo,
+  activeChallenge,
 }: DrawerMenuProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -205,6 +211,39 @@ export function DrawerMenu({
               <View style={styles.navText}>
                 <Text style={styles.iaLabel}>{t('drawer.knowledge')}</Text>
                 <Text style={styles.navDesc}>{t('drawer.knowledgeDesc')}</Text>
+              </View>
+              <Icon name="chevron-right" size={14} color={Colors.muted2} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Protocoles section */}
+          <View style={styles.iaSection}>
+            <Text style={styles.iaSectionLabel}>{t('drawer.protocols')}</Text>
+            <TouchableOpacity
+              style={styles.iaItem}
+              onPress={() => { onOpenChallenge(); onClose(); }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.iaIcon, { backgroundColor: activeChallenge ? Colors.ok : '#6B5A2E' }]}>
+                <Icon name="target" size={16} color={Colors.paper2} />
+              </View>
+              <View style={styles.navText}>
+                <Text style={styles.iaLabel}>{t('drawer.challenge')}</Text>
+                <Text style={styles.navDesc}>{t('drawer.challengeDesc')}</Text>
+              </View>
+              <Icon name="chevron-right" size={14} color={Colors.muted2} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.iaItem, { marginTop: 8 }]}
+              onPress={() => { onOpenFodmap(); onClose(); }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.iaIcon, { backgroundColor: '#8B3A2E' }]}>
+                <Icon name="shield" size={16} color={Colors.paper2} />
+              </View>
+              <View style={styles.navText}>
+                <Text style={styles.iaLabel}>{t('drawer.fodmap')}</Text>
+                <Text style={styles.navDesc}>{t('drawer.fodmapDesc')}</Text>
               </View>
               <Icon name="chevron-right" size={14} color={Colors.muted2} />
             </TouchableOpacity>

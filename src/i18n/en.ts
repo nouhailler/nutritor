@@ -55,6 +55,11 @@ export default {
     settings: 'Settings',
     brand: 'Nutritor',
     tagline: 'Allergies & micronutrients',
+    protocols: 'Protocols',
+    challenge: '30-day challenge',
+    challengeDesc: 'Guided personalised protocols',
+    fodmap: 'FODMAP protocol',
+    fodmapDesc: 'Elimination & reintroduction',
   },
   home: {
     today: 'Today',
@@ -812,6 +817,53 @@ export default {
     riskFactors: 'Risk factors',
     positivePoints: 'Positive points',
     disclaimer: 'Score calculated based on your allergen profile, active diets and goals. Consult a healthcare professional if in doubt.',
+  },
+
+  // ── Challenge ─────────────────────────────────────────────────
+  challenge: {
+    title: 'Challenge',
+    subtitle: 'Guided protocol',
+    noChallengeTitle: 'Choose a protocol',
+    noChallengeDesc: 'Start a guided 21–30 day challenge to improve your diet step by step.',
+    start: 'Start',
+    days: '{{count}} days',
+    dayLabel: 'Progress',
+    dayOf: 'Day {{day}} / {{total}}',
+    streak: '{{count}} day{{s}} in a row',
+    objectives: "Today's objectives",
+    objectivesDone: '{{done}} / {{total}} completed',
+    history: 'History',
+    dayDone: 'Day complete! All objectives reached.',
+    abandon: 'Abandon challenge',
+    abandonConfirm: 'Abandon this challenge?',
+    abandonMsg: 'Your progress will be lost.',
+    abandonCancel: 'Keep going',
+    abandonOk: 'Abandon',
+    openFodmap: 'Open FODMAP protocol',
+    categories: {
+      food: 'Diet',
+      habit: 'Habit',
+      tracking: 'Tracking',
+    },
+    protocols: {
+      'fodmap-elimination': {
+        label: 'FODMAP Elimination',
+        desc: 'Strict 28-day protocol to identify problematic FODMAPs and restore digestive comfort.',
+      },
+      'anti-inflammatory': {
+        label: 'Anti-inflammatory',
+        desc: 'Adopt an anti-inflammatory diet for 30 days to reduce inflammation and fatigue.',
+      },
+      'gluten-free-21': {
+        label: 'Gluten-free 21 days',
+        desc: 'Complete gluten elimination to assess its impact on digestive health and energy.',
+      },
+    },
+    widget: {
+      day: 'Day {{day}} / {{total}}',
+      objectives: '{{done}} / {{total}} objectives',
+      tap: 'View challenge →',
+    },
   },
 
   savedDetail: {

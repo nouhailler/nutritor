@@ -30,6 +30,8 @@ import { OnboardingTip } from '../components/OnboardingTip';
 import { TIPS } from '../data/onboarding';
 import { AppSettings } from '../types/settings';
 import { generateDayAdvice } from '../services/aiService';
+import { Challenge } from '../types/challenge';
+import { getDayNumber, getCompletionPct, getTodayCheckIn } from '../data/challenge';
 import { PhysioTimeline } from '../components/PhysioTimeline';
 import { AutoTimelineEvent, UserTimelineEvent } from '../types/timeline';
 import { computeAutoEvents, computeMiniMetrics, computeDaySummary } from '../services/timelineService';
@@ -433,6 +435,62 @@ function DayComment({
   );
 }
 
+// ── Challenge widget ─────────────────────────────────────────
+
+function ChallengeWidget({ challenge, onPress }: { challenge: Challenge; onPress: () => void }) {
+  const { t, i18n } = useTranslation();
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const dayNumber = getDayNumber(challenge);
+  const pct = getCompletionPct(challenge);
+  const todayCheckIn = getTodayCheckIn(challenge, todayStr);
+  const completedCount = todayCheckIn?.completedObjectiveIds.length ?? 0;
+  const totalObjectives = challenge.objectives.length;
+  const barWidth = `${Math.min(100, Math.round(pct * 100))}%` as const;
+
+  return (
+    <TouchableOpacity style={challengeWidgetStyles.card} onPress={onPress} activeOpacity={0.82}>
+      <View style={challengeWidgetStyles.row}>
+        <Icon name="target" size={16} color={Colors.ok} />
+        <Text style={challengeWidgetStyles.title}>
+          {t(`challenge.protocols.${challenge.protocolId}.label`)}
+        </Text>
+        <Text style={challengeWidgetStyles.day}>
+          {t('challenge.widget.day', { day: dayNumber, total: challenge.durationDays })}
+        </Text>
+      </View>
+      <View style={challengeWidgetStyles.barTrack}>
+        <View style={[challengeWidgetStyles.barFill, { width: barWidth }]} />
+      </View>
+      <View style={challengeWidgetStyles.footer}>
+        <Text style={challengeWidgetStyles.objText}>
+          {t('challenge.widget.objectives', { done: completedCount, total: totalObjectives })}
+        </Text>
+        <Text style={challengeWidgetStyles.tapText}>{t('challenge.widget.tap')}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const challengeWidgetStyles = StyleSheet.create({
+  card: {
+    backgroundColor: Colors.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.ok + '40',
+    padding: 14,
+    marginBottom: 16,
+    gap: 8,
+  },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  title: { flex: 1, fontFamily: Fonts.serif, fontSize: 15, color: Colors.ink, letterSpacing: -0.2 },
+  day: { fontFamily: Fonts.mono, fontSize: 10, color: Colors.ok, letterSpacing: 0.5 },
+  barTrack: { height: 4, backgroundColor: Colors.hairline, borderRadius: 2 },
+  barFill: { height: 4, backgroundColor: Colors.ok, borderRadius: 2 },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  objText: { fontFamily: Fonts.sans, fontSize: 12, color: Colors.muted },
+  tapText: { fontFamily: Fonts.sans, fontSize: 12, color: Colors.ok },
+});
+
 // ── Home Screen ──────────────────────────────────────────────
 
 interface HomeScreenProps {
@@ -461,6 +519,8 @@ interface HomeScreenProps {
   dayTips: DayTip[];
   dismissedTipIds: string[];
   onDismissTip: (id: string) => void;
+  challenge?: Challenge | null;
+  onOpenChallenge?: () => void;
 }
 
 export function HomeScreen({
@@ -489,6 +549,8 @@ export function HomeScreen({
   dayTips,
   dismissedTipIds,
   onDismissTip,
+  challenge,
+  onOpenChallenge,
 }: HomeScreenProps) {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -675,6 +737,11 @@ export function HomeScreen({
             </View>
           </View>
         </View>
+
+        {/* Défi widget — today only when a challenge is active */}
+        {isToday && challenge?.active && onOpenChallenge && (
+          <ChallengeWidget challenge={challenge} onPress={onOpenChallenge} />
+        )}
 
         {/* Journal */}
         <View style={styles.sectionHead}>

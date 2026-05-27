@@ -24,6 +24,7 @@ export const KEYS = {
   dismissedTips:          'nutritor:dismissed_tips',
   scanHistory:            'nutritor:scan_history',
   shoppingList:           'nutritor:shopping_list',
+  challenge:              'nutritor:challenge',
 };
 
 export async function load<T>(key: string): Promise<T | null> {
