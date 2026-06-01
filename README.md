@@ -7,11 +7,16 @@
 *Comprendre ce que vous mangez. Manger ce qui vous convient.*
 
 [![Platform](https://img.shields.io/badge/📱%20Android%20%7C%20iOS%20%7C%20Web-lightgrey?style=for-the-badge)](.)
-[![Version](https://img.shields.io/badge/version-0.37.0-4CAF50?style=for-the-badge)](.)
+[![Version](https://img.shields.io/badge/version-0.38.0-4CAF50?style=for-the-badge)](.)
 [![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020?style=for-the-badge&logo=expo)](.)
+[![Netlify Status](https://api.netlify.com/api/v1/badges/5b82e795-63ce-4c19-aac4-2501498a8b29/deploy-status)](https://nutritor.netlify.app)
 [![Download APK](https://img.shields.io/github/v/release/nouhailler/nutritor?label=Download%20APK&logo=android&color=3F5A3A&style=for-the-badge)](https://github.com/nouhailler/nutritor/releases/latest)
 
 </div>
+
+---
+
+> 🌐 **Application web disponible sur [nutritor.netlify.app](https://nutritor.netlify.app)** — aucune installation requise.
 
 ---
 
@@ -205,6 +210,19 @@ npx expo start
 
 > **Prérequis :** Node 18+, compte [expo.dev](https://expo.dev), app Expo Go sur le téléphone.
 
+### 🌐 Build web (Netlify)
+
+```bash
+# Générer le build statique
+npx expo export --platform web
+# → dossier dist/ prêt à déployer
+
+# Tester localement
+npx serve dist
+```
+
+Le fichier `netlify.toml` configure automatiquement le build sur Netlify : branche `master`, commande `npx expo export --platform web`, dossier `dist/`, SPA redirect et cache long sur les assets.
+
 ### 📦 Build APK Android
 
 ```bash
@@ -220,14 +238,15 @@ eas build --platform android --profile preview
 ```
 React Native + Expo SDK 54  ·  TypeScript strict
 ├── Navigation     AppShell custom (tab + stack, sans React Navigation)
-├── Persistance    AsyncStorage via usePersistedState<T>
+├── Persistance    AsyncStorage / localStorage (web) via usePersistedState<T>
 ├── Rendu SVG      react-native-svg (anneau kcal, sparklines)
 ├── Typographie    Instrument Serif · Geist · JetBrains Mono
 ├── Icônes         @expo/vector-icons (Feather)
 ├── IA             OpenRouter · Ollama · Anthropic · OpenAI
 ├── i18n           i18next · react-i18next (FR / EN)
-├── Caméra         expo-camera v17 (scan + photo IA)
-└── Build          EAS Build (APK Android)
+├── Caméra         expo-camera v17 (scan + photo IA) — saisie manuelle sur web
+├── Build mobile   EAS Build (APK Android)
+└── Build web      expo export --platform web → Netlify (netlify.toml)
 ```
 
 ### 🎨 Palette de couleurs
@@ -277,7 +296,7 @@ React Native + Expo SDK 54  ·  TypeScript strict
 <details>
 <summary><strong>🛒 Assistant de courses</strong></summary>
 
-- ✅ Scanner code-barres (EAN-13, EAN-8, UPC) avec analyse de compatibilité instantanée
+- ✅ Scanner code-barres (EAN-13, EAN-8, UPC) avec analyse de compatibilité instantanée — saisie manuelle du code sur web
 - ✅ Score de compatibilité 0–100 basé sur les sensibilités digestives du profil
 - ✅ Fiche produit : verdict, problèmes, points positifs, badge ultra-transformé
 - ✅ Historique des scans avec filtres par verdict (compatible / à vérifier / déconseillé)

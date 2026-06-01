@@ -9,6 +9,27 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [0.38.0] — 2026-06-01
+
+### Ajouté
+- **Déploiement web sur Netlify** — l'application est maintenant accessible sur [nutritor.netlify.app](https://nutritor.netlify.app) sans installation
+  - `netlify.toml` : commande `npx expo export --platform web`, dossier `dist/`, redirect SPA `/* → /index.html`, cache long (`immutable`) sur les assets hachés `_expo/static/*`
+  - `src/utils/webDownload.ts` : utilitaire cross-platform — `downloadBlob()` (Blob + ancre HTML, déclenche le téléchargement navigateur) et `readFileAsText()` (lecture via `fetch()` sur web, `expo-file-system` sur native)
+
+### Modifié
+- **Exports CSV/JSON/HTML** (`AppShell`, `SettingsScreen`) : branche `Platform.OS === 'web'` → téléchargement direct via `downloadBlob()` ; comportement mobile inchangé (FileSystem + Sharing)
+  - Journal CSV, symptômes CSV, aliments CSV, rapport HTML professionnel
+  - Bibliothèque d'aliments JSON, bibliothèque de plats JSON
+- **Imports JSON/CSV** (`SettingsScreen`) : lecture du fichier via `readFileAsText()` qui fait `fetch(blob_uri)` sur web au lieu de `FileSystem.readAsStringAsync` — `expo-document-picker` fonctionne nativement sur web (input `<file>`)
+- **`BarcodeScannerScreen`** : restructuré en deux composants (`BarcodeScannerNative` + `BarcodeScannerWeb`) ; le composant public dispatche selon `Platform.OS`. Sur web : champ de saisie EAN + bouton recherche + lookup Open Food Facts — même résultat que le scan natif
+- **`ShoppingScannerScreen`** : même pattern — `ShoppingScannerNative` + `ShoppingScannerWeb` avec saisie manuelle du code-barres
+
+### Notes techniques
+- `@react-native-async-storage/async-storage` v2.2 supporte `localStorage` nativement sur web — aucune modification requise
+- La structure des composants camera respecte les règles des Hooks React : le dispatcher public n'appelle aucun hook, les hooks restent dans les composants feuilles (`*Native`, `*Web`)
+
+---
+
 ## [0.37.0] — 2026-05-27
 
 ### Ajouté
