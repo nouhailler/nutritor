@@ -18,10 +18,12 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Platform } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { downloadBlob, readFileAsText } from '../utils/webDownload';
 import { Icon } from '../components/Icon';
 import { HelpButton, HelpModal } from '../components/HelpModal';
 import { HELP } from '../data/helpContent';
@@ -287,6 +289,10 @@ export function SettingsScreen({
     setExportLoading(true);
     try {
       const json = JSON.stringify(foodList, null, 2);
+      if (Platform.OS === 'web') {
+        downloadBlob(json, 'nutritor_aliments.json', 'application/json');
+        return;
+      }
       const path = FileSystem.cacheDirectory + 'nutritor_aliments.json';
       await FileSystem.writeAsStringAsync(path, json, { encoding: FileSystem.EncodingType.UTF8 });
       const available = await Sharing.isAvailableAsync();
@@ -313,9 +319,7 @@ export function SettingsScreen({
       });
       if (result.canceled) return;
       const file = result.assets[0];
-      const content = await FileSystem.readAsStringAsync(file.uri, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
+      const content = await readFileAsText(file.uri);
       const parsed = JSON.parse(content);
       const foods: Food[] = Array.isArray(parsed) ? parsed : [parsed];
       if (!foods.every((f) => f.id && f.name && f.per100)) {
@@ -337,6 +341,10 @@ export function SettingsScreen({
     setExportPlatesLoading(true);
     try {
       const json = JSON.stringify(savedPlates, null, 2);
+      if (Platform.OS === 'web') {
+        downloadBlob(json, 'nutritor_plats.json', 'application/json');
+        return;
+      }
       const path = FileSystem.cacheDirectory + 'nutritor_plats.json';
       await FileSystem.writeAsStringAsync(path, json, { encoding: FileSystem.EncodingType.UTF8 });
       const available = await Sharing.isAvailableAsync();
@@ -363,9 +371,7 @@ export function SettingsScreen({
       });
       if (result.canceled) return;
       const file = result.assets[0];
-      const content = await FileSystem.readAsStringAsync(file.uri, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
+      const content = await readFileAsText(file.uri);
       const parsed = JSON.parse(content);
       const plates: SavedPlate[] = Array.isArray(parsed) ? parsed : [parsed];
       if (!plates.every((p) => p.id && p.name && typeof p.kcal === 'number')) {
@@ -699,7 +705,7 @@ export function SettingsScreen({
               try {
                 const pick = await DocumentPicker.getDocumentAsync({ type: ['text/csv', 'text/comma-separated-values', '*/*'] });
                 if (pick.canceled || !pick.assets?.[0]) return;
-                const content = await FileSystem.readAsStringAsync(pick.assets[0].uri, { encoding: FileSystem.EncodingType.UTF8 });
+                const content = await readFileAsText(pick.assets[0].uri);
                 const result = await onImportJournalCSV(content);
                 showToast(`${result.importedCount} repas importés · ${result.createdFoodsCount} aliments créés`);
               } catch {

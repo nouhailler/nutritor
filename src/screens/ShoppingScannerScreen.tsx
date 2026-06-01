@@ -7,9 +7,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -256,6 +258,136 @@ const rs = StyleSheet.create({
   closeBtnText: { fontFamily: Fonts.sansSemiBold, fontSize: 14, color: Colors.paper2 },
 });
 
+// ── Web fallback ──────────────────────────────────────────────
+
+function ShoppingScannerWeb({ profile, onBack, onScanComplete }: Props) {
+  const insets = useSafeAreaInsets();
+  const [barcode, setBarcode] = useState('');
+  const [phase, setPhase] = useState<'idle' | 'loading' | 'result' | 'not_found'>('idle');
+  const [product, setProduct] = useState<OFFProduct | null>(null);
+  const [result, setResult] = useState<CompatibilityResult | null>(null);
+
+  const handleSearch = async () => {
+    if (!barcode.trim()) return;
+    setPhase('loading');
+    try {
+      const p = await getOFFByBarcode(barcode.trim());
+      if (!p) { setPhase('not_found'); return; }
+      const r = analyzeCompatibility(p, profile);
+      setProduct(p);
+      setResult(r);
+      setPhase('result');
+      const name = p.product_name_fr || p.product_name || 'Produit inconnu';
+      const brand = p.brands?.split(',')[0]?.trim() ?? '';
+      onScanComplete({
+        id: `scan-${Date.now()}`,
+        ts: Date.now(),
+        productName: name,
+        brand,
+        score: r.score,
+        verdict: r.verdict,
+        barcode: barcode.trim(),
+        issues: r.issues,
+        positives: r.positives,
+        ultraProcessed: r.ultraProcessed,
+      }, barcode.trim());
+    } catch {
+      setPhase('not_found');
+    }
+  };
+
+  const handleReset = () => { setBarcode(''); setPhase('idle'); setProduct(null); setResult(null); };
+
+  return (
+    <View style={[webScan.container, { paddingTop: insets.top }]}>
+      <View style={webScan.topbar}>
+        <TouchableOpacity style={webScan.iconBtn} onPress={onBack} activeOpacity={0.7}>
+          <Icon name="back" size={20} color={Colors.ink} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={webScan.eyebrow}>ASSISTANT COURSES</Text>
+          <Text style={webScan.title}>Analyse personnalisée</Text>
+        </View>
+      </View>
+
+      <View style={webScan.notice}>
+        <Icon name="info" size={14} color={Colors.signal} />
+        <Text style={webScan.noticeText}>Scan caméra non disponible sur web. Entrez le code-barres EAN.</Text>
+      </View>
+
+      <View style={webScan.inputRow}>
+        <TextInput
+          style={webScan.input}
+          value={barcode}
+          onChangeText={setBarcode}
+          placeholder="Ex : 3017624010701"
+          placeholderTextColor={Colors.muted2}
+          keyboardType="numeric"
+          returnKeyType="search"
+          onSubmitEditing={handleSearch}
+          autoFocus
+        />
+        <TouchableOpacity
+          style={[webScan.searchBtn, !barcode.trim() && webScan.searchBtnDisabled]}
+          onPress={handleSearch}
+          disabled={!barcode.trim() || phase === 'loading'}
+          activeOpacity={0.8}
+        >
+          {phase === 'loading'
+            ? <ActivityIndicator color={Colors.paper2} size="small" />
+            : <Icon name="search" size={18} color={Colors.paper2} />}
+        </TouchableOpacity>
+      </View>
+
+      {phase === 'not_found' && (
+        <View style={webScan.stateBox}>
+          <Icon name="alert" size={20} color={Colors.warn} />
+          <Text style={webScan.stateText}>Produit introuvable sur Open Food Facts</Text>
+          <TouchableOpacity onPress={handleReset} activeOpacity={0.7}>
+            <Text style={webScan.retryLink}>Réessayer</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {phase === 'result' && product && result && (
+        <ResultSheet product={product} result={result} onScanAgain={handleReset} onClose={onBack} />
+      )}
+    </View>
+  );
+}
+
+const webScan = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.paper },
+  topbar: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 16, paddingBottom: 12, paddingTop: 8,
+    borderBottomWidth: 1, borderBottomColor: Colors.hairline2,
+  },
+  iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  eyebrow: { fontFamily: Fonts.mono, fontSize: 9, letterSpacing: 1.5, color: Colors.muted },
+  title: { fontFamily: Fonts.serif, fontSize: 20, color: Colors.ink, letterSpacing: -0.3 },
+  notice: {
+    flexDirection: 'row', gap: 8, alignItems: 'flex-start',
+    margin: 16, padding: 12, borderRadius: 12,
+    backgroundColor: Colors.signal + '15', borderWidth: 1, borderColor: Colors.signal + '40',
+  },
+  noticeText: { flex: 1, fontFamily: Fonts.sans, fontSize: 13, color: Colors.ink2, lineHeight: 18 },
+  inputRow: { flexDirection: 'row', gap: 10, marginHorizontal: 16, marginTop: 4 },
+  input: {
+    flex: 1, height: 48, borderRadius: 12, borderWidth: 1, borderColor: Colors.hairline,
+    backgroundColor: Colors.card, paddingHorizontal: 16,
+    fontFamily: Fonts.mono, fontSize: 14, color: Colors.ink,
+  },
+  searchBtn: {
+    width: 48, height: 48, borderRadius: 12, backgroundColor: Colors.ink,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  searchBtnDisabled: { opacity: 0.4 },
+  stateBox: { margin: 16, padding: 20, borderRadius: 16, backgroundColor: Colors.card, alignItems: 'center', gap: 10 },
+  stateText: { fontFamily: Fonts.sansMedium, fontSize: 14, color: Colors.ink, textAlign: 'center' },
+  retryLink: { fontFamily: Fonts.sans, fontSize: 13, color: Colors.muted, textDecorationLine: 'underline' },
+});
+
 // ── Main screen ────────────────────────────────────────────────
 
 type Phase = 'scanning' | 'loading' | 'result' | 'not_found' | 'permission_denied';
@@ -266,7 +398,14 @@ interface Props {
   onScanComplete: (entry: ScanHistoryEntry, barcode: string) => void;
 }
 
-export function ShoppingScannerScreen({ profile, onBack, onScanComplete }: Props) {
+export function ShoppingScannerScreen(props: Props) {
+  if (Platform.OS === 'web') {
+    return <ShoppingScannerWeb {...props} />;
+  }
+  return <ShoppingScannerNative {...props} />;
+}
+
+function ShoppingScannerNative({ profile, onBack, onScanComplete }: Props) {
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [phase, setPhase] = useState<Phase>('scanning');

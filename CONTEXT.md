@@ -4,7 +4,7 @@
 
 ---
 
-## État actuel (2026-05-27)
+## État actuel (2026-06-01)
 
 ### Derniers commits
 - WIP — feat: Nutri-Score Perso, Comparateur, Sommeil, CSV (v0.37.0)
@@ -125,6 +125,18 @@ Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été
 **v0.33.1 — Import/export bibliothèque de plats**
 - `SettingsScreen` : nouvelle section "Bibliothèque de plats" avec export JSON (`nutritor_plats.json`) et import avec fusion (déduplication par `id`)
 - `AppShell` : câblage `savedPlates` + handler `onImportPlates`
+
+**v0.38.0 — Support web / déploiement Netlify**
+- `netlify.toml` (nouveau) : `npx expo export --platform web` → `dist/`, SPA fallback, cache immutable sur `_expo/static/*`
+- `src/utils/webDownload.ts` (nouveau) : `downloadBlob()` (Blob + ancre) et `readFileAsText()` (fetch blob: sur web, expo-file-system sur native)
+- `AppShell` : 4 handlers d'export (`handleExportReport`, `handleExportJournalCSV`, `handleExportSymptomsCSV`, `handleExportFoodsCSV`) — branche `Platform.OS === 'web'` → `downloadBlob()` avant FileSystem/Sharing
+- `SettingsScreen` : `handleExport` + `handleExportPlates` → `downloadBlob()` sur web ; `handleImport` + `handleImportPlates` + import CSV → `readFileAsText()` remplace `FileSystem.readAsStringAsync`
+- `BarcodeScannerScreen` : ajout `BarcodeScannerWeb` (saisie EAN manuelle + lookup OFF) ; le composant public dispatche vers web ou native (hooks séparés, pas de violation)
+- `ShoppingScannerScreen` : même pattern — `ShoppingScannerWeb` + `ShoppingScannerNative`
+- AsyncStorage v2.2 = localStorage natif sur web → aucune modif nécessaire
+
+**Fonctionnalités disponibles sur web :** journal, FODMAP, stats, profil, aliments (CIQUAL/OFF/manuel), plats sauvegardés, générateur IA, encyclopédie, défi, comparateur, export CSV/JSON/HTML (download direct), import CSV/JSON, photo IA (galerie uniquement)
+**Dégradées sur web :** scanner caméra → saisie manuelle EAN, photo appareil photo → galerie uniquement (déjà géré dans `foodVisionService.ts`)
 
 **v0.37.0 — Nutri-Score Perso · Comparateur · Sommeil · Export CSV**
 - `src/utils/nutriScorePerso.ts` (nouveau) : wrapper de `computeCompatibilityScore()` → grade A-E (≥80/60/40/20), blockers, positives, explanation

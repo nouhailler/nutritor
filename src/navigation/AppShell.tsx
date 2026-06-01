@@ -1,5 +1,6 @@
 import '../i18n';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -73,6 +74,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as ImagePicker from 'expo-image-picker';
 import { exportJournalCSV, exportSymptomsCSV, exportFoodsCSV, importJournalCSV } from '../services/csvService';
+import { downloadBlob } from '../utils/webDownload';
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -506,6 +508,10 @@ export function AppShell() {
     try {
       const html = generateProfessionalReport(profile, journal, meals, fodmapProtocol, symptoms);
       const fileName = `nutritor-rapport-${profile.name.replace(/\s+/g, '-').toLowerCase()}-${todayStr()}.html`;
+      if (Platform.OS === 'web') {
+        downloadBlob(html, fileName, 'text/html');
+        return;
+      }
       const fileUri = FileSystem.cacheDirectory + fileName;
       await FileSystem.writeAsStringAsync(fileUri, html, { encoding: FileSystem.EncodingType.UTF8 });
       await Sharing.shareAsync(fileUri, {
@@ -589,6 +595,7 @@ export function AppShell() {
 
   const handleExportJournalCSV = async () => {
     const csv = exportJournalCSV(journal);
+    if (Platform.OS === 'web') { downloadBlob(csv, 'journal_nutritor.csv', 'text/csv'); return; }
     const path = FileSystem.cacheDirectory + 'journal_nutritor.csv';
     await FileSystem.writeAsStringAsync(path, csv, { encoding: FileSystem.EncodingType.UTF8 });
     const available = await Sharing.isAvailableAsync();
@@ -597,6 +604,7 @@ export function AppShell() {
 
   const handleExportSymptomsCSV = async () => {
     const csv = exportSymptomsCSV(symptoms);
+    if (Platform.OS === 'web') { downloadBlob(csv, 'symptomes_nutritor.csv', 'text/csv'); return; }
     const path = FileSystem.cacheDirectory + 'symptomes_nutritor.csv';
     await FileSystem.writeAsStringAsync(path, csv, { encoding: FileSystem.EncodingType.UTF8 });
     const available = await Sharing.isAvailableAsync();
@@ -605,6 +613,7 @@ export function AppShell() {
 
   const handleExportFoodsCSV = async () => {
     const csv = exportFoodsCSV(foodList);
+    if (Platform.OS === 'web') { downloadBlob(csv, 'aliments_nutritor.csv', 'text/csv'); return; }
     const path = FileSystem.cacheDirectory + 'aliments_nutritor.csv';
     await FileSystem.writeAsStringAsync(path, csv, { encoding: FileSystem.EncodingType.UTF8 });
     const available = await Sharing.isAvailableAsync();

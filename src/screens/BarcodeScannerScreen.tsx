@@ -8,8 +8,10 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Animated,
+  Platform,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -208,6 +210,157 @@ const sheet = StyleSheet.create({
   addText: { fontFamily: Fonts.sansSemiBold, fontSize: 14, color: Colors.paper2 },
 });
 
+// ── Web fallback ───────────────────────────────────────────────
+
+function BarcodeScannerWeb({
+  existingIds,
+  onImport,
+  onBack,
+  onOpenMenu,
+}: {
+  existingIds: Set<string>;
+  onImport: (food: Food) => void;
+  onBack: () => void;
+  onOpenMenu: () => void;
+}) {
+  const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  const [barcode, setBarcode] = useState('');
+  const [phase, setPhase] = useState<'idle' | 'loading' | 'found' | 'not_found'>('idle');
+  const [foundFood, setFoundFood] = useState<Food | null>(null);
+  const [added, setAdded] = useState(false);
+
+  const handleSearch = async () => {
+    if (!barcode.trim()) return;
+    setPhase('loading');
+    try {
+      const product = await getOFFByBarcode(barcode.trim());
+      if (!product) { setPhase('not_found'); return; }
+      setFoundFood(offProductToFood(product));
+      setPhase('found');
+    } catch {
+      setPhase('not_found');
+    }
+  };
+
+  const handleAdd = () => {
+    if (!foundFood) return;
+    if (!existingIds.has(foundFood.id)) onImport(foundFood);
+    setAdded(true);
+  };
+
+  const handleReset = () => {
+    setBarcode('');
+    setPhase('idle');
+    setFoundFood(null);
+    setAdded(false);
+  };
+
+  return (
+    <View style={[webStyles.container, { paddingTop: insets.top }]}>
+      {/* Topbar */}
+      <View style={webStyles.topbar}>
+        <TouchableOpacity style={webStyles.iconBtn} onPress={onBack} activeOpacity={0.7}>
+          <Icon name="back" size={20} color={Colors.ink} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={webStyles.eyebrow}>{t('scanner.title').toUpperCase()}</Text>
+          <Text style={webStyles.title}>Open Food Facts</Text>
+        </View>
+        <TouchableOpacity style={webStyles.iconBtn} onPress={onOpenMenu} activeOpacity={0.7}>
+          <Icon name="menu" size={22} color={Colors.ink} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Web notice */}
+      <View style={webStyles.notice}>
+        <Icon name="info" size={14} color={Colors.signal} />
+        <Text style={webStyles.noticeText}>
+          Scan de caméra non disponible sur web. Entrez le code-barres manuellement.
+        </Text>
+      </View>
+
+      {/* Input */}
+      <View style={webStyles.inputRow}>
+        <TextInput
+          style={webStyles.input}
+          value={barcode}
+          onChangeText={setBarcode}
+          placeholder="Ex : 3017624010701"
+          placeholderTextColor={Colors.muted2}
+          keyboardType="numeric"
+          returnKeyType="search"
+          onSubmitEditing={handleSearch}
+          autoFocus
+        />
+        <TouchableOpacity
+          style={[webStyles.searchBtn, !barcode.trim() && webStyles.searchBtnDisabled]}
+          onPress={handleSearch}
+          disabled={!barcode.trim() || phase === 'loading'}
+          activeOpacity={0.8}
+        >
+          {phase === 'loading'
+            ? <ActivityIndicator color={Colors.paper2} size="small" />
+            : <Icon name="search" size={18} color={Colors.paper2} />
+          }
+        </TouchableOpacity>
+      </View>
+
+      {/* States */}
+      {phase === 'not_found' && (
+        <View style={webStyles.stateBox}>
+          <Icon name="alert" size={20} color={Colors.warn} />
+          <Text style={webStyles.stateText}>{t('scanner.notFoundOFF')}</Text>
+          <TouchableOpacity onPress={handleReset} activeOpacity={0.7}>
+            <Text style={webStyles.retryLink}>{t('scanner.scanAgain')}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {phase === 'found' && foundFood && (
+        <ResultSheet
+          food={foundFood}
+          alreadyAdded={added || existingIds.has(foundFood.id)}
+          onAdd={handleAdd}
+          onScanAgain={handleReset}
+        />
+      )}
+    </View>
+  );
+}
+
+const webStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.paper },
+  topbar: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 16, paddingBottom: 12, paddingTop: 8,
+    borderBottomWidth: 1, borderBottomColor: Colors.hairline2,
+  },
+  iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  eyebrow: { fontFamily: Fonts.mono, fontSize: 9, letterSpacing: 1.5, color: Colors.muted },
+  title: { fontFamily: Fonts.serif, fontSize: 20, color: Colors.ink, letterSpacing: -0.3 },
+  notice: {
+    flexDirection: 'row', gap: 8, alignItems: 'flex-start',
+    margin: 16, padding: 12, borderRadius: 12,
+    backgroundColor: Colors.signal + '15', borderWidth: 1, borderColor: Colors.signal + '40',
+  },
+  noticeText: { flex: 1, fontFamily: Fonts.sans, fontSize: 13, color: Colors.ink2, lineHeight: 18 },
+  inputRow: { flexDirection: 'row', gap: 10, marginHorizontal: 16, marginTop: 4 },
+  input: {
+    flex: 1, height: 48, borderRadius: 12, borderWidth: 1, borderColor: Colors.hairline,
+    backgroundColor: Colors.card, paddingHorizontal: 16,
+    fontFamily: Fonts.mono, fontSize: 14, color: Colors.ink,
+  },
+  searchBtn: {
+    width: 48, height: 48, borderRadius: 12, backgroundColor: Colors.ink,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  searchBtnDisabled: { opacity: 0.4 },
+  stateBox: { margin: 16, padding: 20, borderRadius: 16, backgroundColor: Colors.card, alignItems: 'center', gap: 10 },
+  stateText: { fontFamily: Fonts.sansMedium, fontSize: 14, color: Colors.ink, textAlign: 'center' },
+  retryLink: { fontFamily: Fonts.sans, fontSize: 13, color: Colors.muted, textDecorationLine: 'underline' },
+});
+
 // ── Main screen ────────────────────────────────────────────────
 
 interface Props {
@@ -218,7 +371,14 @@ interface Props {
   onStartDemo?: () => void;
 }
 
-export function BarcodeScannerScreen({ existingIds, onImport, onBack, onOpenMenu, onStartDemo }: Props) {
+export function BarcodeScannerScreen(props: Props) {
+  if (Platform.OS === 'web') {
+    return <BarcodeScannerWeb existingIds={props.existingIds} onImport={props.onImport} onBack={props.onBack} onOpenMenu={props.onOpenMenu} />;
+  }
+  return <BarcodeScannerNative {...props} />;
+}
+
+function BarcodeScannerNative({ existingIds, onImport, onBack, onOpenMenu, onStartDemo }: Props) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
