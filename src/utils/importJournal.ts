@@ -194,11 +194,14 @@ export function importJournalJSON(
   timelineUpdate: UserTimelineEvent[];
   conflictExists: boolean;
 } {
+  // Supprime les marqueurs markdown (```json ... ```) si l'utilisateur copie depuis Claude
+  const cleaned = fileContent.trim().replace(/^```[a-z]*\s*/i, '').replace(/\s*```$/, '').trim();
+
   let parsed: unknown;
   try {
-    parsed = JSON.parse(fileContent);
+    parsed = JSON.parse(cleaned);
   } catch {
-    throw new Error('JSON invalide — impossible de parser le fichier.');
+    throw new Error('JSON invalide — impossible de parser le contenu.');
   }
 
   const data = parsed as Partial<ImportJournalFile>;
