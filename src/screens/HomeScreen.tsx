@@ -15,8 +15,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as DocumentPicker from 'expo-document-picker';
-import { readFileAsText } from '../utils/webDownload';
 import { Circle, Svg } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
@@ -574,7 +572,10 @@ export function HomeScreen({
     unit: string;
     kcalPer100: number;
   } | null>(null);
+  const [jsonPasteVisible, setJsonPasteVisible] = useState(false);
+  const [jsonPasteText, setJsonPasteText] = useState('');
   const [jsonImportLoading, setJsonImportLoading] = useState(false);
+  const [jsonImportError, setJsonImportError] = useState<string | null>(null);
   const [jsonImportPending, setJsonImportPending] = useState<{
     content: string;
     date: string;
@@ -583,25 +584,25 @@ export function HomeScreen({
     repasCount: number;
   } | null>(null);
 
-  const handleImportJournalJSON = async () => {
-    if (!onImportJournalJSON) return;
+  const handleSubmitPastedJSON = async () => {
+    if (!onImportJournalJSON || !jsonPasteText.trim()) return;
     setJsonImportLoading(true);
-    setJsonImportPending(null);
+    setJsonImportError(null);
     try {
-      const pick = await DocumentPicker.getDocumentAsync({ type: ['application/json', '*/*'] });
-      if (pick.canceled || !pick.assets?.[0]) return;
-      const content = await readFileAsText(pick.assets[0].uri);
-      const result = await onImportJournalJSON(content, 'check');
+      const result = await onImportJournalJSON(jsonPasteText.trim(), 'check');
       if (result.conflictExists) {
-        setJsonImportPending({ content, date: result.date, importes: result.importes, non_trouves: result.non_trouves, repasCount: result.repasCount });
+        setJsonPasteVisible(false);
+        setJsonImportPending({ content: jsonPasteText.trim(), date: result.date, importes: result.importes, non_trouves: result.non_trouves, repasCount: result.repasCount });
       } else {
-        await onImportJournalJSON(content, 'merge');
+        await onImportJournalJSON(jsonPasteText.trim(), 'merge');
         let msg = `✅ ${result.repasCount} repas importés · ${result.importes} aliments`;
         if (result.non_trouves.length > 0) msg += ` · ${result.non_trouves.length} non trouvés`;
         showToast?.(msg);
+        setJsonPasteText('');
+        setJsonPasteVisible(false);
       }
     } catch (e) {
-      showToast?.(`Format JSON invalide — ${e instanceof Error ? e.message : 'Erreur inconnue'}`);
+      setJsonImportError(`Format JSON invalide — ${e instanceof Error ? e.message : 'Erreur inconnue'}`);
     } finally {
       setJsonImportLoading(false);
     }
@@ -616,6 +617,7 @@ export function HomeScreen({
       let msg = `✅ ${result.repasCount} repas importés · ${result.importes} aliments`;
       if (result.non_trouves.length > 0) msg += ` · ${result.non_trouves.length} non trouvés`;
       showToast?.(msg);
+      setJsonPasteText('');
     } catch {
       showToast?.('Erreur lors de l\'import JSON');
     } finally {
@@ -961,16 +963,58 @@ export function HomeScreen({
       {onImportJournalJSON && (
         <TouchableOpacity
           style={[styles.fab, styles.fabSecondary, { bottom: insets.bottom + 226 }]}
-          onPress={handleImportJournalJSON}
+          onPress={() => { setJsonPasteText(''); setJsonImportError(null); setJsonPasteVisible(true); }}
           activeOpacity={0.85}
-          disabled={jsonImportLoading}
         >
-          {jsonImportLoading
-            ? <ActivityIndicator size="small" color={Colors.ink} />
-            : <Icon name="upload" size={20} color={Colors.ink} />}
+          <Icon name="upload" size={20} color={Colors.ink} />
           <Text style={[styles.fabText, styles.fabSecondaryText]}>Ajouter les repas</Text>
         </TouchableOpacity>
       )}
+
+      {/* Modal paste JSON */}
+      <Modal visible={jsonPasteVisible} transparent animationType="slide">
+        <View style={styles.conflictOverlay}>
+          <View style={styles.pasteBox}>
+            <Text style={styles.pasteTitle}>Coller le JSON Claude</Text>
+            <Text style={styles.pasteDesc}>
+              Copie le JSON généré par Claude et colle-le ici.
+            </Text>
+            <TextInput
+              style={styles.pasteInput}
+              multiline
+              placeholder='{ "date": "2026-06-07", "repas": [...] }'
+              placeholderTextColor={Colors.muted2}
+              value={jsonPasteText}
+              onChangeText={(t) => { setJsonPasteText(t); setJsonImportError(null); }}
+              autoFocus
+              textAlignVertical="top"
+            />
+            {jsonImportError && (
+              <Text style={styles.pasteError}>{jsonImportError}</Text>
+            )}
+            <View style={styles.conflictBtns}>
+              <TouchableOpacity
+                style={[styles.conflictBtn, styles.conflictBtnMerge, { flex: 2, opacity: !jsonPasteText.trim() || jsonImportLoading ? 0.4 : 1 }]}
+                onPress={handleSubmitPastedJSON}
+                activeOpacity={0.8}
+                disabled={!jsonPasteText.trim() || jsonImportLoading}
+              >
+                {jsonImportLoading
+                  ? <ActivityIndicator size="small" color={Colors.ink} />
+                  : <Text style={styles.conflictBtnText}>Importer</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.conflictBtnCancel}
+                onPress={() => setJsonPasteVisible(false)}
+                activeOpacity={0.8}
+                disabled={jsonImportLoading}
+              >
+                <Text style={styles.conflictBtnTextMuted}>Annuler</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal conflit import JSON */}
       <Modal visible={!!jsonImportPending} transparent animationType="fade">
@@ -1598,6 +1642,46 @@ const styles = StyleSheet.create({
   },
   fabSecondaryText: {
     color: Colors.ink,
+  },
+
+  // Modal paste JSON
+  pasteBox: {
+    backgroundColor: Colors.paper,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    padding: 22,
+    width: '100%',
+    maxWidth: 480,
+    gap: 12,
+  },
+  pasteTitle: {
+    fontFamily: Fonts.serif,
+    fontSize: 20,
+    color: Colors.ink,
+    letterSpacing: -0.3,
+  },
+  pasteDesc: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.muted,
+    lineHeight: 18,
+  },
+  pasteInput: {
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    borderRadius: 12,
+    padding: 14,
+    fontFamily: Fonts.mono,
+    fontSize: 12,
+    color: Colors.ink,
+    height: 180,
+  },
+  pasteError: {
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    color: Colors.warn,
   },
 
   // Conflit import JSON
