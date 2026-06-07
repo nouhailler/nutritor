@@ -15,6 +15,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
+import { readFileAsText } from '../utils/webDownload';
 import { Circle, Svg } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
@@ -522,6 +524,8 @@ interface HomeScreenProps {
   onDismissTip: (id: string) => void;
   challenge?: Challenge | null;
   onOpenChallenge?: () => void;
+  onImportJournalJSON?: (content: string, mode: 'check' | 'merge' | 'replace') => Promise<{ importes: number; non_trouves: string[]; date: string; repasCount: number; conflictExists: boolean }>;
+  showToast?: (msg: string) => void;
 }
 
 export function HomeScreen({
@@ -552,6 +556,8 @@ export function HomeScreen({
   onDismissTip,
   challenge,
   onOpenChallenge,
+  onImportJournalJSON,
+  showToast,
 }: HomeScreenProps) {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -568,6 +574,54 @@ export function HomeScreen({
     unit: string;
     kcalPer100: number;
   } | null>(null);
+  const [jsonImportLoading, setJsonImportLoading] = useState(false);
+  const [jsonImportPending, setJsonImportPending] = useState<{
+    content: string;
+    date: string;
+    importes: number;
+    non_trouves: string[];
+    repasCount: number;
+  } | null>(null);
+
+  const handleImportJournalJSON = async () => {
+    if (!onImportJournalJSON) return;
+    setJsonImportLoading(true);
+    setJsonImportPending(null);
+    try {
+      const pick = await DocumentPicker.getDocumentAsync({ type: ['application/json', '*/*'] });
+      if (pick.canceled || !pick.assets?.[0]) return;
+      const content = await readFileAsText(pick.assets[0].uri);
+      const result = await onImportJournalJSON(content, 'check');
+      if (result.conflictExists) {
+        setJsonImportPending({ content, date: result.date, importes: result.importes, non_trouves: result.non_trouves, repasCount: result.repasCount });
+      } else {
+        await onImportJournalJSON(content, 'merge');
+        let msg = `✅ ${result.repasCount} repas importés · ${result.importes} aliments`;
+        if (result.non_trouves.length > 0) msg += ` · ${result.non_trouves.length} non trouvés`;
+        showToast?.(msg);
+      }
+    } catch (e) {
+      showToast?.(`Format JSON invalide — ${e instanceof Error ? e.message : 'Erreur inconnue'}`);
+    } finally {
+      setJsonImportLoading(false);
+    }
+  };
+
+  const handleJsonConflictChoice = async (mode: 'merge' | 'replace') => {
+    if (!onImportJournalJSON || !jsonImportPending) return;
+    setJsonImportPending(null);
+    setJsonImportLoading(true);
+    try {
+      const result = await onImportJournalJSON(jsonImportPending.content, mode);
+      let msg = `✅ ${result.repasCount} repas importés · ${result.importes} aliments`;
+      if (result.non_trouves.length > 0) msg += ` · ${result.non_trouves.length} non trouvés`;
+      showToast?.(msg);
+    } catch {
+      showToast?.('Erreur lors de l\'import JSON');
+    } finally {
+      setJsonImportLoading(false);
+    }
+  };
 
   const todayStr = todayDateStr();
   const effectiveDate = viewingDate ?? todayStr;
@@ -904,6 +958,56 @@ export function HomeScreen({
         <Icon name="plus" size={20} color={Colors.ink} />
         <Text style={[styles.fabText, styles.fabSecondaryText]}>{t('home.addFoodToMeals')}</Text>
       </TouchableOpacity>
+      {onImportJournalJSON && (
+        <TouchableOpacity
+          style={[styles.fab, styles.fabSecondary, { bottom: insets.bottom + 226 }]}
+          onPress={handleImportJournalJSON}
+          activeOpacity={0.85}
+          disabled={jsonImportLoading}
+        >
+          {jsonImportLoading
+            ? <ActivityIndicator size="small" color={Colors.ink} />
+            : <Icon name="upload" size={20} color={Colors.ink} />}
+          <Text style={[styles.fabText, styles.fabSecondaryText]}>Ajouter les repas</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Modal conflit import JSON */}
+      <Modal visible={!!jsonImportPending} transparent animationType="fade">
+        <View style={styles.conflictOverlay}>
+          <View style={styles.conflictBox}>
+            <Text style={styles.conflictTitle}>
+              Conflit — journal du {jsonImportPending?.date.split('-').reverse().join('/')}
+            </Text>
+            <Text style={styles.conflictDesc}>
+              Un journal existe déjà pour cette date. Que souhaitez-vous faire ?
+            </Text>
+            <View style={styles.conflictBtns}>
+              <TouchableOpacity
+                style={[styles.conflictBtn, styles.conflictBtnMerge]}
+                onPress={() => handleJsonConflictChoice('merge')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.conflictBtnText}>Fusionner</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.conflictBtn, styles.conflictBtnReplace]}
+                onPress={() => handleJsonConflictChoice('replace')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.conflictBtnTextWarn}>Remplacer</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.conflictBtnCancel}
+                onPress={() => setJsonImportPending(null)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.conflictBtnTextMuted}>Annuler</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <EditPortionModal
         visible={editTarget !== null}
@@ -926,7 +1030,7 @@ export function HomeScreen({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.paper },
   scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 160 },
+  scrollContent: { paddingBottom: 300 },
 
   topbar: {
     flexDirection: 'row',
@@ -1494,6 +1598,78 @@ const styles = StyleSheet.create({
   },
   fabSecondaryText: {
     color: Colors.ink,
+  },
+
+  // Conflit import JSON
+  conflictOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15,12,8,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  conflictBox: {
+    backgroundColor: Colors.paper,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    padding: 22,
+    width: '100%',
+    maxWidth: 380,
+    gap: 12,
+  },
+  conflictTitle: {
+    fontFamily: Fonts.serif,
+    fontSize: 18,
+    color: Colors.ink,
+    letterSpacing: -0.3,
+  },
+  conflictDesc: {
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    color: Colors.muted,
+    lineHeight: 20,
+  },
+  conflictBtns: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  conflictBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  conflictBtnMerge: {
+    backgroundColor: Colors.card,
+    borderColor: Colors.hairline,
+  },
+  conflictBtnReplace: {
+    backgroundColor: Colors.card,
+    borderColor: Colors.hairline,
+  },
+  conflictBtnCancel: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  conflictBtnText: {
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    color: Colors.ink,
+  },
+  conflictBtnTextWarn: {
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    color: Colors.warn,
+  },
+  conflictBtnTextMuted: {
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    color: Colors.muted,
   },
 });
 

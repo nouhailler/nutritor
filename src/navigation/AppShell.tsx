@@ -1462,6 +1462,8 @@ export function AppShell() {
             onDeleteTimelineEvent={handleDeleteTimelineEvent}
             challenge={challenge}
             onOpenChallenge={() => setStack('challenge')}
+            onImportJournalJSON={handleImportJournalJSON}
+            showToast={(msg) => { setToast(msg); setTimeout(() => setToast(null), 2600); }}
           />
         );
         break;
