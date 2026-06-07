@@ -15,6 +15,11 @@ interface ImportAliment {
   quantite: number;
   unite: string;
   source: 'ciqual' | 'generique' | string;
+  // Valeurs nutritionnelles optionnelles pour la portion indiquée
+  kcal?: number;
+  proteines?: number;
+  glucides?: number;
+  lipides?: number;
 }
 
 interface ImportRepas {
@@ -137,9 +142,31 @@ function mapBienEtreToScores(be: ImportBienEtre): Partial<Record<SymptomKey, num
   return scores;
 }
 
+// ── Macros embarquées dans le JSON (priorité absolue) ──────────
+
+function hasEmbeddedNutrition(alim: ImportAliment): boolean {
+  return alim.kcal !== undefined;
+}
+
+function buildFromEmbedded(alim: ImportAliment): MealItem {
+  return {
+    name: alim.nom,
+    qty: `${alim.quantite} ${alim.unite}`,
+    kcal: Math.round(alim.kcal ?? 0),
+    macros: {
+      protein: Math.round((alim.proteines ?? 0) * 10) / 10,
+      carbs:   Math.round((alim.glucides  ?? 0) * 10) / 10,
+      fat:     Math.round((alim.lipides   ?? 0) * 10) / 10,
+    },
+    portionNum: alim.quantite,
+    unit: alim.unite,
+  };
+}
+
 // ── Création d'un MealItem générique ───────────────────────────
 
 function buildGenericMealItem(alim: ImportAliment): MealItem {
+  if (hasEmbeddedNutrition(alim)) return buildFromEmbedded(alim);
   return {
     name: alim.nom,
     qty: `${alim.quantite} ${alim.unite}`,
@@ -151,6 +178,11 @@ function buildGenericMealItem(alim: ImportAliment): MealItem {
 // ── Création d'un MealItem depuis CIQUAL ───────────────────────
 
 function buildCiqualMealItem(alim: ImportAliment): { item: MealItem; found: boolean } {
+  // Valeurs embarquées dans le JSON → on les utilise directement
+  if (hasEmbeddedNutrition(alim)) {
+    return { item: buildFromEmbedded(alim), found: true };
+  }
+
   const results = searchCIQUAL(alim.nom, 1);
   if (results.length === 0) {
     return { item: buildGenericMealItem(alim), found: false };
@@ -158,7 +190,6 @@ function buildCiqualMealItem(alim: ImportAliment): { item: MealItem; found: bool
   const entry = results[0];
   const food = ciqualToFood(entry);
 
-  // Calcul macros pour la quantité donnée (supposée en grammes si unite = g)
   const isGrams = ['g', 'gr', 'grammes', 'gramme'].includes(alim.unite.toLowerCase());
   const ratio = isGrams ? alim.quantite / 100 : 1;
 
