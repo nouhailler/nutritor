@@ -1630,7 +1630,6 @@ export function AppShell() {
         onStartDemo={() => setDemoScenario('drawer')}
         activeChallenge={!!(challenge?.active)}
         mode={mode}
-        modeSelected={modeSelected}
       />
       <OnboardingFlow
         visible={!onboardingDone}

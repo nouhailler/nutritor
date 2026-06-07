@@ -50,7 +50,6 @@ interface DrawerMenuProps {
   onStartDemo?: () => void;
   activeChallenge?: boolean;
   mode?: AppMode;
-  modeSelected?: boolean;
 }
 
 export function DrawerMenu({
@@ -67,7 +66,6 @@ export function DrawerMenu({
   onStartDemo,
   activeChallenge,
   mode,
-  modeSelected,
 }: DrawerMenuProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -268,7 +266,7 @@ export function DrawerMenu({
                 <Text style={styles.demoBtnText}>{t('drawer.demo')}</Text>
               </TouchableOpacity>
             )}
-            {modeSelected && mode && (
+            {mode && (
               <TouchableOpacity
                 style={[styles.modePill, { backgroundColor: mode === 'expert' ? '#1A3A2A' : '#3A2A10' }]}
                 onPress={() => { onOpenSettings(); onClose(); }}
