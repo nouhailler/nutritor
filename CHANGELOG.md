@@ -9,6 +9,31 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [0.39.0] — 2026-06-07
+
+### Ajouté
+- **Import journal JSON** — l'utilisateur peut dicter ses repas à Claude Chat qui génère un fichier JSON structuré, puis l'importer en un clic dans Nutritor
+  - `src/utils/importJournal.ts` : `importJournalJSON()` — parse et valide le format `nutritor_import v1.0`, recherche approximative CIQUAL par nom, calcule les macros au prorata de la quantité en grammes, mappe les symptômes et le bien-être vers les stores existants, construit des timeline events pour les symptômes ponctuels et les activités
+  - `mergeJournalEntries()` : fusionne un journal importé avec l'existant (ajoute les items sans écraser)
+  - `SettingsScreen` : section **IMPORT / EXPORT** avec bouton "Importer un journal JSON" ; gestion inline du conflit (journal existant) via deux boutons Fusionner / Remplacer sans `Alert.alert`
+  - `AppShell` : handler `handleImportJournalJSON(content, mode)` — `'check'` sonde le conflit sans écrire, `'merge'` fusionne, `'replace'` remplace ; met à jour journal, symptômes et timeline events
+  - `docs/exemple-import.json` : journée complète de démonstration (4 repas, 2 symptômes, bien-être, 2 activités)
+
+### Format JSON supporté
+```json
+{
+  "nutritor_import": true,
+  "version": "1.0",
+  "date": "YYYY-MM-DD",
+  "repas": [{ "moment": "déjeuner", "heure": "12:45", "aliments": [...] }],
+  "symptomes": [{ "heure": "14:00", "type": "ballonnements", "intensite": 2 }],
+  "bien_etre": { "energie": 4, "humeur": 4, "stress": 2, "sommeil_h": 7.5 },
+  "activite": [{ "type": "marche", "duree_min": 35, "heure": "18:00" }]
+}
+```
+
+---
+
 ## [0.38.0] — 2026-06-01
 
 ### Ajouté

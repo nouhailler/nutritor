@@ -140,6 +140,17 @@ function ModelItem({
   );
 }
 
+// ── Import journal JSON helpers ─────────────────────────────────
+
+function buildImportSummary(repasCount: number, importes: number, non_trouves: string[]): string {
+  let msg = `✅ ${repasCount} repas importés · ${importes} aliments`;
+  if (non_trouves.length > 0) {
+    msg += ` · ${non_trouves.length} non trouvés : ${non_trouves.slice(0, 3).join(', ')}`;
+    if (non_trouves.length > 3) msg += `…`;
+  }
+  return msg;
+}
+
 // ── Main screen ────────────────────────────────────────────────
 
 interface Props {
@@ -158,6 +169,7 @@ interface Props {
   onExportSymptomsCSV?: () => Promise<void>;
   onExportFoodsCSV?: () => Promise<void>;
   onImportJournalCSV?: (csv: string) => Promise<{ importedCount: number; createdFoodsCount: number; ignoredCount: number }>;
+  onImportJournalJSON?: (content: string, mode: 'check' | 'merge' | 'replace') => Promise<{ importes: number; non_trouves: string[]; date: string; repasCount: number; conflictExists: boolean }>;
 }
 
 export function SettingsScreen({
@@ -176,6 +188,7 @@ export function SettingsScreen({
   onExportSymptomsCSV,
   onExportFoodsCSV,
   onImportJournalCSV,
+  onImportJournalJSON,
 }: Props) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -188,6 +201,14 @@ export function SettingsScreen({
   const [exportPlatesLoading, setExportPlatesLoading] = useState(false);
   const [csvExportLoading, setCsvExportLoading] = useState(false);
   const [csvImportLoading, setCsvImportLoading] = useState(false);
+  const [jsonImportLoading, setJsonImportLoading] = useState(false);
+  const [jsonImportPending, setJsonImportPending] = useState<{
+    content: string;
+    date: string;
+    importes: number;
+    non_trouves: string[];
+    repasCount: number;
+  } | null>(null);
   const [helpVisible, setHelpVisible] = useState(false);
   const [logText, setLogText] = useState(() => aiLogger.export());
 
@@ -391,6 +412,51 @@ export function SettingsScreen({
   const isOpenRouter  = local.aiProvider === 'openrouter';
   const isAnthropic   = local.aiProvider === 'anthropic';
   const isOpenAI      = local.aiProvider === 'openai';
+
+  const handleImportJournalJSON = async () => {
+    if (!onImportJournalJSON) return;
+    setJsonImportLoading(true);
+    setJsonImportPending(null);
+    try {
+      const pick = await DocumentPicker.getDocumentAsync({ type: ['application/json', '*/*'] });
+      if (pick.canceled || !pick.assets?.[0]) return;
+      const content = await readFileAsText(pick.assets[0].uri);
+      const result = await onImportJournalJSON(content, 'check');
+      if (result.conflictExists) {
+        setJsonImportPending({
+          content,
+          date: result.date,
+          importes: result.importes,
+          non_trouves: result.non_trouves,
+          repasCount: result.repasCount,
+        });
+      } else {
+        await onImportJournalJSON(content, 'merge');
+        const summary = buildImportSummary(result.repasCount, result.importes, result.non_trouves);
+        showToast(summary);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Erreur inconnue';
+      showToast(`Format JSON invalide — ${msg}`);
+    } finally {
+      setJsonImportLoading(false);
+    }
+  };
+
+  const handleJsonConflictChoice = async (mode: 'merge' | 'replace') => {
+    if (!onImportJournalJSON || !jsonImportPending) return;
+    setJsonImportPending(null);
+    setJsonImportLoading(true);
+    try {
+      const result = await onImportJournalJSON(jsonImportPending.content, mode);
+      const summary = buildImportSummary(result.repasCount, result.importes, result.non_trouves);
+      showToast(summary);
+    } catch {
+      showToast('Erreur lors de l\'import JSON');
+    } finally {
+      setJsonImportLoading(false);
+    }
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -658,6 +724,61 @@ export function SettingsScreen({
             }
           />
         </Card>
+
+        {/* ── Import journal JSON ─────────────────────────────── */}
+        <SectionHeader icon="upload" label="IMPORT / EXPORT" />
+        <Card>
+          <Row
+            label="Importer un journal JSON"
+            description="Fichier généré par Claude Chat ou un outil externe (format Nutritor v1.0)"
+            borderBottom={false}
+            onPress={handleImportJournalJSON}
+            right={
+              jsonImportLoading ? (
+                <ActivityIndicator size="small" color={Colors.ink} />
+              ) : (
+                <Icon name="upload" size={18} color={Colors.muted} />
+              )
+            }
+          />
+        </Card>
+
+        {/* Confirmation de conflit journal JSON */}
+        {jsonImportPending && (
+          <Card>
+            <View style={styles.conflictBox}>
+              <Text style={styles.conflictTitle}>
+                Conflit — journal du {jsonImportPending.date.split('-').reverse().join('/')}
+              </Text>
+              <Text style={styles.conflictDesc}>
+                Un journal existe déjà pour cette date. Que souhaitez-vous faire ?
+              </Text>
+              <View style={styles.conflictBtns}>
+                <TouchableOpacity
+                  style={[styles.conflictBtn, styles.conflictBtnMerge]}
+                  onPress={() => handleJsonConflictChoice('merge')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.conflictBtnText}>Fusionner</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.conflictBtn, styles.conflictBtnReplace]}
+                  onPress={() => handleJsonConflictChoice('replace')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.conflictBtnTextWarn}>Remplacer</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.conflictBtnCancel}
+                  onPress={() => setJsonImportPending(null)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.conflictBtnTextMuted}>Annuler</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Card>
+        )}
 
         {/* ── CSV Export / Import ─────────────────────────────── */}
         <SectionHeader icon="file-text" label={t('settings.sectionCSV')} />
@@ -1205,5 +1326,59 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 0.5,
     color: Colors.ink,
+  },
+  conflictBox: {
+    padding: 16,
+    gap: 8,
+  },
+  conflictTitle: {
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.ink,
+  },
+  conflictDesc: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.ink2,
+    lineHeight: 18,
+  },
+  conflictBtns: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  conflictBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  conflictBtnMerge: {
+    backgroundColor: Colors.card,
+    borderColor: Colors.hairline,
+  },
+  conflictBtnReplace: {
+    backgroundColor: Colors.card,
+    borderColor: Colors.hairline,
+  },
+  conflictBtnCancel: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  conflictBtnText: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.ink,
+  },
+  conflictBtnTextWarn: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.warn,
+  },
+  conflictBtnTextMuted: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: Colors.muted,
   },
 });

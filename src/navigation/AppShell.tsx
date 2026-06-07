@@ -74,6 +74,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as ImagePicker from 'expo-image-picker';
 import { exportJournalCSV, exportSymptomsCSV, exportFoodsCSV, importJournalCSV } from '../services/csvService';
+import { importJournalJSON, mergeJournalEntries } from '../utils/importJournal';
 import { downloadBlob } from '../utils/webDownload';
 
 function todayStr() {
@@ -630,6 +631,47 @@ export function AppShell() {
       return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
     });
     return result;
+  };
+
+  const handleImportJournalJSON = async (
+    content: string,
+    mode: 'check' | 'merge' | 'replace',
+  ) => {
+    const { result, journalUpdate, symptomUpdate, timelineUpdate, conflictExists } =
+      importJournalJSON(content, journal, symptoms, timelineEvents);
+
+    if (mode === 'check') {
+      return { ...result, conflictExists };
+    }
+
+    setJournal((prev) => {
+      const byDate = new Map(prev.map((e) => [e.date, e]));
+      const existing = byDate.get(result.date);
+      if (existing && mode === 'merge') {
+        byDate.set(result.date, mergeJournalEntries(existing, journalUpdate));
+      } else {
+        byDate.set(result.date, journalUpdate);
+      }
+      return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+    });
+
+    if (symptomUpdate) {
+      setSymptoms((prev) => {
+        const without = prev.filter((e) => e.date !== result.date);
+        return [...without, symptomUpdate].sort((a, b) => a.date.localeCompare(b.date));
+      });
+    }
+
+    if (timelineUpdate.length > 0) {
+      setTimelineEvents((prev) => {
+        const existing = prev[result.date] ?? [];
+        const existingIds = new Set(existing.map((e) => e.id));
+        const newEvents = timelineUpdate.filter((e) => !existingIds.has(e.id));
+        return { ...prev, [result.date]: [...existing, ...newEvents] };
+      });
+    }
+
+    return { ...result, conflictExists };
   };
 
   const handleSaveComment = (date: string, text: string) => {
@@ -1380,6 +1422,7 @@ export function AppShell() {
         onExportSymptomsCSV={handleExportSymptomsCSV}
         onExportFoodsCSV={handleExportFoodsCSV}
         onImportJournalCSV={handleImportJournalCSV}
+        onImportJournalJSON={handleImportJournalJSON}
       />
     );
   } else {

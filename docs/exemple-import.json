@@ -1,0 +1,58 @@
+{
+  "nutritor_import": true,
+  "version": "1.0",
+  "date": "2026-06-07",
+  "repas": [
+    {
+      "moment": "petit-déjeuner",
+      "heure": "08:15",
+      "aliments": [
+        { "nom": "Banane", "quantite": 1, "unite": "fruit", "source": "generique" },
+        { "nom": "Granola maison", "quantite": 40, "unite": "g", "source": "generique" },
+        { "nom": "Yaourt nature", "quantite": 125, "unite": "g", "source": "ciqual" }
+      ]
+    },
+    {
+      "moment": "déjeuner",
+      "heure": "12:45",
+      "aliments": [
+        { "nom": "Poulet rôti", "quantite": 150, "unite": "g", "source": "ciqual" },
+        { "nom": "Riz basmati cuit", "quantite": 180, "unite": "g", "source": "ciqual" },
+        { "nom": "Courgettes sautées", "quantite": 100, "unite": "g", "source": "ciqual" },
+        { "nom": "Huile d'olive", "quantite": 10, "unite": "g", "source": "ciqual" }
+      ]
+    },
+    {
+      "moment": "encas après-midi",
+      "heure": "16:30",
+      "aliments": [
+        { "nom": "Pomme", "quantite": 1, "unite": "fruit", "source": "generique" },
+        { "nom": "Amandes", "quantite": 20, "unite": "g", "source": "ciqual" }
+      ]
+    },
+    {
+      "moment": "dîner",
+      "heure": "20:00",
+      "aliments": [
+        { "nom": "Soupe de lentilles corail", "quantite": 300, "unite": "ml", "source": "generique" },
+        { "nom": "Pain de campagne", "quantite": 60, "unite": "g", "source": "ciqual" },
+        { "nom": "Fromage de chèvre frais", "quantite": 30, "unite": "g", "source": "ciqual" }
+      ]
+    }
+  ],
+  "symptomes": [
+    { "heure": "14:00", "type": "ballonnements", "intensite": 2, "note": "après déjeuner, léger" },
+    { "heure": "21:30", "type": "bien", "intensite": 4, "note": "bonne soirée" }
+  ],
+  "bien_etre": {
+    "energie": 4,
+    "humeur": 4,
+    "stress": 2,
+    "sommeil_h": 7.5,
+    "note": "Bonne journée, énergie soutenue"
+  },
+  "activite": [
+    { "type": "marche", "duree_min": 35, "heure": "18:00", "intensite": "légère" },
+    { "type": "yoga", "duree_min": 20, "heure": "07:30", "intensite": "douce" }
+  ]
+}

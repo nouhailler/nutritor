@@ -4,9 +4,10 @@
 
 ---
 
-## État actuel (2026-06-01)
+## État actuel (2026-06-07)
 
 ### Derniers commits
+- WIP — feat: Import journal JSON depuis Claude Chat (v0.39.0)
 - WIP — feat: Nutri-Score Perso, Comparateur, Sommeil, CSV (v0.37.0)
 - WIP — feat: Mode Débutant / Expert global (v0.36.0)
 - WIP — feat: Mode Défi 30 jours (v0.35.0)
@@ -16,7 +17,7 @@
 - `b992be3` — feat: photo de profil + menu hamburger cliquable vers Profil (v0.32.0)
 - `08d12aa` — feat: export professionnel HTML pour médecins et diététiciens (v0.31.0)
 
-### Version courante : 0.37.0 (app.json : 0.30.0)
+### Version courante : 0.39.0 (app.json : 0.30.0)
 
 Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été ajoutées (voir CHANGELOG.md pour le détail complet) :
 
@@ -125,6 +126,12 @@ Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été
 **v0.33.1 — Import/export bibliothèque de plats**
 - `SettingsScreen` : nouvelle section "Bibliothèque de plats" avec export JSON (`nutritor_plats.json`) et import avec fusion (déduplication par `id`)
 - `AppShell` : câblage `savedPlates` + handler `onImportPlates`
+
+**v0.39.0 — Import journal JSON**
+- `src/utils/importJournal.ts` (nouveau) : `importJournalJSON(content, journal, symptoms, timelineEvents)` — parse le format `nutritor_import v1.0`, recherche approximative CIQUAL par nom, calcule macros au prorata g, mappe bien_être → SymptomScores, crée des UserTimelineEvent pour symptômes et activités ; `mergeJournalEntries()` fusionne sans écraser
+- `SettingsScreen` : section **IMPORT / EXPORT** avec bouton "Importer un journal JSON" + gestion de conflit inline (Fusionner / Remplacer / Annuler) compatible web (pas d'`Alert.alert`)
+- `AppShell` : `handleImportJournalJSON(content, mode)` avec 3 modes — `'check'` (sonde le conflit), `'merge'`, `'replace'`
+- `docs/exemple-import.json` : fichier de démonstration avec 4 repas, symptômes, bien-être, activités
 
 **v0.38.0 — Support web / déploiement Netlify**
 - `netlify.toml` (nouveau) : `npx expo export --platform web` → `dist/`, SPA fallback, cache immutable sur `_expo/static/*`
