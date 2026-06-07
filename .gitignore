@@ -45,3 +45,6 @@ nutritor-fdroid/
 tmp/
 fdroid-update.yml
 keystore.b64
+
+# Local Netlify folder
+.netlify

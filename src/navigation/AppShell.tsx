@@ -1616,17 +1616,6 @@ export function AppShell() {
           onPress={() => setStack('mealGenerator')}
         />
       )}
-      {modeSelected && (
-        <TouchableOpacity
-          style={[styles.modeBadge, { top: insets.top + 8 }]}
-          onPress={() => setStack('settings')}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.modeBadgeText, { color: mode === 'expert' ? Colors.ok : Colors.signal }]}>
-            {mode === 'expert' ? '🔬' : '🙂'} {mode === 'expert' ? 'Expert' : 'Débutant'}
-          </Text>
-        </TouchableOpacity>
-      )}
       <DrawerMenu
         visible={drawerOpen}
         activeTab={tab}
@@ -1640,6 +1629,8 @@ export function AppShell() {
         onClose={() => setDrawerOpen(false)}
         onStartDemo={() => setDemoScenario('drawer')}
         activeChallenge={!!(challenge?.active)}
+        mode={mode}
+        modeSelected={modeSelected}
       />
       <OnboardingFlow
         visible={!onboardingDone}
@@ -1682,22 +1673,6 @@ const styles = StyleSheet.create({
     zIndex: 200,
   },
 
-  modeBadge: {
-    position: 'absolute',
-    left: 12,
-    zIndex: 200,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.hairline,
-  },
-  modeBadgeText: {
-    fontFamily: Fonts.mono,
-    fontSize: 10,
-    letterSpacing: 0.5,
-  },
   aiGenIconBtn: {
     width: 34,
     height: 34,

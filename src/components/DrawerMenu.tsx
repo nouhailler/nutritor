@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from './Icon';
 import { Colors, Fonts } from '../theme/tokens';
+import { AppMode } from '../contexts/ModeContext';
 
 const DRAWER_WIDTH = 290;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -48,6 +49,8 @@ interface DrawerMenuProps {
   onClose: () => void;
   onStartDemo?: () => void;
   activeChallenge?: boolean;
+  mode?: AppMode;
+  modeSelected?: boolean;
 }
 
 export function DrawerMenu({
@@ -63,6 +66,8 @@ export function DrawerMenu({
   onClose,
   onStartDemo,
   activeChallenge,
+  mode,
+  modeSelected,
 }: DrawerMenuProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -252,16 +257,27 @@ export function DrawerMenu({
 
         {/* Footer — always visible */}
         <View style={styles.drawerFooter}>
-          {onStartDemo && (
-            <TouchableOpacity
-              style={styles.demoBtn}
-              onPress={() => { onStartDemo(); onClose(); }}
-              activeOpacity={0.7}
-            >
-              <Icon name="activity" size={16} color={Colors.signal} />
-              <Text style={styles.demoBtnText}>{t('drawer.demo')}</Text>
-            </TouchableOpacity>
-          )}
+          <View style={styles.demoRow}>
+            {onStartDemo && (
+              <TouchableOpacity
+                style={styles.demoBtn}
+                onPress={() => { onStartDemo(); onClose(); }}
+                activeOpacity={0.7}
+              >
+                <Icon name="activity" size={16} color={Colors.signal} />
+                <Text style={styles.demoBtnText}>{t('drawer.demo')}</Text>
+              </TouchableOpacity>
+            )}
+            {modeSelected && mode && (
+              <TouchableOpacity
+                style={[styles.modePill, { backgroundColor: mode === 'expert' ? '#1A3A2A' : '#3A2A10' }]}
+                onPress={() => { onOpenSettings(); onClose(); }}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.modePillEmoji}>{mode === 'expert' ? '🔬' : '🌱'}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <View style={styles.separator} />
           <TouchableOpacity
             style={styles.settingsBtn}
@@ -469,17 +485,32 @@ const styles = StyleSheet.create({
   drawerFooter: {
     paddingTop: 8,
   },
+  demoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
   demoBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     paddingVertical: 10,
-    marginBottom: 10,
   },
   demoBtnText: {
     fontFamily: Fonts.sans,
     fontSize: 13,
     color: Colors.signal,
+  },
+  modePill: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modePillEmoji: {
+    fontSize: 16,
   },
   settingsBtn: {
     flexDirection: 'row',
