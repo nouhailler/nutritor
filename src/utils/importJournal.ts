@@ -1,8 +1,15 @@
 /**
  * importJournal.ts — Import d'un journal journalier depuis un fichier JSON
  * généré par Claude Chat ou un autre outil externe.
+ *
+ * Chaîne de priorité pour chaque aliment :
+ *  1. Aliment existant dans la bibliothèque Nutritor (matching par nom)
+ *  2. Valeurs per100 embarquées dans le JSON → crée la fiche aliment
+ *  3. Valeurs par portion legacy (kcal, proteines…) → crée une fiche minimale
+ *  4. Recherche CIQUAL → crée la fiche aliment
+ *  5. Générique 0 kcal
  */
-import { Meal, MealItem } from '../types';
+import { Food, Meal, MealItem } from '../types';
 import { JournalEntry, EMPTY_DAY_MEALS } from '../data/weeklyStats';
 import { SymptomEntry, SymptomScores, UNSET_SCORES, SymptomKey } from '../types/symptoms';
 import { UserTimelineEvent, QuickSymptomKey } from '../types/timeline';
@@ -10,12 +17,24 @@ import { searchCIQUAL, ciqualToFood } from '../services/ciqual';
 
 // ── Types JSON d'entrée ─────────────────────────────────────────
 
+interface ImportPer100 {
+  kcal: number;
+  proteines: number;
+  glucides: number;
+  lipides: number;
+  fibres?: number;
+}
+
 interface ImportAliment {
   nom: string;
   quantite: number;
   unite: string;
-  source: 'ciqual' | 'generique' | string;
-  // Valeurs nutritionnelles optionnelles pour la portion indiquée
+  source: 'ciqual' | 'generique' | 'claude' | string;
+  // Per-100g (format préféré — permet de créer la fiche aliment)
+  per100?: ImportPer100;
+  // Poids total en grammes de la quantité indiquée (utile pour les unités non-grammes)
+  poids_g?: number;
+  // Valeurs par portion (format legacy, encore supporté)
   kcal?: number;
   proteines?: number;
   glucides?: number;
@@ -129,85 +148,159 @@ function resolveSymptomKey(type: string): QuickSymptomKey {
 
 function mapBienEtreToScores(be: ImportBienEtre): Partial<Record<SymptomKey, number>> {
   const scores: Partial<Record<SymptomKey, number>> = {};
-
-  // energie 1–5 → energy 0–4
   if (be.energie !== undefined) {
     scores.energy = Math.min(4, Math.max(0, Math.round(be.energie - 1)));
   }
-  // stress 1–5 → inflammation 0–4 (inverse : stress élevé = inflammation perçue élevée)
   if (be.stress !== undefined) {
     scores.inflammation = Math.min(4, Math.max(0, Math.round(be.stress - 1)));
   }
-
   return scores;
 }
 
-// ── Macros embarquées dans le JSON (priorité absolue) ──────────
+// ── Création d'une fiche Food depuis des données per100 ─────────
 
-function hasEmbeddedNutrition(alim: ImportAliment): boolean {
-  return alim.kcal !== undefined;
+function slugify(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 }
 
-function buildFromEmbedded(alim: ImportAliment): MealItem {
-  return {
-    name: alim.nom,
-    qty: `${alim.quantite} ${alim.unite}`,
-    kcal: Math.round(alim.kcal ?? 0),
-    macros: {
-      protein: Math.round((alim.proteines ?? 0) * 10) / 10,
-      carbs:   Math.round((alim.glucides  ?? 0) * 10) / 10,
-      fat:     Math.round((alim.lipides   ?? 0) * 10) / 10,
-    },
-    portionNum: alim.quantite,
-    unit: alim.unite,
-  };
-}
-
-// ── Création d'un MealItem générique ───────────────────────────
-
-function buildGenericMealItem(alim: ImportAliment): MealItem {
-  if (hasEmbeddedNutrition(alim)) return buildFromEmbedded(alim);
-  return {
-    name: alim.nom,
-    qty: `${alim.quantite} ${alim.unite}`,
-    kcal: 0,
-    macros: { protein: 0, carbs: 0, fat: 0 },
-  };
-}
-
-// ── Création d'un MealItem depuis CIQUAL ───────────────────────
-
-function buildCiqualMealItem(alim: ImportAliment): { item: MealItem; found: boolean } {
-  // Valeurs embarquées dans le JSON → on les utilise directement
-  if (hasEmbeddedNutrition(alim)) {
-    return { item: buildFromEmbedded(alim), found: true };
-  }
-
-  const results = searchCIQUAL(alim.nom, 1);
-  if (results.length === 0) {
-    return { item: buildGenericMealItem(alim), found: false };
-  }
-  const entry = results[0];
-  const food = ciqualToFood(entry);
-
+function buildFoodFromPer100(alim: ImportAliment, per100: ImportPer100): Food {
   const isGrams = ['g', 'gr', 'grammes', 'gramme'].includes(alim.unite.toLowerCase());
-  const ratio = isGrams ? alim.quantite / 100 : 1;
+  return {
+    id: `import-${slugify(alim.nom)}`,
+    category: 'Importé',
+    name: alim.nom,
+    subtitle: 'Importé depuis Claude',
+    brand: 'Claude IA',
+    defaultPortion: isGrams ? 100 : alim.quantite,
+    unit: isGrams ? 'g' : alim.unite,
+    per100: {
+      kcal:    per100.kcal,
+      protein: per100.proteines,
+      carbs:   per100.glucides,
+      fat:     per100.lipides,
+      fatSat:  0,
+      sugars:  0,
+      fiber:   per100.fibres ?? 0,
+      salt:    0,
+    },
+    allergens: [],
+    compat: [],
+    ingredients: alim.nom,
+  };
+}
 
+// ── Résolution d'un aliment (chaîne de priorité) ───────────────
+
+function resolveAliment(
+  alim: ImportAliment,
+  existingFoods: Food[],
+): { item: MealItem; found: boolean; foodToAdd?: Food } {
+  const normName = alim.nom.toLowerCase().trim();
+  const isGrams = ['g', 'gr', 'grammes', 'gramme'].includes(alim.unite.toLowerCase());
+
+  // Ratio de base pour les unités en grammes
+  const gramsRatio = (poids: number) => poids / 100;
+
+  // ── Priorité 1 : aliment existant dans Nutritor ────────────────
+  const existing = existingFoods.find((f) => f.name.toLowerCase().trim() === normName);
+  if (existing) {
+    const totalGrams = alim.poids_g ?? (isGrams ? alim.quantite : null);
+    const ratio = totalGrams !== null ? gramsRatio(totalGrams) : 1;
+    return {
+      item: {
+        name: alim.nom,
+        qty: `${alim.quantite} ${alim.unite}`,
+        kcal: Math.round(existing.per100.kcal * ratio),
+        macros: {
+          protein: Math.round(existing.per100.protein * ratio * 10) / 10,
+          carbs:   Math.round(existing.per100.carbs   * ratio * 10) / 10,
+          fat:     Math.round(existing.per100.fat     * ratio * 10) / 10,
+        },
+        foodId: existing.id,
+        portionNum: alim.quantite,
+        unit: alim.unite,
+      },
+      found: true,
+    };
+  }
+
+  // ── Priorité 2 : per100 embarqué dans le JSON ──────────────────
+  if (alim.per100) {
+    const totalGrams = alim.poids_g ?? (isGrams ? alim.quantite : null);
+    const ratio = totalGrams !== null ? gramsRatio(totalGrams) : 1;
+    const food = buildFoodFromPer100(alim, alim.per100);
+    return {
+      item: {
+        name: alim.nom,
+        qty: `${alim.quantite} ${alim.unite}`,
+        kcal: Math.round(alim.per100.kcal * ratio),
+        macros: {
+          protein: Math.round(alim.per100.proteines * ratio * 10) / 10,
+          carbs:   Math.round(alim.per100.glucides  * ratio * 10) / 10,
+          fat:     Math.round(alim.per100.lipides   * ratio * 10) / 10,
+        },
+        foodId: food.id,
+        portionNum: alim.quantite,
+        unit: alim.unite,
+      },
+      found: true,
+      foodToAdd: food,
+    };
+  }
+
+  // ── Priorité 3 : valeurs par portion legacy ────────────────────
+  if (alim.kcal !== undefined) {
+    return {
+      item: {
+        name: alim.nom,
+        qty: `${alim.quantite} ${alim.unite}`,
+        kcal: Math.round(alim.kcal),
+        macros: {
+          protein: Math.round((alim.proteines ?? 0) * 10) / 10,
+          carbs:   Math.round((alim.glucides  ?? 0) * 10) / 10,
+          fat:     Math.round((alim.lipides   ?? 0) * 10) / 10,
+        },
+        portionNum: alim.quantite,
+        unit: alim.unite,
+      },
+      found: true,
+    };
+  }
+
+  // ── Priorité 4 : recherche CIQUAL ─────────────────────────────
+  const results = searchCIQUAL(alim.nom, 1);
+  if (results.length > 0) {
+    const food = ciqualToFood(results[0]);
+    const totalGrams = alim.poids_g ?? (isGrams ? alim.quantite : null);
+    const ratio = totalGrams !== null ? gramsRatio(totalGrams) : 1;
+    return {
+      item: {
+        name: alim.nom,
+        qty: `${alim.quantite} ${alim.unite}`,
+        kcal: Math.round(food.per100.kcal * ratio),
+        macros: {
+          protein: Math.round(food.per100.protein * ratio * 10) / 10,
+          carbs:   Math.round(food.per100.carbs   * ratio * 10) / 10,
+          fat:     Math.round(food.per100.fat     * ratio * 10) / 10,
+        },
+        foodId: food.id,
+        portionNum: alim.quantite,
+        unit: alim.unite,
+      },
+      found: true,
+      foodToAdd: food,
+    };
+  }
+
+  // ── Priorité 5 : générique 0 kcal ─────────────────────────────
   return {
     item: {
       name: alim.nom,
       qty: `${alim.quantite} ${alim.unite}`,
-      kcal: Math.round(food.per100.kcal * ratio),
-      macros: {
-        protein: Math.round(food.per100.protein * ratio * 10) / 10,
-        carbs:   Math.round(food.per100.carbs   * ratio * 10) / 10,
-        fat:     Math.round(food.per100.fat     * ratio * 10) / 10,
-      },
-      foodId: food.id,
-      portionNum: alim.quantite,
-      unit: alim.unite,
+      kcal: 0,
+      macros: { protein: 0, carbs: 0, fat: 0 },
     },
-    found: true,
+    found: false,
   };
 }
 
@@ -218,14 +311,16 @@ export function importJournalJSON(
   existingJournal: JournalEntry[],
   existingSymptoms: SymptomEntry[],
   existingTimelineEvents: Record<string, UserTimelineEvent[]>,
+  existingFoodList: Food[] = [],
 ): {
   result: ImportJournalResult;
   journalUpdate: JournalEntry;
   symptomUpdate: SymptomEntry | null;
   timelineUpdate: UserTimelineEvent[];
+  newFoods: Food[];
   conflictExists: boolean;
 } {
-  // Supprime les marqueurs markdown (```json ... ```) si l'utilisateur copie depuis Claude
+  // Supprime les marqueurs markdown (```json ... ```) si copiés depuis Claude
   const cleaned = fileContent.trim().replace(/^```[a-z]*\s*/i, '').replace(/\s*```$/, '').trim();
 
   let parsed: unknown;
@@ -251,6 +346,7 @@ export function importJournalJSON(
   const non_trouves: string[] = [];
   const erreurs: string[] = [];
   let importes = 0;
+  const newFoodsMap = new Map<string, Food>(); // dédoublonnage par id
 
   // ── Repas ───────────────────────────────────────────────────
   const baseMeals: Meal[] = EMPTY_DAY_MEALS.map((m) => ({ ...m, items: [] }));
@@ -265,14 +361,14 @@ export function importJournalJSON(
 
     for (const alim of repas.aliments ?? []) {
       try {
-        if (alim.source === 'ciqual') {
-          const { item, found } = buildCiqualMealItem(alim);
-          if (!found) non_trouves.push(alim.nom);
-          meal.items.push(item);
-          importes++;
-        } else {
-          meal.items.push(buildGenericMealItem(alim));
-          importes++;
+        const { item, found, foodToAdd } = resolveAliment(alim, existingFoodList);
+        meal.items.push(item);
+        importes++;
+        if (!found) non_trouves.push(alim.nom);
+        if (foodToAdd && !newFoodsMap.has(foodToAdd.id)) {
+          // N'ajoute que si l'aliment n'est pas déjà dans la bibliothèque
+          const alreadyExists = existingFoodList.some((f) => f.id === foodToAdd.id);
+          if (!alreadyExists) newFoodsMap.set(foodToAdd.id, foodToAdd);
         }
       } catch {
         erreurs.push(alim.nom);
@@ -302,7 +398,7 @@ export function importJournalJSON(
     symptomUpdate = entry;
   }
 
-  // ── Timeline events pour symptômes ponctuels ────────────────
+  // ── Timeline events ────────────────────────────────────────
   const newTimelineEvents: UserTimelineEvent[] = [];
   for (const symp of data.symptomes ?? []) {
     const symptomKey = resolveSymptomKey(symp.type);
@@ -318,13 +414,10 @@ export function importJournalJSON(
     });
   }
 
-  // Activités → timeline events (emoji 🏃)
   for (const act of data.activite ?? []) {
     if (!act.heure) continue;
     const id = `ute-import-act-${date}-${act.heure}-${act.type}`;
-    const label = act.duree_min
-      ? `${act.type} · ${act.duree_min} min`
-      : act.type;
+    const label = act.duree_min ? `${act.type} · ${act.duree_min} min` : act.type;
     newTimelineEvents.push({
       kind: 'user',
       id,
@@ -347,6 +440,7 @@ export function importJournalJSON(
     journalUpdate,
     symptomUpdate,
     timelineUpdate: newTimelineEvents,
+    newFoods: [...newFoodsMap.values()],
     conflictExists,
   };
 }

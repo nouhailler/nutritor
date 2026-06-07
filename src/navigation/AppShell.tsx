@@ -637,15 +637,23 @@ export function AppShell() {
     content: string,
     mode: 'check' | 'merge' | 'replace',
   ) => {
-    const { result, journalUpdate, symptomUpdate, timelineUpdate, conflictExists } =
-      importJournalJSON(content, journal, symptoms, timelineEvents);
+    const { result, journalUpdate, symptomUpdate, timelineUpdate, newFoods, conflictExists } =
+      importJournalJSON(content, journal, symptoms, timelineEvents, foodList);
 
     if (mode === 'check') {
       return { ...result, conflictExists };
     }
 
+    // Auto-ajout des nouveaux aliments dans la bibliothèque
+    if (newFoods.length > 0) {
+      setFoodList((prev) => {
+        const existingIds = new Set(prev.map((f) => f.id));
+        const toAdd = newFoods.filter((f) => !existingIds.has(f.id));
+        return toAdd.length ? [...prev, ...toAdd] : prev;
+      });
+    }
+
     if (result.date === today) {
-      // Pour aujourd'hui : mettre à jour l'état live `meals` (affiché en temps réel)
       setMeals((prev) => {
         if (mode === 'merge') {
           return mergeJournalEntries({ date: today, meals: prev }, journalUpdate).meals;
