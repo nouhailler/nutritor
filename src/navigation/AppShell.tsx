@@ -644,16 +644,26 @@ export function AppShell() {
       return { ...result, conflictExists };
     }
 
-    setJournal((prev) => {
-      const byDate = new Map(prev.map((e) => [e.date, e]));
-      const existing = byDate.get(result.date);
-      if (existing && mode === 'merge') {
-        byDate.set(result.date, mergeJournalEntries(existing, journalUpdate));
-      } else {
-        byDate.set(result.date, journalUpdate);
-      }
-      return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
-    });
+    if (result.date === today) {
+      // Pour aujourd'hui : mettre à jour l'état live `meals` (affiché en temps réel)
+      setMeals((prev) => {
+        if (mode === 'merge') {
+          return mergeJournalEntries({ date: today, meals: prev }, journalUpdate).meals;
+        }
+        return journalUpdate.meals;
+      });
+    } else {
+      setJournal((prev) => {
+        const byDate = new Map(prev.map((e) => [e.date, e]));
+        const existing = byDate.get(result.date);
+        if (existing && mode === 'merge') {
+          byDate.set(result.date, mergeJournalEntries(existing, journalUpdate));
+        } else {
+          byDate.set(result.date, journalUpdate);
+        }
+        return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+      });
+    }
 
     if (symptomUpdate) {
       setSymptoms((prev) => {
