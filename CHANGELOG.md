@@ -9,6 +9,48 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [0.40.0] — 2026-06-07
+
+### Ajouté
+- **Import journal par collage JSON** — nouveau bouton FAB "Ajouter les repas" dans le journal (HomeScreen), ouvre une boîte de collage où l'utilisateur colle directement le JSON copié depuis Claude Web
+  - Modal avec `TextInput` multilignes (police monospace), bouton Valider, indicateur de chargement
+  - Gestion de conflit inline (journal existant pour la date) : choix Fusionner / Remplacer / Annuler sans `Alert.alert`
+  - Toast de confirmation avec le nombre de repas importés
+- **Format JSON enrichi — valeurs nutritionnelles embarquées** : les aliments peuvent désormais inclure un objet `per100` (kcal, proteines, glucides, lipides, fibres) et un champ `poids_g` (grammes totaux de la portion), permettant un calcul précis même pour des aliments absents de CIQUAL
+
+```json
+{
+  "aliments": [{
+    "nom": "Œuf au plat",
+    "quantite": 2,
+    "unite": "œufs",
+    "poids_g": 120,
+    "per100": { "kcal": 196, "proteines": 13.6, "glucides": 0.9, "lipides": 14.8, "fibres": 0 }
+  }]
+}
+```
+
+- **Chaîne de priorité pour la résolution des aliments** (`importJournal.ts`) :
+  1. Bibliothèque Nutritor existante (correspondance exacte insensible à la casse)
+  2. `per100` fourni dans le JSON → création d'une fiche Food temporaire `import-{slug}`
+  3. Valeurs legacy `kcal`/`proteines`/`glucides`/`lipides` par portion dans le JSON
+  4. Recherche CIQUAL par nom d'aliment
+  5. Générique (0 kcal, aucune macro)
+- **Auto-enrichissement de la bibliothèque** : les aliments importés avec données `per100` sont automatiquement ajoutés à la bibliothèque personnelle de l'utilisateur (déduplication par `id`), avec catégorie "Importé" et marque "Claude IA"
+
+### Modifié
+- **DrawerMenu** : l'indicateur de mode Débutant/Expert est déplacé de son overlay flottant absolu (AppShell) vers le footer du menu hamburger — pastille emoji 🔬 (Expert, fond vert foncé) ou 🌱 (Débutant, fond ambre foncé), toujours visible quel que soit l'état de session, tap → Paramètres
+- **`importJournalJSON()`** : accepte maintenant `existingFoodList` en paramètre et retourne `newFoods: Food[]` ; strip des balises markdown (` ```json … ``` `) avant `JSON.parse` pour compatibilité avec le copier-coller Claude Web
+- **`AppShell.handleImportJournalJSON()`** : ajoute les `newFoods` à `foodList` ; si la date importée = aujourd'hui → met à jour `meals` (état live), sinon → met à jour `journal` (historique)
+
+### Corrigé
+- **Indicateur de mode invisible sur Netlify mobile** : l'ancien badge conditionné sur `modeSelected` était invisible lors des sessions sans données persistées (fresh browser) — corrigé en ne conditionnant plus que sur `mode` (toujours défini)
+- **Aliments à 0 kcal après import** : les aliments non présents dans CIQUAL (ex : "œuf au plat", "pain sarrasin sans gluten") se retrouvaient à 0 kcal — corrigé par le support de `per100` embarqué dans le JSON
+- **Repas importés n'apparaissant pas dans le journal du jour** : `handleImportJournalJSON` écrivait toujours dans `journal` (historique), mais la vue du jour lit `meals` (état live) — corrigé par la vérification `result.date === today`
+- **Erreur de parsing JSON** : Claude Web encadre le JSON dans des balises ` ```json ``` `, ce qui cassait `JSON.parse` — strip des balises ajouté dans `importJournalJSON()`
+
+---
+
 ## [0.39.0] — 2026-06-07
 
 ### Ajouté

@@ -7,17 +7,18 @@
 ## État actuel (2026-06-07)
 
 ### Derniers commits
-- WIP — feat: Import journal JSON depuis Claude Chat (v0.39.0)
-- WIP — feat: Nutri-Score Perso, Comparateur, Sommeil, CSV (v0.37.0)
-- WIP — feat: Mode Débutant / Expert global (v0.36.0)
-- WIP — feat: Mode Défi 30 jours (v0.35.0)
+- `6bb2000` — feat: import journal journalier depuis fichier JSON Claude Chat (v0.39.0)
+- `27475c2` — docs: mise à jour README, CHANGELOG et CONTEXT (v0.38.0)
+- `4037b8f` — feat: support web / déploiement Netlify (v0.38.0)
+- `3dd7933` — feat: Nutri-Score Perso, Comparateur, Sommeil & CSV (v0.37.0)
+- `feaeb13` — feat: mode Défi 30 jours (v0.35.0)
 - `993ce5b` — docs: mise à jour CONTEXT, Changelog et README (v0.33.1)
 - `188804b` — feat: import/export de la bibliothèque de plats dans les paramètres (v0.33.1)
 - `e73bf4a` — feat: journal symptômes, moteur corrélation et formulaire bio/médicaments (v0.33.0)
 - `b992be3` — feat: photo de profil + menu hamburger cliquable vers Profil (v0.32.0)
 - `08d12aa` — feat: export professionnel HTML pour médecins et diététiciens (v0.31.0)
 
-### Version courante : 0.39.0 (app.json : 0.30.0)
+### Version courante : 0.40.0 (app.json : 0.30.0)
 
 Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été ajoutées (voir CHANGELOG.md pour le détail complet) :
 
@@ -127,6 +128,20 @@ Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été
 - `SettingsScreen` : nouvelle section "Bibliothèque de plats" avec export JSON (`nutritor_plats.json`) et import avec fusion (déduplication par `id`)
 - `AppShell` : câblage `savedPlates` + handler `onImportPlates`
 
+**v0.40.0 — Import journal JSON enrichi (collage Claude Web)**
+- **DrawerMenu** : l'indicateur de mode Débutant/Expert est déplacé du badge flottant absolu dans AppShell vers une pastille emoji dans le footer du drawer (🔬 Expert / 🌱 Débutant) ; toujours visible (conditionné sur `mode`, pas `modeSelected`)
+- **HomeScreen** : 3ème FAB "Ajouter les repas" → modal de collage JSON (TextInput multilignes, font monospace) ; gestion de conflit inline Fusionner/Remplacer sans `Alert.alert` ; toast de confirmation
+- **`importJournalJSON()`** (refonte complète) :
+  - Strip des balises markdown (` ```json … ``` `) avant `JSON.parse`
+  - Nouveau paramètre `existingFoodList: Food[]`, retourne `newFoods: Food[]`
+  - Chaîne de priorité : bibliothèque Nutritor > `per100` JSON > kcal legacy > CIQUAL > générique 0 kcal
+  - `resolveAliment(alim, existingFoods)` → `{ item: MealItem; found: boolean; foodToAdd?: Food }`
+  - `buildFoodFromPer100(alim, per100)` → `Food` avec `id: import-${slugify(nom)}`, catégorie "Importé", marque "Claude IA"
+  - `slugify(name)` : `name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')`
+- **Format JSON enrichi** : les aliments supportent `per100: { kcal, proteines, glucides, lipides, fibres }` et `poids_g` (grammes totaux de la portion)
+- **`AppShell.handleImportJournalJSON()`** : ajoute `newFoods` à `foodList` ; si date = aujourd'hui → `setMeals()`, sinon → `setJournal()` (corrige les repas qui n'apparaissaient pas après import)
+- **Auto-enrichissement bibliothèque** : les aliments importés avec `per100` sont ajoutés à la bibliothèque personnelle (déduplication par `id`)
+
 **v0.39.0 — Import journal JSON**
 - `src/utils/importJournal.ts` (nouveau) : `importJournalJSON(content, journal, symptoms, timelineEvents)` — parse le format `nutritor_import v1.0`, recherche approximative CIQUAL par nom, calcule macros au prorata g, mappe bien_être → SymptomScores, crée des UserTimelineEvent pour symptômes et activités ; `mergeJournalEntries()` fusionne sans écraser
 - `SettingsScreen` : section **IMPORT / EXPORT** avec bouton "Importer un journal JSON" + gestion de conflit inline (Fusionner / Remplacer / Annuler) compatible web (pas d'`Alert.alert`)
@@ -163,7 +178,7 @@ Depuis la v0.14.0 (dernier CONTEXT.md), les fonctionnalités suivantes ont été
 - `src/components/ModeOnboarding.tsx` (nouveau) : overlay plein-écran (absoluteFill, zIndex 100) — affiché une seule fois après l'onboarding regular, deux cartes cliquables 🙂 Débutant / 🤸 Expert
 - `src/storage/store.ts` : deux nouvelles clés `appMode: 'nutritor:app_mode'` et `modeSelected: 'nutritor:mode_selected'`
 - `App.tsx` : `ModeProvider` enveloppe toute l'arborescence
-- `AppShell` : badge flottant `🙂 Débutant` / `🔬 Expert` (left 12, absolutePositioned, zIndex 200, cliquable → Paramètres) + rendu de `ModeOnboarding` après `OnboardingFlow`
+- `AppShell` : badge flottant `🙂 Débutant` / `🔬 Expert` (left 12, absolutePositioned, zIndex 200, cliquable → Paramètres) + rendu de `ModeOnboarding` après `OnboardingFlow` *(badge supprimé en v0.40.0 — déplacé dans le footer du DrawerMenu)*
 - `SettingsScreen` : nouvelle section "Interface" avec pills Débutant/Expert et description contextuelle
 - `HomeScreen` : en mode débutant, `autoEvents` filtrés sur 4 types (`glycemic`, `digestion`, `satiety`, `anabolic`), `miniMetrics = []`
 - `PhysioTimeline` / `EventDetailModal` : section "Et si…" (simulation) cachée en mode débutant

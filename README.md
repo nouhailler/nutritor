@@ -7,7 +7,7 @@
 *Comprendre ce que vous mangez. Manger ce qui vous convient.*
 
 [![Platform](https://img.shields.io/badge/📱%20Android%20%7C%20iOS%20%7C%20Web-lightgrey?style=for-the-badge)](.)
-[![Version](https://img.shields.io/badge/version-0.38.0-4CAF50?style=for-the-badge)](.)
+[![Version](https://img.shields.io/badge/version-0.40.0-4CAF50?style=for-the-badge)](.)
 [![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020?style=for-the-badge&logo=expo)](.)
 [![Netlify Status](https://api.netlify.com/api/v1/badges/5b82e795-63ce-4c19-aac4-2501498a8b29/deploy-status)](https://nutritor.netlify.app)
 [![Download APK](https://img.shields.io/github/v/release/nouhailler/nutritor?label=Download%20APK&logo=android&color=3F5A3A&style=for-the-badge)](https://github.com/nouhailler/nutritor/releases/latest)
@@ -143,6 +143,7 @@ C'est un **compagnon de connaissance nutritionnelle** — conçu pour les person
 - 🔗 Corrélations aliment → symptômes (automatique)
 - ⚙️ Config IA (OpenRouter / Ollama / Anthropic / OpenAI)
 - 📤 Import / export bibliothèque de plats (JSON)
+- 🗣️ Import journal par collage JSON depuis Claude Web (FAB "Ajouter les repas" dans le journal)
 - 📊 Export CSV journal, symptômes & aliments + import CSV
 - ⚖️ Comparateur de produits côte à côte
 - 🏅 Nutri-Score Perso (A–E selon votre profil)
