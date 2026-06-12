@@ -272,8 +272,6 @@ function AIGenIcon({
 // ── App Shell ─────────────────────────────────────────────────
 
 export function AppShell() {
-  console.log('[AppShell] render start');
-
   // ── All hooks must be declared before any conditional return ──
   const { i18n } = useTranslation();
   const [tab, setTab] = useState<Tab>('home');
@@ -422,15 +420,11 @@ export function AppShell() {
   const [viewingDate, setViewingDate] = useState<string | null>(null); // null = today
   const [showDuplicateBanner, setShowDuplicateBanner] = useState(false);
 
-  console.log(`[AppShell] loading — profile:${profileLoading} foods:${foodsLoading} meals:${mealsLoading}`);
-
   // Reset meals daily — saves previous day to journal before clearing
   useEffect(() => {
     if (mealsLoading || journalLoading) return;
-    console.log('[AppShell] checking daily reset…');
     load<string>(KEYS.mealsDate).then((storedDate) => {
       const today = todayStr();
-      console.log(`[AppShell] mealsDate stored="${storedDate}" today="${today}"`);
       if (storedDate !== today) {
         if (storedDate) {
           // Archive yesterday's meals before reset
@@ -438,7 +432,6 @@ export function AppShell() {
             const without = prev.filter((e) => e.date !== storedDate);
             return [...without, { date: storedDate, meals }].slice(-365); // keep 1 year
           });
-          console.log(`[AppShell] journal: archived ${storedDate}`);
 
           // Duplicate yesterday's meals if they had items, otherwise start fresh
           const hadItems = meals.some((m) => m.items.length > 0);
@@ -446,13 +439,10 @@ export function AppShell() {
             setMeals(meals.map((m) => ({ ...m, items: m.items.map((i) => ({ ...i })) })));
             setShowDuplicateBanner(true);
             setTimeout(() => setShowDuplicateBanner(false), 3720);
-            console.log('[AppShell] duplicated yesterday meals into new day');
           } else {
-            console.log('[AppShell] resetting meals for new day (yesterday was empty)');
             setMeals(INITIAL_MEALS);
           }
         } else {
-          console.log('[AppShell] first launch — using initial meals');
           setMeals(INITIAL_MEALS);
         }
         save(KEYS.mealsDate, today);
@@ -540,7 +530,6 @@ export function AppShell() {
       });
       if (changed) setFoodList(migrated);
       save(KEYS.migrationV1, true);
-      console.log('[AppShell] migration v1: CIQUAL allergens refreshed');
     });
   }, [foodsLoading]);
 
@@ -571,15 +560,12 @@ export function AppShell() {
   const appLoading = profileLoading || foodsLoading || mealsLoading || journalLoading;
 
   if (appLoading) {
-    console.log('[AppShell] still loading — showing spinner');
     return (
       <View style={styles.loadingScreen}>
         <ActivityIndicator color={Colors.ink} />
       </View>
     );
   }
-
-  console.log(`[AppShell] ready — tab:${tab} stack:${stack} foods:${foodList.length} plates:${savedPlates.length}`);
 
   // ── Symptom helpers ──────────────────────────────────────────
 
@@ -813,7 +799,6 @@ export function AppShell() {
     setRecentFoodViewIds((p) => [id, ...p.filter((x) => x !== id)].slice(0, 10));
 
   const showTab = (t: Tab) => {
-    console.log(`[AppShell] showTab → ${t}`);
     setStack(null);
     setTab(t);
   };

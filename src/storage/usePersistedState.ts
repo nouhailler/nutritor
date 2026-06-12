@@ -14,14 +14,10 @@ export function usePersistedState<T>(
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log(`[usePersistedState] loading key="${key}"…`);
     load<T>(key)
       .then((stored) => {
         if (stored !== null) {
-          console.log(`[usePersistedState] key="${key}" → found (${Array.isArray(stored) ? (stored as unknown[]).length + ' items' : typeof stored})`);
           setRaw(stored);
-        } else {
-          console.log(`[usePersistedState] key="${key}" → not found, using default`);
         }
         setLoading(false);
       })
